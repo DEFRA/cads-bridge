@@ -1,66 +1,68 @@
-# cads-bridge
+CADS Bridge
 
-Core delivery C# ASP.NET backend template.
+## Table of Contents
 
-* [Install MongoDB](#install-mongodb)
-* [Inspect MongoDB](#inspect-mongodb)
+* [Overview](#overview)
+* [Technology Stack](#technology-stack)
+* [Prerequisites](#prerequisites)
+* [Getting Started](#docker-compose)
 * [Testing](#testing)
+* [SonarCloud](#sonarcloud)
 * [Running](#running)
 * [Dependabot](#dependabot)
 
+## Overview
 
-### Docker Compose
+The CADS Bridge service is a data ingestion service for the CADS Central Data Platform.
 
-A Docker Compose template is in [compose.yml](compose.yml).
+## Technology Stack:
+- .NET 10
+- ASP.NET Core
+- AWS S3
+- AWS (LocalStack for local development)
+- Docker & Docker Compose
+
+## Prerequisites
+
+- **.NET 10 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/10.0)
+- **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop)
+- **Git** - [Download](https://git-scm.com/)
+
+## Getting Started
+
+A Docker Compose template is in [docker-compose.yml](docker-compose.yml).
 
 A local environment with:
 
-- Localstack for AWS services (S3, SQS)
-- Redis
-- MongoDB
+- Localstack for AWS services (S3)
 - This service.
-- A commented out frontend example.
+
+If running locally on MacOS run the following command to allow executalbe access to the localstack start up script:
 
 ```bash
-docker compose up --build -d
+chmod +x compose/start-localstack.sh 
 ```
 
-A more extensive setup is available in [github.com/DEFRA/cdp-local-environment](https://github.com/DEFRA/cdp-local-environment)
+To start the local environment run:
 
-### MongoDB
-
-#### MongoDB via Docker
-
-See above.
-
-```
-docker compose up -d mongodb
-```
-
-#### MongoDB locally
-
-Alternatively install MongoDB locally:
-
-- Install [MongoDB](https://www.mongodb.com/docs/manual/tutorial/#installation) on your local machine
-- Start MongoDB:
+Windows
 ```bash
-sudo mongod --dbpath ~/mongodb-cdp
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build -d;
 ```
-
-#### MongoDB in CDP environments
-
-In CDP environments a MongoDB instance is already set up
-and the credentials exposed as enviromment variables.
-
-
-### Inspect MongoDB
-
-To inspect the Database and Collections locally:
+MacOS Arm/Silicon
 ```bash
-mongosh
+docker-compose -f docker-compose.yml -f docker-compose.override.mac.arm.yml up --build -d;
+```
+MacOS Intel
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.override.mac.intel.yml up --build -d;
 ```
 
-You can use the CDP Terminal to access the environments' MongoDB.
+To clean up the local environment run:
+
+```bash
+docker compose up --down -v
+```
 
 ### Testing
 

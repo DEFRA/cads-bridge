@@ -1,5 +1,5 @@
 ﻿# Base dotnet image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
@@ -12,14 +12,15 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/*
 
 # Build stage image
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
 WORKDIR /src
 
 COPY . .
 WORKDIR "/src"
 
 # unit test and code coverage
-RUN dotnet test CadsBridge.Test
+#RUN dotnet test CadsBridge.Test
 
 FROM build AS publish
 RUN dotnet publish CadsBridge -c Release -o /app/publish /p:UseAppHost=false

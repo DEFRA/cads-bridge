@@ -1,47 +1,47 @@
-version: '3.4'
+name: 'cads-bridge'
 services:
   localstack:
+    container_name: 'cads-bridge-localstack-emulator'
     image: localstack/localstack:3.0.2
     ports:
-      - '4566:4566' # LocalStack Gateway
-      - '4510-4559:4510-4559' # external services port range
+      - '4567:4566'
     env_file:
       - 'compose/aws.env'
     environment:
       DEBUG: ${DEBUG:-1}
       LS_LOG: WARN # Localstack DEBUG Level
-      SERVICES: s3,sqs,sns,firehose
+      SERVICES: s3
       LOCALSTACK_HOST: 127.0.0.1
     volumes:
-      - '${TMPDIR:-/tmp}/localstack:/var/lib/localstack'
+      - "./localstack_data:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
       - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
     healthcheck:
-      test: ['CMD', 'curl', 'localhost:4566']
+      test: [ 'CMD', 'curl', 'http://cads-bridge-localstack-emulator:4566/health' ]
       interval: 5s
       start_period: 5s
       retries: 3
     networks:
       - cdp-tenant
 
-  your-backend:
+  cads_bridge:
+    container_name: "cads_bridge"
+    platform: linux
+    image: cads_bridge
     build: ./
     ports:
-      - '8080:8080'
-    links:
-      - 'localstack:localstack'
+      - '5550:5550'
     depends_on:
       localstack:
         condition: service_healthy
     env_file:
       - 'compose/aws.env'
     environment:
-      PORT: 8080
-      LOCALSTACK_ENDPOINT: http://localstack:4566
+      PORT: 5550
+      LOCALSTACK_ENDPOINT: http://cads-bridge-localstack-emulator:4566
     networks:
       - cdp-tenant
 
-################################################################################
-
 networks:
   cdp-tenant:
-    driver: bridge
+    name: cdp-tenant

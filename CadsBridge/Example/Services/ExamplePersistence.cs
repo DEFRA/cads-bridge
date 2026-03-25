@@ -1,7 +1,4 @@
 ﻿using CadsBridge.Example.Models;
-using CadsBridge.Utils.Mongo;
-using MongoDB.Driver;
-using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Example.Services;
 
@@ -20,88 +17,54 @@ public interface IExamplePersistence
     public Task<bool> DeleteAsync(string name);
 }
 
-/**
- * An example of how to persist data in MongoDB.
- * The base class `MongoService` provides access to the db collection as well as providing helpers to
- * ensure the indexes for this collection are created on startup.
- */
-[ExcludeFromCodeCoverage]
-public class ExamplePersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
-    : MongoService<ExampleModel>(connectionFactory, "example", loggerFactory), IExamplePersistence
+public class FakePersistence : IExamplePersistence
 {
-    public async Task<bool> CreateAsync(ExampleModel example)
+    private readonly List<ExampleModel> _examples = new();
+
+    public Task<bool> CreateAsync(ExampleModel example)
     {
-        try
-        {
-            await Collection.InsertOneAsync(example);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Failed to insert {example}", example);
-            return false;
-        }
+        if (_examples.Any(e => e.Name.Equals(example.Name, StringComparison.OrdinalIgnoreCase)))
+            return Task.FromResult(false);
+
+        _examples.Add(example);
+        return Task.FromResult(true);
     }
 
-    [ExcludeFromCodeCoverage]
-    public async Task<ExampleModel?> GetByExampleName(string name)
+    public Task<ExampleModel?> GetByExampleName(string name)
     {
-        var result = await Collection.Find(b => b.Name == name).FirstOrDefaultAsync();
-        Logger.LogInformation("Searching for {Name}, found {Result}", name, result);
-        return result;
+        var example = _examples.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(example);
     }
 
-    [ExcludeFromCodeCoverage]
-    public async Task<IEnumerable<ExampleModel>> GetAllAsync()
+    public Task<IEnumerable<ExampleModel>> GetAllAsync()
     {
-        return await Collection.Find(_ => true).ToListAsync();
+        return Task.FromResult(_examples.AsEnumerable());
     }
 
-
-    [ExcludeFromCodeCoverage]
-    public async Task<IEnumerable<ExampleModel>> SearchByValueAsync(string searchTerm)
+    public Task<IEnumerable<ExampleModel>> SearchByValueAsync(string searchTerm)
     {
-        var searchOptions = new TextSearchOptions { CaseSensitive = false, DiacriticSensitive = false };
-        var filter = Builders<ExampleModel>.Filter.Text(searchTerm, searchOptions);
-        var result = await Collection.Find(filter).ToListAsync();
-        return result;
+        var matches = _examples.Where(e =>
+            e.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            e.Value.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult(matches);
     }
 
-    /**
-     * Updates the value field for a given name and increments the counter.
-     * Rather than replacing the whole record we selectively $set and $inc fields while leaving others
-     * unchanged.
-     */
-    [ExcludeFromCodeCoverage]
-    public async Task<bool> UpdateAsync(ExampleModel example)
+    public Task<bool> UpdateAsync(ExampleModel example)
     {
-        var filter = Builders<ExampleModel>.Filter.Eq(e => e.Name, example.Name);
-        var update = Builders<ExampleModel>.Update
-            .Inc(e => e.Counter, 1)
-            .Set(e => e.Value, example.Value);
+        var existing = _examples.FirstOrDefault(e => e.Name.Equals(example.Name, StringComparison.OrdinalIgnoreCase));
+        if (existing is null) return Task.FromResult(false);
 
-        var result = await Collection.UpdateOneAsync(filter, update);
-        return result.ModifiedCount > 0;
+        existing.Value = example.Value;
+        return Task.FromResult(true);
     }
 
-    [ExcludeFromCodeCoverage]
-    public async Task<bool> DeleteAsync(string name)
+    public Task<bool> DeleteAsync(string name)
     {
-        var result = await Collection.DeleteOneAsync(e => e.Name == name);
-        return result.DeletedCount > 0;
-    }
+        var existing = _examples.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (existing is null) return Task.FromResult(false);
 
-    /**
-     * Ensure indexes are created for this collection.
-     * In this example it creates a single index on the `name` field. The Unique flag is set preventing duplicate names
-     * being inserted.
-     */
-    [ExcludeFromCodeCoverage]
-    protected override List<CreateIndexModel<ExampleModel>> DefineIndexes(
-        IndexKeysDefinitionBuilder<ExampleModel> builder)
-    {
-        var options = new CreateIndexOptions { Unique = true };
-        var nameIndex = new CreateIndexModel<ExampleModel>(builder.Ascending(e => e.Name), options);
-        return [nameIndex];
+        _examples.Remove(existing);
+        return Task.FromResult(true);
     }
 }

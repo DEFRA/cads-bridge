@@ -1,0 +1,19 @@
+services:
+  cads_bridge:
+    build:
+      args:
+        TARGETARCH: arm64
+    labels:
+      com.microsoft.visual-studio.project-name: "CadsBridge"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=5550
+      - AWS__ServiceURL=http://cads-bridge-localstack-emulator:4566
+    ports:
+      - "5550"
+    volumes:
+      # Mac-specific paths for user secrets and HTTPS certificates
+      - ~/.microsoft/usersecrets:/home/app/.microsoft/usersecrets:ro
+      - ~/.microsoft/usersecrets:/root/.microsoft/usersecrets:ro
+      - ~/.aspnet/https:/home/app/.aspnet/https:ro
+      - ~/.aspnet/https:/root/.aspnet/https:ro
