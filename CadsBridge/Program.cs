@@ -1,14 +1,9 @@
 using CadsBridge.Example.Endpoints;
 using CadsBridge.Example.Services;
-using CadsBridge.Utils;
 using CadsBridge.Utils.Http;
-using CadsBridge.Utils.Mongo;
 using FluentValidation;
 using System.Diagnostics.CodeAnalysis;
-using CadsBridge.Config;
 using CadsBridge.Utils.Logging;
-using MongoDB.Driver;
-using MongoDB.Driver.Authentication.AWS;
 using Serilog;
 
 var app = CreateWebApplication(args);
@@ -55,16 +50,13 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
         }
     });
 
-
-    // Set up the MongoDB client. Config and credentials are injected automatically at runtime.
-    MongoClientSettings.Extensions.AddAWSAuthentication();
-
+    
     // Add healthcheck, this is required for the platform to know your service is alive.
     builder.Services.AddHealthChecks();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
     // Set up the endpoints and their dependencies
-    builder.Services.AddSingleton<IExamplePersistence, ExamplePersistence>();
+    builder.Services.AddSingleton<IExamplePersistence, FakePersistence>();
 }
 
 [ExcludeFromCodeCoverage]

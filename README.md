@@ -11,56 +11,39 @@ Core delivery C# ASP.NET backend template.
 
 ### Docker Compose
 
-A Docker Compose template is in [compose.yml](compose.yml).
+A Docker Compose template is in [docker-compose.yml](docker-compose.yml).
 
 A local environment with:
 
-- Localstack for AWS services (S3, SQS)
-- Redis
-- MongoDB
+- Localstack for AWS services (S3)
 - This service.
-- A commented out frontend example.
+
+If running locally on MacOS run the following command to allow executalbe access to the localstack start up script:
 
 ```bash
-docker compose up --build -d
+chmod +x compose/start-localstack.sh 
 ```
 
-A more extensive setup is available in [github.com/DEFRA/cdp-local-environment](https://github.com/DEFRA/cdp-local-environment)
+To start the local environment run:
 
-### MongoDB
-
-#### MongoDB via Docker
-
-See above.
-
-```
-docker compose up -d mongodb
-```
-
-#### MongoDB locally
-
-Alternatively install MongoDB locally:
-
-- Install [MongoDB](https://www.mongodb.com/docs/manual/tutorial/#installation) on your local machine
-- Start MongoDB:
+Windows
 ```bash
-sudo mongod --dbpath ~/mongodb-cdp
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build -d;
 ```
-
-#### MongoDB in CDP environments
-
-In CDP environments a MongoDB instance is already set up
-and the credentials exposed as enviromment variables.
-
-
-### Inspect MongoDB
-
-To inspect the Database and Collections locally:
+MacOS Arm/Silicon
 ```bash
-mongosh
+docker-compose -f docker-compose.yml -f docker-compose.override.mac.arm.yml up --build -d;
+```
+MacOS Intel
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.override.mac.intel.yml up --build -d;
 ```
 
-You can use the CDP Terminal to access the environments' MongoDB.
+To clean up the local environment run:
+
+```bash
+docker compose up --down -v
+```
 
 ### Testing
 

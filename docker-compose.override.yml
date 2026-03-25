@@ -1,0 +1,15 @@
+services:
+  cads_bridge:
+    labels:
+      com.microsoft.visual-studio.project-name: "CadsBridge"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=5550
+      - AWS__ServiceURL=http://cads-bridge-localstack-emulator:4566
+    ports:
+      - "5550"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
