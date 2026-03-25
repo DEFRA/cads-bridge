@@ -29,10 +29,7 @@ static WebApplication CreateWebApplication(string[] args)
 static void ConfigureBuilder(WebApplicationBuilder builder)
 {
     builder.Configuration.AddEnvironmentVariables();
-
-    // Load certificates into Trust Store - Note must happen before Mongo and Http client connections.
-    builder.Services.AddCustomTrustStore();
-
+    
     // Configure logging to use the CDP Platform standards.
     builder.Services.AddHttpContextAccessor();
     builder.Host.UseSerilog(CdpLogging.Configuration);
@@ -61,8 +58,6 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
 
     // Set up the MongoDB client. Config and credentials are injected automatically at runtime.
     MongoClientSettings.Extensions.AddAWSAuthentication();
-    builder.Services.Configure<MongoConfig>(builder.Configuration.GetSection("Mongo"));
-    builder.Services.AddSingleton<IMongoDbClientFactory, MongoDbClientFactory>();
 
     // Add healthcheck, this is required for the platform to know your service is alive.
     builder.Services.AddHealthChecks();
