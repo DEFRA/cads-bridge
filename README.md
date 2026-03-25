@@ -1,15 +1,34 @@
-# cads-bridge
+CADS Bridge
 
-Core delivery C# ASP.NET backend template.
+## Table of Contents
 
-* [Install MongoDB](#install-mongodb)
-* [Inspect MongoDB](#inspect-mongodb)
+* [Overview](#overview)
+* [Technology Stack](#technology-stack)
+* [Prerequisites](#prerequisites)
+* [Getting Started](#docker-compose)
 * [Testing](#testing)
+* [SonarCloud](#sonarcloud)
 * [Running](#running)
 * [Dependabot](#dependabot)
 
+## Overview
 
-### Docker Compose
+The CADS Bridge service is a data ingestion service for the CADS Central Data Platform.
+
+## Technology Stack:
+- .NET 10
+- ASP.NET Core
+- AWS S3
+- AWS (LocalStack for local development)
+- Docker & Docker Compose
+
+## Prerequisites
+
+- **.NET 10 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/10.0)
+- **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop)
+- **Git** - [Download](https://git-scm.com/)
+
+## Getting Started
 
 A Docker Compose template is in [docker-compose.yml](docker-compose.yml).
 
