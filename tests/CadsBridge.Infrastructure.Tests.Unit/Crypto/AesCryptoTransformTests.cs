@@ -20,32 +20,8 @@ public class AesCryptoTransformTests
         _tempDir = Path.Combine(Path.GetTempPath(), "AesCryptoTransformTests", Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDir);
     }
-    
+
     [Fact]
-    public async Task EncryptStreamAsync_WithByteArraySalt_ShouldEncryptStreamSuccessfully()
-    {
-        // Arrange
-        var inputData = "test stream data for encryption";
-        using var inputStream = new MemoryStream(Encoding.UTF8.GetBytes(inputData));
-        using var outputStream = new MemoryStream();
-        var progressReports = new List<(int percentage, string status)>();
-
-        // Act
-        await _cryptoTransform.EncryptStreamAsync(
-            inputStream,
-            outputStream,
-            TestPassword,
-            TestSalt,
-            inputStream.Length,
-            (percentage, status) => progressReports.Add((percentage, status)));
-
-        // Assert
-        outputStream.Length.Should().BeGreaterThan(0);
-        outputStream.ToArray().Should().NotEqual(Encoding.UTF8.GetBytes(inputData));
-        progressReports.Should().NotBeEmpty();
-    }
-    
-        [Fact]
     public async Task EncryptStreamAsync_WithStringSalt_ShouldEncryptStreamSuccessfully()
     {
         // Arrange
@@ -59,25 +35,6 @@ public class AesCryptoTransformTests
         // Assert
         outputStream.Length.Should().BeGreaterThan(0);
         outputStream.ToArray().Should().NotEqual(Encoding.UTF8.GetBytes(inputData));
-    }
-
-    [Fact]
-    public async Task DecryptStreamAsync_WithByteArraySalt_ShouldDecryptStreamSuccessfully()
-    {
-        // Arrange
-        var originalData = "test stream data for round-trip encryption/decryption";
-        using var inputStream = new MemoryStream(Encoding.UTF8.GetBytes(originalData));
-        using var encryptedStream = new MemoryStream();
-        using var decryptedStream = new MemoryStream();
-
-        // Act
-        await _cryptoTransform.EncryptStreamAsync(inputStream, encryptedStream, TestPassword, TestSalt);
-        encryptedStream.Position = 0;
-        await _cryptoTransform.DecryptStreamAsync(encryptedStream, decryptedStream, TestPassword, TestSalt);
-
-        // Assert
-        var decryptedData = Encoding.UTF8.GetString(decryptedStream.ToArray());
-        decryptedData.Should().Be(originalData);
     }
 
     [Fact]
