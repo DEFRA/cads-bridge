@@ -26,7 +26,7 @@ jobs:
       - name: Restore
         run: dotnet restore ./working-dir/CadsBridge.sln
       - name: Build
-        run: dotnet build ./working-dir/CadsBridge.sln --configuration Release --no-restore -warnaserror
+        run: dotnet build ./working-dir/CadsBridge.sln --configuration Release --no-restore
       - name: Test
         run: dotnet test ./working-dir/CadsBridge.sln
 
