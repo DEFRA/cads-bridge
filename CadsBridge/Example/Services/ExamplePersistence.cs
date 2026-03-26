@@ -1,4 +1,4 @@
-﻿using CadsBridge.Example.Models;
+using CadsBridge.Example.Models;
 
 namespace CadsBridge.Example.Services;
 

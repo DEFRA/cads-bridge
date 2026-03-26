@@ -6,7 +6,18 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
     <ItemGroup>
+      <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.26" />
+      <PackageReference Include="Serilog" Version="4.3.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
       <ProjectReference Include="..\CadsBridge.Application\CadsBridge.Application.csproj" />
     </ItemGroup>
 

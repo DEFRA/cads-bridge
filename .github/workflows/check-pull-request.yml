@@ -16,14 +16,20 @@ jobs:
     name: Run Pull Request Checks
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "10.0.x"
       - name: Check out code
         uses: actions/checkout@v3
-      - name: Test
-        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: |
-            10.0
-      - run: dotnet test
+          path: working-dir
+      - name: Restore
+        run: dotnet restore ./working-dir/CadsBridge.sln
+      - name: Build
+        run: dotnet build ./working-dir/CadsBridge.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test ./working-dir/CadsBridge.sln
+
     ## SonarCloud
     ## Uncomment to unable SonarCloud scan
     ## Requires project to be set up in SonarCloud

@@ -6,6 +6,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5550
       - AWS__ServiceURL=http://cads-bridge-localstack-emulator:4566
+      - Storage__Internal__BucketName=cads-bridge-internal-bucket
+      - Storage__Internal__HealthcheckEnabled=true
+      - Storage__External__BucketName=cads-bridge-external-bucket
+      - Storage__External__HealthcheckEnabled=true
     ports:
       - "5550"
     volumes:

@@ -1,4 +1,4 @@
-﻿using CadsBridge.Example.Models;
+using CadsBridge.Example.Models;
 using CadsBridge.Example.Services;
 using FluentValidation;
 using FluentValidation.Results;

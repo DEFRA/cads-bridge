@@ -5,6 +5,7 @@ using FluentValidation;
 using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Utils.Logging;
 using Serilog;
+using CadsBridge.Setup;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();
@@ -24,7 +25,7 @@ static WebApplication CreateWebApplication(string[] args)
 static void ConfigureBuilder(WebApplicationBuilder builder)
 {
     builder.Configuration.AddEnvironmentVariables();
-    
+
     // Configure logging to use the CDP Platform standards.
     builder.Services.AddHttpContextAccessor();
     builder.Host.UseSerilog(CdpLogging.Configuration);
@@ -50,9 +51,8 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
         }
     });
 
-    
-    // Add healthcheck, this is required for the platform to know your service is alive.
-    builder.Services.AddHealthChecks();
+    builder.Services.ConfigureCds(builder.Configuration);
+    //builder.Services.AddHealthChecks();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
     // Set up the endpoints and their dependencies
