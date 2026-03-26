@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadBridge.Core", "CadBridge
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Application", "CadsBridge.Application\CadsBridge.Application.csproj", "{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5E1FF158-9AE4-4763-8000-2C4D3DCDE435}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Infrastructure.Tests.Unit", "tests\CadsBridge.Infrastructure.Tests.Unit\CadsBridge.Infrastructure.Tests.Unit.csproj", "{5452AB6F-2E44-4D49-A9D1-F85921DD5830}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,12 @@ Global
 		{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 	EndGlobalSection
 EndGlobal
