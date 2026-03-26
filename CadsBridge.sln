@@ -1,13 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.4.11620.152 stable
+VisualStudioVersion = 18.4.11620.152
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge", "CadsBridge\CadsBridge.csproj", "{7D935959-D3BE-4EDC-BAEC-541C72741633}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Infrastructure", "CadsBridge.Infrastructure\CadsBridge.Infrastructure.csproj", "{BE700FF4-019A-4A84-8214-0EF7D1A3C344}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Application", "CadsBridge.Application\CadsBridge.Application.csproj", "{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5E1FF158-9AE4-4763-8000-2C4D3DCDE435}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Infrastructure.Tests.Unit", "tests\CadsBridge.Infrastructure.Tests.Unit\CadsBridge.Infrastructure.Tests.Unit.csproj", "{5452AB6F-2E44-4D49-A9D1-F85921DD5830}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Core", "CadsBridge.Core\CadsBridge.Core.csproj", "{CE332674-3568-DDC5-EA77-1AD4134CF22F}"
 EndProject
@@ -31,6 +35,10 @@ Global
 		{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CCF5470F-DD1C-44FE-95B8-ED116A2E3C9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CE332674-3568-DDC5-EA77-1AD4134CF22F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CE332674-3568-DDC5-EA77-1AD4134CF22F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE332674-3568-DDC5-EA77-1AD4134CF22F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -43,7 +51,7 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {C8BD3D08-FB22-4FC6-A049-E5730572F360}
+	GlobalSection(NestedProjects) = preSolution
+		{5452AB6F-2E44-4D49-A9D1-F85921DD5830} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 	EndGlobalSection
 EndGlobal
