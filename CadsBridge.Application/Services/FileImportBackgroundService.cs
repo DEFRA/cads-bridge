@@ -98,8 +98,6 @@ public class FileImportBackgroundService(
                     "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
                     externalS3Info.BucketName, request.SourceKey,
                     internalS3Info.BucketName, request.TargetKey);
-
-                return;
             }
             catch (Exception ex) when (attempt < _maxRetries)
             {
@@ -181,8 +179,8 @@ public class FileImportBackgroundService(
             throw new ArgumentException("Stream is null or empty.");
 
         // Reset stream position to ensure full upload
-        if (stream.CanSeek)
-            stream.Position = 0;
+        //if (stream.CanSeek)
+        //    stream.Position = 0;
 
         var request = new PutObjectRequest
         {
@@ -197,9 +195,6 @@ public class FileImportBackgroundService(
 
     private static async Task TransferAsync(IAmazonS3 s3Client, Stream stream, string bucketName, string key)
     {
-        if (stream == null || stream.Length == 0)
-            throw new ArgumentException("Stream is null or empty.");
-
         var transferUtility = new TransferUtility(s3Client);
 
         var uploadRequest = new TransferUtilityUploadRequest
