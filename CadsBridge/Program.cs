@@ -1,11 +1,10 @@
-using CadsBridge.Example.Endpoints;
-using CadsBridge.Example.Services;
-using CadsBridge.Utils.Http;
-using FluentValidation;
-using System.Diagnostics.CodeAnalysis;
-using CadsBridge.Utils.Logging;
-using Serilog;
+using CadsBridge.Endpoints;
 using CadsBridge.Setup;
+using CadsBridge.Utils.Http;
+using CadsBridge.Utils.Logging;
+using FluentValidation;
+using Serilog;
+using System.Diagnostics.CodeAnalysis;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();
@@ -52,11 +51,7 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
     });
 
     builder.Services.ConfigureCds(builder.Configuration);
-    //builder.Services.AddHealthChecks();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-
-    // Set up the endpoints and their dependencies
-    builder.Services.AddSingleton<IExamplePersistence, FakePersistence>();
 }
 
 [ExcludeFromCodeCoverage]
@@ -66,8 +61,7 @@ static WebApplication SetupApplication(WebApplication app)
     app.UseRouting();
     app.MapHealthChecks("/health");
 
-    // Example module, remove before deploying!
-    app.UseExampleEndpoints();
+    app.CreateEndpoints();
 
     return app;
 }
