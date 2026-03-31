@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IConfigureS3Clients, StorageS3Configurator>();
 
-        if (configSection.InternalStorage.HealthcheckEnabled || configSection.ExternalStorage.HealthcheckEnabled)
+        if (configSection.Internal.HealthcheckEnabled || configSection.External.HealthcheckEnabled)
         {
             services.AddSingleton<IEnableS3HealthCheck, StorageHealthCheckMarker>();
         }
