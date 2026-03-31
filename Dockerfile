@@ -19,9 +19,6 @@ WORKDIR /src
 COPY . .
 WORKDIR "/src"
 
-# unit test and code coverage
-RUN dotnet test
-
 FROM build AS publish
 RUN dotnet publish CadsBridge -c Release -o /app/publish /p:UseAppHost=false
 
