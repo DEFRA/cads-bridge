@@ -43,8 +43,16 @@ public class FileImportBackgroundService(
                 try
                 {
                     _progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                    await CopyWithRetryAsync(request, cancellationToken);
-                    _progressStore.MarkSucceeded(request.JobId, request.SourceKey);
+                    var result = await CopyWithRetryAsync(request, cancellationToken);
+
+                    if (result)
+                    {
+                        _progressStore.MarkSucceeded(request.JobId, request.SourceKey);
+                    }
+                    else
+                    {
+                        _progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -63,7 +71,7 @@ public class FileImportBackgroundService(
         await Task.WhenAll(runningTasks);
     }
 
-    private async Task CopyWithRetryAsync(FileImportJob request, CancellationToken ct)
+    private async Task<bool> CopyWithRetryAsync(FileImportJob request, CancellationToken cancellationToken = default)
     {
         var attempt = 0;
         var delayBaseMs = 500;
@@ -78,8 +86,19 @@ public class FileImportBackgroundService(
         {
             attempt++;
 
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Cancellation requested for {Key}, aborting copy", request.SourceKey);
+                return false;
+            }
+
             try
             {
+                if (attempt > _maxRetries)
+                {
+                    throw new Exception($"Exceeded maximum retry attempts ({_maxRetries}) for copying {request.SourceKey}");
+                }
+
                 _logger.LogInformation(
                     "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
                     request.SourceKey, externalS3Info.BucketName, internalS3Info.BucketName, attempt);
@@ -92,12 +111,15 @@ public class FileImportBackgroundService(
                     internalS3Info.BucketName,
                     request.TargetKey,
                     request.Password,
-                    request.Salt);
+                    request.Salt, 
+                    cancellationToken);
 
                 _logger.LogInformation(
                     "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
                     externalS3Info.BucketName, request.SourceKey,
                     internalS3Info.BucketName, request.TargetKey);
+
+                break;
             }
             catch (Exception ex) when (attempt < _maxRetries)
             {
@@ -108,9 +130,11 @@ public class FileImportBackgroundService(
                     "Error copying {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
                     request.SourceKey, attempt, _maxRetries, delay.TotalMilliseconds);
 
-                await Task.Delay(delay, ct);
+                await Task.Delay(delay, cancellationToken);
             }
         }
+
+        return true;
     }
 
     private async Task DecryptAndCopyAsync(
@@ -122,23 +146,23 @@ public class FileImportBackgroundService(
        string destinationKey,
        string password,
        string salt,
-       CancellationToken ct = default)
+       CancellationToken cancellationToken = default)
     {
         try
         {
             // 2. Stream encrypted file from S3
-            using var getResponse = await sourceS3Client.GetObjectAsync(sourceBucket, sourceKey, ct);
+            using var getResponse = await sourceS3Client.GetObjectAsync(sourceBucket, sourceKey, cancellationToken);
             using var encryptedStream = getResponse.ResponseStream;
 
             // 3. Determine file size to decide whether to use multipart upload or single upload
-            var fileSize = await GetRemoteFileSizeAsync(sourceS3Client, sourceBucket, sourceKey);
+            var fileSize = await GetRemoteFileSizeAsync(sourceS3Client, sourceBucket, sourceKey, cancellationToken);
 
             if (fileSize < 5 * 1024 * 1024)
             {
                 using var memoryStream = new MemoryStream();
                 memoryStream.Position = 0;
                 await _aesCryptoTransform.DecryptStreamAsync(encryptedStream, memoryStream, password, salt);
-                await PutAsync(targetS3Client, memoryStream, destinationBucket, destinationKey);
+                await PutAsync(targetS3Client, memoryStream, destinationBucket, destinationKey, cancellationToken);
             }
             else
             {
@@ -146,7 +170,7 @@ public class FileImportBackgroundService(
                 using var decryptor = AesCryptoTransform.CreateDecryptor(password, salt);
                 using var cryptoStream = new CryptoStream(encryptedStream, decryptor, CryptoStreamMode.Read);
 
-                await TransferAsync(targetS3Client, cryptoStream, destinationBucket, destinationKey);
+                await TransferAsync(targetS3Client, cryptoStream, destinationBucket, destinationKey, cancellationToken);
             }
 
             _logger.LogInformation("Successfully decrypted and uploaded {Key}", destinationKey);
@@ -159,11 +183,11 @@ public class FileImportBackgroundService(
         }
     }
 
-    private static async Task<long> GetRemoteFileSizeAsync(IAmazonS3 s3Client, string bucketName, string key)
+    private static async Task<long> GetRemoteFileSizeAsync(IAmazonS3 s3Client, string bucketName, string key, CancellationToken cancellationToken = default)
     {
         try
         {
-            var metadata = await s3Client.GetObjectMetadataAsync(bucketName, key);
+            var metadata = await s3Client.GetObjectMetadataAsync(bucketName, key, cancellationToken);
             return metadata.ContentLength;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -173,7 +197,7 @@ public class FileImportBackgroundService(
         }
     }
 
-    private static async Task PutAsync(IAmazonS3 s3Client, Stream stream, string bucketName, string key)
+    private static async Task PutAsync(IAmazonS3 s3Client, Stream stream, string bucketName, string key, CancellationToken cancellationToken = default)
     {
         if (stream == null || stream.Length == 0)
             throw new ArgumentException("Stream is null or empty.");
@@ -193,7 +217,7 @@ public class FileImportBackgroundService(
         await s3Client.PutObjectAsync(request);
     }
 
-    private static async Task TransferAsync(IAmazonS3 s3Client, Stream stream, string bucketName, string key)
+    private static async Task TransferAsync(IAmazonS3 s3Client, Stream stream, string bucketName, string key, CancellationToken cancellationToken = default)
     {
         var transferUtility = new TransferUtility(s3Client);
 
@@ -207,6 +231,6 @@ public class FileImportBackgroundService(
             AutoCloseStream = true
         };
 
-        await transferUtility.UploadAsync(uploadRequest);
+        await transferUtility.UploadAsync(uploadRequest, cancellationToken);
     }
 }
