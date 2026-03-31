@@ -2,7 +2,7 @@ namespace CadsBridge.Infrastructure.Storage.Configuration;
 
 public record StorageConfiguration
 {
-    public StorageConfigurationDetails Internal { get; init; } = new();
+    public StorageConfigurationDetails InternalStorage { get; init; } = new();
 
-    public StorageConfigurationDetails External { get; init; } = new();
+    public StorageConfigurationsDetailsWithCredentials ExternalStorage { get; init; } = new();
 }

@@ -15,12 +15,14 @@ public class StorageS3Configurator(StorageConfiguration config) : IConfigureS3Cl
         var factory = sp.GetRequiredService<IS3ClientFactory>();
         var amazonConfig = sp.GetRequiredService<AmazonS3Config>();
 
-        factory.AddClient<InternalClient>(
-            _config.Internal.BucketName,
+        factory.AddClient<InternalStorageClient>(
+            _config.InternalStorage.BucketName,
             amazonConfig);
 
-        factory.AddClient<ExternalClient>(
-            _config.External.BucketName,
-            amazonConfig);
+        factory.AddClientWithCredentials<ExternalStorageClient>(
+               _config.ExternalStorage.BucketName,
+               _config.ExternalStorage.AccessKeySecretName,
+               _config.ExternalStorage.SecretKeySecretName,
+               amazonConfig);
     }
 }

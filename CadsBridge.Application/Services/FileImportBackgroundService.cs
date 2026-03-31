@@ -68,11 +68,11 @@ public class FileImportBackgroundService(
         var attempt = 0;
         var delayBaseMs = 500;
 
-        var externalS3 = _s3ClientFactory.GetClient<ExternalClient>();
-        var externalS3Info = _s3ClientFactory.GetClientInfo<ExternalClient>();
+        var externalS3 = _s3ClientFactory.GetClient<ExternalStorageClient>();
+        var externalS3Info = _s3ClientFactory.GetClientInfo<ExternalStorageClient>();
 
-        var internalS3 = _s3ClientFactory.GetClient<InternalClient>();
-        var internalS3Info = _s3ClientFactory.GetClientInfo<InternalClient>();
+        var internalS3 = _s3ClientFactory.GetClient<InternalStorageClient>();
+        var internalS3Info = _s3ClientFactory.GetClientInfo<InternalStorageClient>();
 
         while (true)
         {
