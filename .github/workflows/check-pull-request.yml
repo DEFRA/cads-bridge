@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - release/*
     types:
       - opened
       - edited
@@ -28,7 +29,7 @@ jobs:
       - name: Build
         run: dotnet build ./working-dir/CadsBridge.sln --configuration Release --no-restore
       - name: Test
-        run: dotnet test ./working-dir/CadsBridge.sln
+        run: dotnet test ./working-dir/CadsBridge.sln --filter Dependence!=testcontainers --logger "GitHubActions;summary.includePassedTests=true;summary.includeSkippedTests=true" --collect:"XPlat Code Coverage" --results-directory ./coverage
 
     ## SonarCloud
     ## Uncomment to unable SonarCloud scan

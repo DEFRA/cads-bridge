@@ -4,5 +4,5 @@ public record StorageConfiguration
 {
     public StorageConfigurationDetails Internal { get; init; } = new();
 
-    public StorageConfigurationDetails External { get; init; } = new();
+    public StorageConfigurationsDetailsWithCredentials External { get; init; } = new();
 }

@@ -18,7 +18,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
-      <ProjectReference Include="..\CadsBridge.Application\CadsBridge.Application.csproj" />
     </ItemGroup>
 
 </Project>

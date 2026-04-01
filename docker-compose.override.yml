@@ -10,6 +10,8 @@ services:
       - Storage__Internal__HealthcheckEnabled=true
       - Storage__External__BucketName=cads-bridge-external-bucket
       - Storage__External__HealthcheckEnabled=true
+      - IMB_S3_ACCESS_KEY=test
+      - IMB_S3_ACCESS_SECRET=test
     ports:
       - "5550"
     volumes:

@@ -1,3 +1,4 @@
+using CadsBridge.Application.Setup;
 using CadsBridge.Infrastructure.Configuration.Aws;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Setup;
@@ -21,8 +22,8 @@ public static class ServiceCollectionExtensions
 
         services.AddDefaultAWSOptions(configuration.GetAWSOptions());
         services.Configure<AwsConfig>(configuration.GetSection(AwsConfig.SectionName));
-
         services.AddInfrastructureLayer(configuration);
+        services.AddApplicationLayer(configuration);
 
         services.ConfigureHealthChecks();
     }

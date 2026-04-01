@@ -28,10 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Example\Services\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\CadsBridge.Application\CadsBridge.Application.csproj" />
     <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
     <ProjectReference Include="..\CadsBridge.Infrastructure\CadsBridge.Infrastructure.csproj" />

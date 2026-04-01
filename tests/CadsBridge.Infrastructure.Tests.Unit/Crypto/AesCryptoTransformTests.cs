@@ -9,7 +9,7 @@ public class AesCryptoTransformTests
 {
     private const string TestPassword = "2025-08-05_ADDRESSES_CT_01628_DELTA_PROD_UKV_CTSM";
     private const string TestSalt = "Jr8Lm2PXzd7qNbVyWutRfGBxhkHTpE";
-    
+
     private readonly AesCryptoTransform _cryptoTransform;
     private readonly List<string> _tempFiles = new();
     private readonly string _tempDir;
@@ -55,8 +55,8 @@ public class AesCryptoTransformTests
         var decryptedData = Encoding.UTF8.GetString(decryptedStream.ToArray());
         decryptedData.Should().Be(originalData);
     }
-    
-        [Fact]
+
+    [Fact]
     public async Task EncryptDecrypt_WithEmptySalt_ShouldWorkCorrectly()
     {
         // Arrange
@@ -75,7 +75,7 @@ public class AesCryptoTransformTests
         var decryptedData = Encoding.UTF8.GetString(decryptedStream.ToArray());
         decryptedData.Should().Be(originalData);
     }
-    
+
     [Fact]
     public async Task EncryptDecrypt_WithNullEmptyStringSalt_ShouldWorkCorrectly()
     {

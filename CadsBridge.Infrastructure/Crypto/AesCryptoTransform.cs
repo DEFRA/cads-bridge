@@ -1,4 +1,3 @@
-using CadsBridge.Application.Crypto;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -10,6 +9,20 @@ public class AesCryptoTransform : IAesCryptoTransform
     private const int PbeKeySpecKeyLenDefault = 256;
     private const int BufferSize = 64 * 1024;
     private const int ProgressReportInterval = 1;
+
+    public static ICryptoTransform CreateDecryptor(string password, string salt)
+    {
+        var saltBytes = string.IsNullOrEmpty(salt) ? new byte[0] : Encoding.UTF8.GetBytes(salt);
+        var key = DeriveKey(password, saltBytes);
+
+        using var aes = Aes.Create();
+        aes.Key = key;
+        aes.Mode = CipherMode.ECB;
+        aes.Padding = PaddingMode.PKCS7;
+
+        return aes.CreateDecryptor();
+    }
+
 
     public async Task EncryptStreamAsync(Stream inputStream, Stream outputStream, string password, string salt, long? totalBytes = null,
         ProgressCallback? progressCallback = null, CancellationToken cancellationToken = default)
@@ -46,7 +59,7 @@ public class AesCryptoTransform : IAesCryptoTransform
 
         await ProcessStreamAsync(cryptoStream, outputStream, totalBytes, progressCallback, "Decrypting", cancellationToken);
     }
-    
+
     private static byte[] DeriveKey(string password, byte[] salt)
     {
         var actualSalt = salt;
@@ -64,7 +77,7 @@ public class AesCryptoTransform : IAesCryptoTransform
         return pbkdf2.GetBytes(PbeKeySpecKeyLenDefault / 8);
     }
 
-    private static async Task ProcessStreamAsync(Stream inputStream,
+    public static async Task ProcessStreamAsync(Stream inputStream,
                                                  Stream outputStream,
                                                  long? totalBytes,
                                                  ProgressCallback? progressCallback,
