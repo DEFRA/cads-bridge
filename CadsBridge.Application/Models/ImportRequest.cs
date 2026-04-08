@@ -1,5 +1,5 @@
 namespace CadsBridge.Application.Models;
 
-public record StartImportRequest(
+public record ImportRequest(
     List<FileImportRequest> Files
 );

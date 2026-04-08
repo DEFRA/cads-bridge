@@ -7,6 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <None Include="Persistance\InMemoryJobProgressStore.cs" />
+      <None Include="Persistance\InMemorySplitJobProgressStore.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="MediatR" Version="14.1.0" />
     </ItemGroup>
 

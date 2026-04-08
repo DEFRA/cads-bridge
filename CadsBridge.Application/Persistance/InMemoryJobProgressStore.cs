@@ -3,34 +3,25 @@ using System.Collections.Concurrent;
 
 namespace CadsBridge.Application.Persistance;
 
-public interface IImportProgressStore
-{
-    void InitJob(string jobId, int totalFiles);
-    void MarkInProgress(string jobId, string key);
-    void MarkSucceeded(string jobId, string key);
-    void MarkFailed(string jobId, string key, string error);
-    ImportJobProgress? GetJob(string jobId);
-}
-
-public record ImportFileProgress(
+public record JobItemProgress(
     string Key,
-    ImportStatus Status,
+    JobStatus Status,
     string? ErrorMessage
 );
 
-public record ImportJobProgress(
+public record JobProgress(
     string JobId,
     int TotalFiles,
     int CompletedFiles,
-    IReadOnlyCollection<ImportFileProgress> Files
+    IReadOnlyCollection<JobItemProgress> Files
 );
 
-public class InMemoryImportProgressStore : IImportProgressStore
+public abstract class InMemoryJobProgressStore
 {
     private class MutableJob
     {
         public int TotalFiles { get; set; }
-        public ConcurrentDictionary<string, ImportFileProgress> Files { get; } = new();
+        public ConcurrentDictionary<string, JobItemProgress> Files { get; } = new();
     }
 
     private readonly ConcurrentDictionary<string, MutableJob> _jobs = new();
@@ -44,34 +35,54 @@ public class InMemoryImportProgressStore : IImportProgressStore
     public void MarkInProgress(string jobId, string key)
     {
         if (!_jobs.TryGetValue(jobId, out var job)) return;
-        job.Files[key] = new ImportFileProgress(key, ImportStatus.InProgress, null);
+        job.Files[key] = new JobItemProgress(key, JobStatus.InProgress, null);
     }
 
     public void MarkSucceeded(string jobId, string key)
     {
         if (!_jobs.TryGetValue(jobId, out var job)) return;
-        job.Files[key] = new ImportFileProgress(key, ImportStatus.Succeeded, null);
+        job.Files[key] = new JobItemProgress(key, JobStatus.Succeeded, null);
     }
 
     public void MarkFailed(string jobId, string key, string error)
     {
         if (!_jobs.TryGetValue(jobId, out var job)) return;
-        job.Files[key] = new ImportFileProgress(key, ImportStatus.Failed, error);
+        job.Files[key] = new JobItemProgress(key, JobStatus.Failed, error);
     }
 
-    public ImportJobProgress? GetJob(string jobId)
+    public JobProgress? GetJob(string jobId)
     {
         if (!_jobs.TryGetValue(jobId, out var job)) return null;
 
         var files = job.Files.Values.ToList();
         var completed = files.Count(f =>
-            f.Status is ImportStatus.Succeeded or ImportStatus.Failed);
+            f.Status is JobStatus.Succeeded or JobStatus.Failed);
 
-        return new ImportJobProgress(
+        return new JobProgress(
             jobId,
             job.TotalFiles,
             completed,
             files
+        );
+    }
+
+    public IEnumerable<JobProgress> GetJobs()
+    {
+        return
+            _jobs.Select(kvp =>
+            {
+                var jobId = kvp.Key;
+                var job = kvp.Value;
+                var files = job.Files.Values.ToList();
+                var completed = files.Count(f =>
+                    f.Status is JobStatus.Succeeded or JobStatus.Failed);
+                return new JobProgress(
+                    jobId,
+                    job.TotalFiles,
+                    completed,
+                    files
+                );
+            }
         );
     }
 }
