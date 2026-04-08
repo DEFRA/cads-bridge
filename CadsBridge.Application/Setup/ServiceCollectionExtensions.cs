@@ -20,8 +20,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
         services.AddSingleton<IS3ClientFactory, S3ClientFactory>();
 
-        services.AddScoped<IAesCryptoTransform, AesCryptoTransform>();
-        services.AddScoped<ISplitMessageProducer, SplitMessageProducer>();
+        services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
+        services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 
         services.AddHostedService<FileImportBackgroundService>();
         services.AddHostedService<FileSplitBackgroundService>();
