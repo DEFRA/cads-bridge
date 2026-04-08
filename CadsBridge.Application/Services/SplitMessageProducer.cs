@@ -6,22 +6,16 @@ namespace CadsBridge.Application.Services;
 
 public interface ISplitMessageProducer
 {
-    ValueTask ProduceAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default);
+    ValueTask SendAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default);
 }
 
-internal class SplitMessageProducer : ISplitMessageProducer
+internal class SplitMessageProducer(Channel<FileSplitJob> channel, ILogger<SplitMessageProducer> logger) : ISplitMessageProducer
 {
 
-    private readonly Channel<FileSplitJob> _channel;
-    private readonly ILogger<SplitMessageProducer> _logger;
+    private readonly Channel<FileSplitJob> _channel = channel;
+    private readonly ILogger<SplitMessageProducer> _logger = logger;
 
-    public SplitMessageProducer(Channel<FileSplitJob> channel, ILogger<SplitMessageProducer> logger)
-    {
-        _channel = channel;
-        _logger = logger;
-    }
-
-    public async ValueTask ProduceAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default)
+    public async ValueTask SendAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default)
     {
         await _channel.Writer.WriteAsync(fileSplitJob, cancellationToken);
         _logger.LogInformation("File split: {Key}, Split type: {SplitType}, Split size: {SplitSize}", fileSplitJob.Key, fileSplitJob.SplitType.ToString(), fileSplitJob.SplitValue.GetValueOrDefault());

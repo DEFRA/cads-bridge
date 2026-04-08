@@ -61,7 +61,7 @@ public class FileImportBackgroundService(
 
                         if(request.SplitType != SplitType.None)
                         {
-                            await _splitMessageProducer.ProduceAsync(new FileSplitJob(
+                            await _splitMessageProducer.SendAsync(new FileSplitJob(
                                 JobId: request.JobId,
                                 Key: request.TargetKey,
                                 TargetFolder: Path.GetFileNameWithoutExtension(request.TargetKey),
