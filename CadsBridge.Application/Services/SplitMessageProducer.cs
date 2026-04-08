@@ -24,6 +24,6 @@ internal class SplitMessageProducer : ISplitMessageProducer
     public async ValueTask ProduceAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default)
     {
         await _channel.Writer.WriteAsync(fileSplitJob, cancellationToken);
-        _logger.LogInformation("File split: {Key}, Split size (Mb): {FileSize}, Lines per file: {LineSize}", fileSplitJob.Key, fileSplitJob.FileSizeInMBytes, fileSplitJob.LinesPerFile);
+        _logger.LogInformation("File split: {Key}, Split type: {SplitType}, Split size: {SplitSize}", fileSplitJob.Key, fileSplitJob.SplitType.ToString(), fileSplitJob.SplitValue.GetValueOrDefault());
     }
 }

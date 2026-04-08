@@ -37,9 +37,9 @@ public static class EndpointsExtensions
                 SourceKey: importFile.sourceKey,
                 TargetKey: importFile.targetKey,
                 Password: importFile.Password,
-                Salt: importFile.Salt, 
-                SplitFileSizeInMBytes: importFile.SplitFileSizeInMBytes,
-                SplitLinesPerFile: importFile.SplitLinesPerFile
+                Salt: importFile.Salt,
+                SplitType: importFile.SplitType,
+                SplitValue: importFile.SplitValue
             ));
         }
 
@@ -71,8 +71,8 @@ public static class EndpointsExtensions
                 JobId: jobId,
                 Key: file.Key,
                 TargetFolder: file.TargetFolder,
-                FileSizeInMBytes: file.FileSizeInMBytes,
-                LinesPerFile: file.LinesPerFile
+                SplitType: file.SplitType,
+                SplitValue: file.SplitValue
             ));
         }
 

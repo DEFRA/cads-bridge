@@ -59,15 +59,14 @@ public class FileImportBackgroundService(
                     {
                         _progressStore.MarkSucceeded(request.JobId, request.SourceKey);
 
-                        if((request.SplitFileSizeInMBytes.GetValueOrDefault() > 0) || 
-                            (request.SplitLinesPerFile.GetValueOrDefault() > 0))
+                        if(request.SplitType != SplitType.None)
                         {
                             await _splitMessageProducer.ProduceAsync(new FileSplitJob(
                                 JobId: request.JobId,
                                 Key: request.TargetKey,
                                 TargetFolder: Path.GetFileNameWithoutExtension(request.TargetKey),
-                                FileSizeInMBytes: request.SplitFileSizeInMBytes,
-                                LinesPerFile: request.SplitLinesPerFile
+                                SplitType: request.SplitType,
+                                SplitValue: request.SplitValue
                             ), cancellationToken);
                         }
                     }
@@ -192,7 +191,7 @@ public class FileImportBackgroundService(
                 using var memoryStream = new MemoryStream();
                 memoryStream.Position = 0;
                 await _aesCryptoTransform.DecryptStreamAsync(encryptedStream, memoryStream, password, salt, cancellationToken: cancellationToken);
-                await PutAsync(targetS3, memoryStream, destinationBucket, destinationKey, cancellationToken);
+                await PutAsync(targetS3, memoryStream, destinationBucket, destinationKey, cancellationToken: cancellationToken);
             }
             else
             {
@@ -202,7 +201,7 @@ public class FileImportBackgroundService(
 
                 var partitionSize = CalculateOptimalPartSize(fileSize);
 
-                await TransferAsync(targetS3, cryptoStream, destinationBucket, destinationKey, partitionSize, cancellationToken);
+                await TransferAsync(targetS3, cryptoStream, destinationBucket, destinationKey, partitionSize, cancellationToken: cancellationToken);
             }
 
             _logger.LogInformation("Successfully decrypted and uploaded {Key}", destinationKey);
@@ -265,6 +264,7 @@ public class FileImportBackgroundService(
         Stream stream, 
         string bucketName, 
         string key, 
+        string contentType = "text/plain",
         CancellationToken cancellationToken = default)
     {
         if (stream == null || stream.Length == 0)
@@ -275,7 +275,7 @@ public class FileImportBackgroundService(
             BucketName = bucketName,
             Key = key,
             InputStream = stream,
-            ContentType = "text/plain" // Adjust MIME type as needed
+            ContentType = contentType // Adjust MIME type as needed
         };
 
         await s3.PutObjectAsync(request, cancellationToken);
@@ -287,20 +287,22 @@ public class FileImportBackgroundService(
         string bucketName, 
         string key, 
         long partSize = MinPartitionSize, // 5 MB minimum for multipart
+        string contentType = "text/plain",
         CancellationToken cancellationToken = default)
     {
         var transferUtility = new TransferUtility(s3);
 
-        var uploadRequest = new TransferUtilityUploadRequest
+        var request = new TransferUtilityUploadRequest
         {
             InputStream = inputStream,
             BucketName = bucketName,
             Key = key,
             StorageClass = S3StorageClass.Standard,
             PartSize = partSize,
-            AutoCloseStream = true
+            AutoCloseStream = true,
+            ContentType = contentType
         };
 
-        await transferUtility.UploadAsync(uploadRequest, cancellationToken);
+        await transferUtility.UploadAsync(request, cancellationToken);
     }
 }

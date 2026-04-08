@@ -1,5 +1,5 @@
 namespace CadsBridge.Application.Models;
 
 public record SplitRequest(
-    List<FileSplitRequest> Files
+    List<SplitRequestItem> Files
 );

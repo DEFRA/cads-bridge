@@ -6,6 +6,5 @@ public record FileImportJob(
     string TargetKey,
     string Password,
     string Salt,
-    int? SplitFileSizeInMBytes,
-    int? SplitLinesPerFile
-);
+    SplitType SplitType,
+    int? SplitValue);

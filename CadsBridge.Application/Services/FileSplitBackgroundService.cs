@@ -104,18 +104,23 @@ public class FileSplitBackgroundService(
                     "S3 splitting copy of {Key} from {SourceBucket}, attempt {Attempt}",
                     request.Key, internalS3Info.BucketName, attempt);
 
+                if (!request.SplitValue.HasValue)
+                {
+                    throw new ArgumentException("Split value must be specified for splitting.");
+                }
 
-                if (request.LinesPerFile.HasValue)
+                switch (request.SplitType)
                 {
-                    await SplitFileByLineAsync(internalS3, internalS3Info.BucketName, request.Key, request.TargetFolder, request.LinesPerFile.Value, cancellationToken);
-                }
-                else if (request.FileSizeInMBytes.HasValue)
-                {
-                    await SplitFileBySizeAsync(internalS3, internalS3Info.BucketName, request.Key, request.TargetFolder, request.FileSizeInMBytes.Value, cancellationToken);
-                }
-                else
-                {
-                    throw new ArgumentException("Either LinesPerFile or FileSizeInMBytes must be specified for splitting.");
+                    case SplitType.ByLines:
+                        await SplitFileByLineAsync(internalS3, internalS3Info.BucketName, request.Key, request.TargetFolder, request.SplitValue.Value, cancellationToken);
+                        break;
+
+                    case SplitType.BySize:
+                        await SplitFileBySizeAsync(internalS3, internalS3Info.BucketName, request.Key, request.TargetFolder, request.SplitValue.Value, cancellationToken);
+                        break;
+
+                    default:
+                        throw new ArgumentException("Invalid SplitType specified");
                 }
             
                 _logger.LogInformation(
@@ -288,7 +293,15 @@ public class FileSplitBackgroundService(
     {
         await using var inputStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
-        return await UploadChunkAsync(s3, bucketName, destinationPrefix, sourceKey, chunkNumber, inputStream, contentType, cancellationToken);
+        return await UploadChunkAsync(
+            s3, 
+            bucketName, 
+            destinationPrefix, 
+            sourceKey, 
+            chunkNumber, 
+            inputStream, 
+            contentType, 
+            cancellationToken);
     }
 
     private static async Task<string> UploadChunkAsync(

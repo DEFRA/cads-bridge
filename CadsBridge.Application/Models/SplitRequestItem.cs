@@ -1,9 +1,9 @@
 namespace CadsBridge.Application.Models;
 
-public record FileSplitRequest(
+public record SplitRequestItem(
     string JobId,
     string Key,
     string TargetFolder,
-    int? FileSizeInMBytes,
-    int? LinesPerFile
+    SplitType SplitType,
+    int? SplitValue
 );
