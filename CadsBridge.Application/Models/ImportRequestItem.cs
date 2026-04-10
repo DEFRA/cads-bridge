@@ -1,10 +1,11 @@
 namespace CadsBridge.Application.Models;
 
-public record FileImportJob(
+public record ImportRequestItem(
     string JobId,
-    string SourceKey,
-    string TargetKey,
+    string sourceKey,
+    string targetKey,
     string Password,
     string Salt,
     SplitType SplitType,
-    int? SplitValue);
+    int? SplitValue
+);

@@ -19,10 +19,20 @@ public class StorageS3Configurator(StorageConfiguration config) : IConfigureS3Cl
             _config.Internal.BucketName,
             amazonConfig);
 
-        factory.AddClientWithCredentials<ExternalStorageClient>(
-               _config.External.BucketName,
-               _config.External.AccessKeySecretName,
-               _config.External.SecretKeySecretName,
-               amazonConfig);
+        if (!string.IsNullOrEmpty(_config.External.AccessKeySecretName) &&
+            !string.IsNullOrEmpty(_config.External.SecretKeySecretName))
+        {
+            factory.AddClientWithCredentials<ExternalStorageClient>(
+                   _config.External.BucketName,
+                   _config.External.AccessKeySecretName,
+                   _config.External.SecretKeySecretName,
+                   amazonConfig);
+        }
+        else
+        {
+            factory.AddClient<ExternalStorageClient>(
+                _config.External.BucketName,
+                amazonConfig);
+        }
     }
 }
