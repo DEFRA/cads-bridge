@@ -244,6 +244,7 @@ public class FileSplitBackgroundService(
         var lineCount = 0;
         var chunkBuilder = new StringBuilder();
         chunkBuilder.AppendLine(header);
+        chunkBuilder.AppendLine(columns);
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
