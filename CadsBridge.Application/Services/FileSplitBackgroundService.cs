@@ -226,8 +226,16 @@ public class FileSplitBackgroundService(
 
         using var reader = new StreamReader(response.ResponseStream);
 
+        // read the file header information, should be the first line in the file.
         var header = await reader.ReadLineAsync(cancellationToken);
         if (header is null)
+        {
+            return;
+        }
+
+        // read the column definitions, should be the second line in the file.
+        var columns = await reader.ReadLineAsync(cancellationToken);
+        if (columns is null)
         {
             return;
         }
@@ -263,6 +271,7 @@ public class FileSplitBackgroundService(
                 lineCount = 0;
                 chunkBuilder.Clear();
                 chunkBuilder.AppendLine(header);
+                chunkBuilder.AppendLine(columns);
             }
         }
 
