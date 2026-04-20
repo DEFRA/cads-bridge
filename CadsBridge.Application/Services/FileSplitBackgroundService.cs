@@ -250,6 +250,7 @@ public class FileSplitBackgroundService(
         var chunkNumber = 1;
         var lineCount = 0;
         var chunkBuilder = new StringBuilder();
+   
         chunkBuilder.AppendLine(columns);
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
@@ -277,6 +278,7 @@ public class FileSplitBackgroundService(
                 chunkNumber++;
                 lineCount = 0;
                 chunkBuilder.Clear();
+
                 chunkBuilder.AppendLine(columns);
             }
         }
