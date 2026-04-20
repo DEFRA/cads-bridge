@@ -1,8 +1,8 @@
 using Amazon;
 using Amazon.S3;
-using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Core.Storage.Factories;
 using CadsBridge.Infrastructure.Storage.Configuration;
-using CadsBridge.Infrastructure.Storage.Factories;
 using CadsBridge.Infrastructure.Storage.Health;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

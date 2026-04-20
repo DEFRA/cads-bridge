@@ -1,7 +1,7 @@
 using Amazon.S3;
-using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Core.Storage.Abstractions;
 
-namespace CadsBridge.Infrastructure.Storage.Factories;
+namespace CadsBridge.Core.Storage.Factories;
 
 public class S3ClientFactory : IS3ClientFactory
 {

@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CadsBridge.Infrastructure.Crypto;
+namespace CadsBridge.Core.Crypto;
 
 public class AesCryptoTransform : IAesCryptoTransform
 {

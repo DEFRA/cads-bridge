@@ -1,4 +1,4 @@
-namespace CadsBridge.Infrastructure.Storage.Abstractions;
+namespace CadsBridge.Core.Storage.Abstractions;
 
 public interface IConfigureS3Clients
 {

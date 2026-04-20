@@ -1,4 +1,4 @@
-namespace CadsBridge.Infrastructure.Crypto;
+namespace CadsBridge.Core.Crypto;
 
 public delegate void ProgressCallback(int progressPercentage, string status);
 

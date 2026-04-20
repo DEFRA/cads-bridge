@@ -1,7 +1,7 @@
 using FluentAssertions;
-using CadsBridge.Infrastructure.Crypto;
 using System.Text;
 using Xunit;
+using CadsBridge.Core.Crypto;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Crypto;
 
@@ -30,7 +30,7 @@ public class AesCryptoTransformTests
         using var outputStream = new MemoryStream();
 
         // Act
-        await _cryptoTransform.EncryptStreamAsync(inputStream, outputStream, TestPassword, TestSalt);
+        await _cryptoTransform.EncryptStreamAsync(inputStream, outputStream, TestPassword, TestSalt, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         outputStream.Length.Should().BeGreaterThan(0);
@@ -47,9 +47,9 @@ public class AesCryptoTransformTests
         using var decryptedStream = new MemoryStream();
 
         // Act
-        await _cryptoTransform.EncryptStreamAsync(inputStream, encryptedStream, TestPassword, TestSalt);
+        await _cryptoTransform.EncryptStreamAsync(inputStream, encryptedStream, TestPassword, TestSalt, cancellationToken: TestContext.Current.CancellationToken);
         encryptedStream.Position = 0;
-        await _cryptoTransform.DecryptStreamAsync(encryptedStream, decryptedStream, TestPassword, TestSalt);
+        await _cryptoTransform.DecryptStreamAsync(encryptedStream, decryptedStream, TestPassword, TestSalt, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var decryptedData = Encoding.UTF8.GetString(decryptedStream.ToArray());
@@ -67,9 +67,9 @@ public class AesCryptoTransformTests
         using var decryptedStream = new MemoryStream();
 
         // Act
-        await _cryptoTransform.EncryptStreamAsync(inputStream, encryptedStream, TestPassword, emptySalt);
+        await _cryptoTransform.EncryptStreamAsync(inputStream, encryptedStream, TestPassword, emptySalt, cancellationToken: TestContext.Current.CancellationToken);
         encryptedStream.Position = 0;
-        await _cryptoTransform.DecryptStreamAsync(encryptedStream, decryptedStream, TestPassword, emptySalt);
+        await _cryptoTransform.DecryptStreamAsync(encryptedStream, decryptedStream, TestPassword, emptySalt, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var decryptedData = Encoding.UTF8.GetString(decryptedStream.ToArray());
@@ -89,14 +89,14 @@ public class AesCryptoTransformTests
         using var decryptedStream2 = new MemoryStream();
 
         // Act - Test with null string salt
-        await _cryptoTransform.EncryptStreamAsync(inputStream1, encryptedStream1, TestPassword, (string)null!);
+        await _cryptoTransform.EncryptStreamAsync(inputStream1, encryptedStream1, TestPassword, (string)null!, cancellationToken: TestContext.Current.CancellationToken);
         encryptedStream1.Position = 0;
-        await _cryptoTransform.DecryptStreamAsync(encryptedStream1, decryptedStream1, TestPassword, (string)null!);
+        await _cryptoTransform.DecryptStreamAsync(encryptedStream1, decryptedStream1, TestPassword, (string)null!, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Test with empty string salt
-        await _cryptoTransform.EncryptStreamAsync(inputStream2, encryptedStream2, TestPassword, "");
+        await _cryptoTransform.EncryptStreamAsync(inputStream2, encryptedStream2, TestPassword, "", cancellationToken: TestContext.Current.CancellationToken);
         encryptedStream2.Position = 0;
-        await _cryptoTransform.DecryptStreamAsync(encryptedStream2, decryptedStream2, TestPassword, "");
+        await _cryptoTransform.DecryptStreamAsync(encryptedStream2, decryptedStream2, TestPassword, "", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var decryptedData1 = Encoding.UTF8.GetString(decryptedStream1.ToArray());
@@ -152,13 +152,7 @@ public class AesCryptoTransformTests
         var progressReports = new List<(int percentage, string status)>();
 
         // Act
-        await _cryptoTransform.EncryptStreamAsync(
-            inputStream,
-            outputStream,
-            TestPassword,
-            TestSalt,
-            totalBytes: null, // No total bytes provided
-            (percentage, status) => progressReports.Add((percentage, status)));
+        await _cryptoTransform.EncryptStreamAsync(inputStream, outputStream, TestPassword, TestSalt, totalBytes: null, (percentage, status) => progressReports.Add((percentage, status)), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         progressReports.Should().NotBeEmpty();
