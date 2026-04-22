@@ -59,7 +59,7 @@ public class FileSplitBackgroundService(
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to splt file {Key}", request.Key);
+                    _logger.LogError(ex, "Failed to split file {Key}", request.Key);
                     _progressStore.MarkFailed(request.JobId, request.Key, ex.Message);
                 }
                 finally

@@ -103,7 +103,6 @@ public class FileImportBackgroundService(
         var internalS3Info = _s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var internalS3 = internalS3Info.Client;
 
-
         while (true)
         {
             if (cancellationToken.IsCancellationRequested)
