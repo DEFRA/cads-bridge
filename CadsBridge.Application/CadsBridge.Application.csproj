@@ -17,7 +17,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
-      <ProjectReference Include="..\CadsBridge.Infrastructure\CadsBridge.Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

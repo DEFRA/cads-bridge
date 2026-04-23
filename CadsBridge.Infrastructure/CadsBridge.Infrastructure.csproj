@@ -17,7 +17,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\CadsBridge.Application\CadsBridge.Application.csproj" />
       <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Storage\Factories\" />
     </ItemGroup>
 
 </Project>

@@ -3,9 +3,9 @@ using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
-using CadsBridge.Infrastructure.Crypto;
-using CadsBridge.Infrastructure.Storage.Abstractions;
-using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Core.Crypto;
+using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Core.Storage.Clients;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -102,7 +102,6 @@ public class FileImportBackgroundService(
 
         var internalS3Info = _s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var internalS3 = internalS3Info.Client;
-
 
         while (true)
         {

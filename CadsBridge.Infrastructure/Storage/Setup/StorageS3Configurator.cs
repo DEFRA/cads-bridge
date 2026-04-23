@@ -1,6 +1,6 @@
 using Amazon.S3;
-using CadsBridge.Infrastructure.Storage.Abstractions;
-using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

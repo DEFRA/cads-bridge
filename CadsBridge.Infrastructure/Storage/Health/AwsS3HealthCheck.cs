@@ -1,6 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
-using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Core.Storage.Abstractions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 
