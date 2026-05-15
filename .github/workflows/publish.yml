@@ -38,6 +38,11 @@ jobs:
           cp -r cads-data-seed/sql/* sql/
           rm -rf cads-data-seed
 
+      - name: List SQL files in build context
+        run: |
+          echo "SQL files in build context:"
+          ls -R sql
+
       - name: Build and Publish
         uses: DEFRA/cdp-build-action/build@main
         with:
