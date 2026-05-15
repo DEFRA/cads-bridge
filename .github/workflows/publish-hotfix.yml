@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0 # Depth 0 required for branch-based versioning
 
-      -name: Check out cads data seed
+      - name: Check out cads data seed
         uses: actions/checkout@v4
         with:
           repository: DEFRA/cads-data-seed
