@@ -13,15 +13,12 @@ RUN apt update && \
 
 # Build stage image
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-
 WORKDIR /src
-
 COPY . .
 WORKDIR "/src"
 
 FROM build AS publish
 RUN dotnet publish CadsBridge -c Release -o /app/publish /p:UseAppHost=false
-
 
 ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
@@ -29,5 +26,9 @@ ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Copy SQL files baked in at build time
+COPY sql/ /app/sql/
+
 EXPOSE 8085
 ENTRYPOINT ["dotnet", "CadsBridge.dll"]
