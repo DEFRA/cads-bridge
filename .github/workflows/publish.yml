@@ -30,12 +30,12 @@ jobs:
           repository: DEFRA/cads-data-seed
           path: cads-data-seed
           ref: main
-          token: ${{ secrets.CADS_DATA_SEED_TOKEN }}
+          token: ${{ secrets.CADS_DATA_SEED_PAT_TOKEN }}
 
       - name: Copy SQL files into build context
         run: |
           mkdir -p sql
-          cp -r cads-data-seed/sql/v1/* sql/
+          cp -r cads-data-seed/sql/* sql/
           rm -rf cads-data-seed
 
       - name: Build and Publish
