@@ -16,7 +16,8 @@ services:
     ports:
       - "5550"
     volumes:
-      # Mac-specific paths for user secrets and HTTPS certificates
+      # Mac-specific paths for seeding data, user secrets and HTTPS certificates
+      - ../cads-data-seed/sql:/app/sql:ro
       - ~/.microsoft/usersecrets:/home/app/.microsoft/usersecrets:ro
       - ~/.microsoft/usersecrets:/root/.microsoft/usersecrets:ro
       - ~/.aspnet/https:/home/app/.aspnet/https:ro
