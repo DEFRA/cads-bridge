@@ -46,9 +46,6 @@ jobs:
         uses: DEFRA/cdp-build-action/build-hotfix@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify SQL files in image
-        run: docker run --rm cads_bridge ls /app/sql/
     ## SonarCloud
     ## Uncomment to unable SonarCloud scan
     ## Requires project to be set up in SonarCloud
