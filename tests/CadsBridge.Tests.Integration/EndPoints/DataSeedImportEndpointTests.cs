@@ -4,6 +4,7 @@ using FluentAssertions;
 
 namespace CadsBridge.Tests.Infrastructure.Endpoints;
 
+[Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class DataSeedImportEndpointTests
 {
     [Fact]
