@@ -59,7 +59,7 @@ public class FileImportBackgroundService(
                     {
                         _progressStore.MarkSucceeded(request.JobId, request.SourceKey);
 
-                        if(request.SplitType != SplitType.None)
+                        if (request.SplitType != SplitType.None)
                         {
                             await _splitMessageProducer.SendAsync(new FileSplitJob(
                                 JobId: request.JobId,
@@ -132,7 +132,7 @@ public class FileImportBackgroundService(
                     internalS3Info.BucketName,
                     request.TargetKey,
                     request.Password,
-                    request.Salt, 
+                    request.Salt,
                     cancellationToken);
 
                 _logger.LogInformation(
@@ -259,10 +259,10 @@ public class FileImportBackgroundService(
     }
 
     private static async Task PutAsync(
-        IAmazonS3 s3, 
-        Stream stream, 
-        string bucketName, 
-        string key, 
+        IAmazonS3 s3,
+        Stream stream,
+        string bucketName,
+        string key,
         string contentType = "text/plain",
         CancellationToken cancellationToken = default)
     {
@@ -281,10 +281,10 @@ public class FileImportBackgroundService(
     }
 
     private static async Task TransferAsync(
-        IAmazonS3 s3, 
-        Stream inputStream, 
-        string bucketName, 
-        string key, 
+        IAmazonS3 s3,
+        Stream inputStream,
+        string bucketName,
+        string key,
         long partSize = MinPartitionSize, // 5 MB minimum for multipart
         string contentType = "text/plain",
         CancellationToken cancellationToken = default)
