@@ -20,10 +20,10 @@ public class DataSeedImportEndpointTests
         await using var factory = CreateFactory(dataSeedingEnabled: false);
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync("data-seed/import");
+        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         body.Should().Contain("Data seeding import is disabled.");
     }
 
@@ -37,10 +37,10 @@ public class DataSeedImportEndpointTests
 
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync("data-seed/import");
+        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         body.Should().Contain("No data seed files found.");
     }
 
@@ -57,10 +57,10 @@ public class DataSeedImportEndpointTests
 
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync("data-seed/import");
+        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         using var doc = JsonDocument.Parse(body);
 
         doc.RootElement.GetProperty("fileCount").GetInt32().Should().Be(2);
@@ -83,7 +83,7 @@ public class DataSeedImportEndpointTests
 
         var client = factory.CreateClient();
 
-        await client.GetAsync("data-seed/import");
+        await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         using var scope = factory.Services.CreateScope();
         var channel = scope.ServiceProvider
