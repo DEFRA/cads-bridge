@@ -74,7 +74,7 @@ public class FileSplitBackgroundService(
         await Task.WhenAll(runningTasks);
     }
 
-    private async Task<bool> SplitAsync(FileSplitJob request, 
+    private async Task<bool> SplitAsync(FileSplitJob request,
         CancellationToken cancellationToken = default)
     {
         var attempt = 0;
@@ -122,7 +122,7 @@ public class FileSplitBackgroundService(
                     default:
                         throw new ArgumentException("Invalid SplitType specified");
                 }
-            
+
                 _logger.LogInformation(
                     "S3 file split complete: {SourceBucket}/{SourceKey}",
                     internalS3Info.BucketName, request.Key);
@@ -146,15 +146,15 @@ public class FileSplitBackgroundService(
     }
 
     private async Task SplitFileBySizeAsync(
-        IAmazonS3 s3, 
-        string bucketName, 
+        IAmazonS3 s3,
+        string bucketName,
         string sourceKey,
         string destinationPrefix,
-        int chunkSizeMB, 
+        int chunkSizeMB,
         CancellationToken cancellationToken = default)
     {
         var chunkSizeBytes = chunkSizeMB * 1024L * 1024L;
-        
+
         // Get object metadata to know file size
         var metadata = await s3.GetObjectMetadataAsync(bucketName, sourceKey, cancellationToken);
         var totalSize = metadata.ContentLength;
@@ -250,7 +250,7 @@ public class FileSplitBackgroundService(
         var chunkNumber = 1;
         var lineCount = 0;
         var chunkBuilder = new StringBuilder();
-   
+
         chunkBuilder.AppendLine(columns);
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
@@ -324,13 +324,13 @@ public class FileSplitBackgroundService(
         await using var inputStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
         return await UploadChunkAsync(
-            s3, 
-            bucketName, 
-            destinationPrefix, 
-            sourceKey, 
-            chunkNumber, 
-            inputStream, 
-            contentType, 
+            s3,
+            bucketName,
+            destinationPrefix,
+            sourceKey,
+            chunkNumber,
+            inputStream,
+            contentType,
             cancellationToken);
     }
 
@@ -340,7 +340,7 @@ public class FileSplitBackgroundService(
         string destinationPrefix,
         string sourceKey,
         int chunkNumber,
-        MemoryStream inputStream, 
+        MemoryStream inputStream,
         string contentType = "text/csv",
         CancellationToken cancellationToken = default)
     {

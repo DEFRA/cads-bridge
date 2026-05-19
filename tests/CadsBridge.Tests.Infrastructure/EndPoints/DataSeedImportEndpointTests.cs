@@ -15,10 +15,10 @@ public class DataSeedImportEndpointTests
         });
         await fixture.InitializeAsync();
 
-        var response = await fixture.HttpClient.GetAsync("data-seed/import");
+        var response = await fixture.HttpClient.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         body.Should().Contain("Data seeding import is disabled.");
     }
 
@@ -31,10 +31,10 @@ public class DataSeedImportEndpointTests
         });
         await fixture.InitializeAsync();
 
-        var response = await fixture.HttpClient.GetAsync("data-seed/import");
+        var response = await fixture.HttpClient.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         body.Should().Contain("No data seed files found.");
     }
 }

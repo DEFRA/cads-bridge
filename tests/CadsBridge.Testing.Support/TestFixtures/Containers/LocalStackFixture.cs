@@ -74,7 +74,7 @@ public class LocalStackFixture : IAsyncLifetime
         // Synchronous disposals wrapped safely
         try { S3Client?.Dispose(); }
         catch (Exception ex) { error ??= ex; }
-        
+
         // Async disposal using the same Safe pattern
         await Safe(() => LocalStackContainer!.DisposeAsync());
 

@@ -40,13 +40,12 @@ public abstract class WebAppFactoryBase<TStart>(
         {
             OverrideAmazonS3(services);
         });
-        
+
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(AmazonS3Mock.Object);
             services.RemoveAll<IHostedService>();
         });
-        
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
@@ -61,7 +60,7 @@ public abstract class WebAppFactoryBase<TStart>(
 
         return base.CreateHost(builder);
     }
-    
+
     private static void SetTestEnvironmentVariables()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
