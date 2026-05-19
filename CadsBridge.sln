@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Testing.Support"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Tests.Component", "tests\CadsBridge.Tests.Component\CadsBridge.Tests.Component.csproj", "{FC9B6183-4F29-4229-A519-358F371DFC19}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Tests.Infrastructure", "tests\CadsBridge.Tests.Infrastructure\CadsBridge.Tests.Infrastructure.csproj", "{C8AFD891-2A18-4860-9E40-B26216FCDAE1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{FC9B6183-4F29-4229-A519-358F371DFC19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FC9B6183-4F29-4229-A519-358F371DFC19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FC9B6183-4F29-4229-A519-358F371DFC19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8AFD891-2A18-4860-9E40-B26216FCDAE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8AFD891-2A18-4860-9E40-B26216FCDAE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8AFD891-2A18-4860-9E40-B26216FCDAE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8AFD891-2A18-4860-9E40-B26216FCDAE1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,5 +73,6 @@ Global
 		{5452AB6F-2E44-4D49-A9D1-F85921DD5830} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 		{D9417C25-43D2-4F5B-AE08-3CBF761FEBD3} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 		{FC9B6183-4F29-4229-A519-358F371DFC19} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
+		{C8AFD891-2A18-4860-9E40-B26216FCDAE1} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 	EndGlobalSection
 EndGlobal
