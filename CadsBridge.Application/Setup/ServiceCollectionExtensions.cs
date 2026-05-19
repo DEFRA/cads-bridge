@@ -16,15 +16,16 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<Channel<FileImportJob>>(Channel.CreateUnbounded<FileImportJob>(new UnboundedChannelOptions() { SingleReader = false }));
         services.AddSingleton<Channel<FileSplitJob>>(Channel.CreateUnbounded<FileSplitJob>(new UnboundedChannelOptions() { SingleReader = false }));        
+        services.AddSingleton<Channel<DataSeedImportJob>>(Channel.CreateUnbounded<DataSeedImportJob>(new UnboundedChannelOptions() { SingleReader = false }));        
         services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
-        services.AddSingleton<IS3ClientFactory, S3ClientFactory>();
 
         services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 
         services.AddHostedService<FileImportBackgroundService>();
         services.AddHostedService<FileSplitBackgroundService>();
+        services.AddHostedService<DataSeedImportService>();
 
         return services;
     }

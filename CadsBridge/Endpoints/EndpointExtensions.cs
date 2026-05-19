@@ -3,6 +3,7 @@ using CadsBridge.Application.Persistance;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
+using CadsBridge.Core.DataSeed.Abstractions;
 
 namespace CadsBridge.Endpoints;
 
@@ -22,6 +23,33 @@ public static class EndpointsExtensions
         app.MapGet("split/{jobId}/progress", GetSplitProgress);
 
         app.MapGet("split/progress", GetSplitProgress);
+
+        app.MapGet("data-seed/import", GetDataSeed);
+    }
+
+    private static async Task<IResult> GetDataSeed(Channel<DataSeedImportJob> channel, IConfiguration configuration, IDataSeedFileLoader dataSeedFileLoader)
+    {
+        var dataSeedingImportEnabled = configuration.GetValue<bool>("DataSeedingImportEnabled");
+        if (!dataSeedingImportEnabled)
+        {
+            return Results.Ok("Data seeding import is disabled.");
+        }
+        var files = dataSeedFileLoader.GetFiles();
+        if (files.Count == 0)
+        {
+            return Results.Ok("No data seed files found.");
+        }
+
+        foreach (var file in files)
+        {
+            var jobId = Guid.NewGuid().ToString("N");
+            await channel.Writer.WriteAsync(new DataSeedImportJob(
+                JobId: jobId,
+                FileName: file.FilePath,
+                TargetKey: $"data-seed/{file.FileName}"
+            ));
+        }
+        return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
     private static async Task<IResult> Import([FromBody] ImportRequest request, Channel<FileImportJob> channel, IImportJobProgressStore progressStore)
@@ -90,7 +118,7 @@ public static class EndpointsExtensions
             return Results.Ok(job);
         }
 
-        
+
         return Results.Ok(progressStore.GetJobs());
     }
 }
