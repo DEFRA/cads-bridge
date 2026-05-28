@@ -60,7 +60,7 @@ public class AesCryptoTransform : IAesCryptoTransform
         await ProcessStreamAsync(cryptoStream, outputStream, totalBytes, progressCallback, "Decrypting", cancellationToken);
     }
 
-    private static byte[] DeriveKey(string password, byte[] salt)
+    public static byte[] DeriveKey(string password, byte[] salt)
     {
         var actualSalt = salt;
         if (salt.Length == 0)
@@ -72,9 +72,7 @@ public class AesCryptoTransform : IAesCryptoTransform
             actualSalt = new byte[8];
             Array.Copy(salt, actualSalt, salt.Length);
         }
-
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, actualSalt, PbeKeySpecIterationsDefault, HashAlgorithmName.SHA1);
-        return pbkdf2.GetBytes(PbeKeySpecKeyLenDefault / 8);
+        return Rfc2898DeriveBytes.Pbkdf2(password, actualSalt, PbeKeySpecIterationsDefault, HashAlgorithmName.SHA1, PbeKeySpecKeyLenDefault / 8);
     }
 
     public static async Task ProcessStreamAsync(Stream inputStream,

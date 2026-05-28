@@ -18,8 +18,7 @@ public class ApiContainerFixture(IDictionary<string, string>? extraEnvironment =
         await LocalStackFixture.InitializeAsync();
         DockerNetworkHelper.EnsureNetworkExists(TestContainerConstants.NetworkName);
 
-        var builder = new ContainerBuilder()
-            .WithImage("cads_bridge:latest")
+        var builder = new ContainerBuilder("cads_bridge:latest")
             .WithImagePullPolicy(PullPolicy.Never)
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Test")
             .WithEnvironment("ASPNETCORE_URLS", "http://0.0.0.0:5550")   // ✅ HTTP only - no HTTPS
