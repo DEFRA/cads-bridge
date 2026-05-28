@@ -175,7 +175,7 @@ public class FileSplitBackgroundService(
         var chunkStream = new MemoryStream();
         var chunkWriter = new StreamWriter(chunkStream, Encoding.UTF8);
 
-        string line;
+        string? line = null;
 
         while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
         {
