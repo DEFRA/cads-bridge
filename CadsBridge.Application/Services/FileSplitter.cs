@@ -52,15 +52,15 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
             // If adding this line exceeds chunk size, upload current chunk and start a new one
             if (bytesInChunk + lineBytes.Length > chunkSizeBytes)
             {
+                int chunkNumber1 = chunkNumber++;
+                string fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber1:D4}.csv";
                 await UploadChunkAsync(
                     s3,
                     bucketName,
-                    destinationPrefix,
-                    sourceKey,
-                    chunkNumber++,
                     chunkStream,
+                    string.IsNullOrEmpty(destinationPrefix) ? fileName : $"{destinationPrefix.TrimEnd('/')}/{fileName}",
                     cancellationToken: cancellationToken);
-                chunkStream.Dispose();
+                await chunkStream.DisposeAsync();
 
                 chunkStream = new MemoryStream();
                 chunkWriter = new StreamWriter(chunkStream, Encoding.UTF8);
@@ -75,13 +75,12 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         // Upload the last chunk if it has data
         if (bytesInChunk > 0)
         {
+            string fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
             await UploadChunkAsync(
                 s3,
                 bucketName,
-                destinationPrefix,
-                sourceKey,
-                chunkNumber,
                 chunkStream,
+                string.IsNullOrEmpty(destinationPrefix) ? fileName : $"{destinationPrefix.TrimEnd('/')}/{fileName}",
                 cancellationToken: cancellationToken);
         }
     }
@@ -143,10 +142,8 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
                 await UploadChunkAsync(
                     s3,
                     bucketName,
-                    destinationPrefix,
-                    sourceKey,
-                    chunkNumber,
                     chunkBuilder.ToString(),
+                    FormatKeyFromFilename(destinationPrefix, sourceKey, chunkNumber),
                     cancellationToken: cancellationToken);
 
                 chunkNumber++;
@@ -162,14 +159,10 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
             await UploadChunkAsync(
                 s3,
                 bucketName,
-                destinationPrefix,
-                sourceKey,
-                chunkNumber,
                 chunkBuilder.ToString(),
+                FormatKeyFromFilename(destinationPrefix, sourceKey, chunkNumber),
                 cancellationToken: cancellationToken);
         }
-
-        return;
     }
 
     private static string ProcessColumnDefinitions(string columns, char delimiter)
@@ -185,47 +178,33 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         return string.Join(delimiter, columnList);
     }
 
-    private static async Task<string> UploadChunkAsync(
+    private static async Task UploadChunkAsync(
         IAmazonS3 s3,
         string bucketName,
-        string destinationPrefix,
-        string sourceKey,
-        int chunkNumber,
         string content,
+        string key,
         string contentType = "text/csv",
         CancellationToken cancellationToken = default)
     {
         await using var inputStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
-        return await UploadChunkAsync(
+        await UploadChunkAsync(
             s3,
             bucketName,
-            destinationPrefix,
-            sourceKey,
-            chunkNumber,
             inputStream,
+            key,
             contentType,
             cancellationToken);
     }
 
-    private static async Task<string> UploadChunkAsync(
+    private static async Task UploadChunkAsync(
         IAmazonS3 s3,
         string bucketName,
-        string destinationPrefix,
-        string sourceKey,
-        int chunkNumber,
         MemoryStream inputStream,
+        string key,
         string contentType = "text/csv",
         CancellationToken cancellationToken = default)
     {
-        var fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
-        var key = fileName;
-
-        if (!string.IsNullOrEmpty(destinationPrefix))
-        {
-            key = $"{destinationPrefix.TrimEnd('/')}/{fileName}";
-        }
-
         inputStream.Position = 0; // Reset stream position before upload
 
         await s3.PutObjectAsync(
@@ -237,7 +216,11 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
                 ContentType = contentType
             },
             cancellationToken);
+    }
 
-        return key;
+    private static string FormatKeyFromFilename(string destinationPrefix, string sourceKey, int chunkNumber)
+    {
+        string fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
+        return string.IsNullOrEmpty(destinationPrefix) ? fileName : $"{destinationPrefix.TrimEnd('/')}/{fileName}";
     }
 }
