@@ -38,7 +38,8 @@ public class FileSplitterTests
             bucketName,
             sourceKey,
             destinationPrefix,
-            linesPerChunk);
+            linesPerChunk,
+            TestContext.Current.CancellationToken);
 
         // Assert
         uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
@@ -99,7 +100,8 @@ public class FileSplitterTests
             bucketName,
             sourceKey,
             destinationPrefix,
-            linesPerChunk);
+            linesPerChunk,
+            TestContext.Current.CancellationToken);
 
         // Assert
         uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
@@ -137,7 +139,8 @@ public class FileSplitterTests
             "test-bucket",
             "source-file.csv",
             "chunks",
-            linesPerChunk: 2);
+            linesPerChunk: 2,
+            TestContext.Current.CancellationToken);
 
         // Assert
         s3.Verify(client => client.PutObjectAsync(

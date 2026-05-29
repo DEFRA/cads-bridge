@@ -8,7 +8,7 @@ namespace CadsBridge.Application.Services;
 public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
 {
     private readonly ILogger<FileSplitter> _logger = logger;
-    
+
     public async Task SplitFileBySizeAsync(
         IAmazonS3 s3,
         string bucketName,
@@ -231,7 +231,10 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         await s3.PutObjectAsync(
             new PutObjectRequest
             {
-                BucketName = bucketName, Key = key, InputStream = inputStream, ContentType = contentType
+                BucketName = bucketName,
+                Key = key,
+                InputStream = inputStream,
+                ContentType = contentType
             },
             cancellationToken);
 
