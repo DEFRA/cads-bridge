@@ -61,9 +61,9 @@ jobs:
           recreate: true
           path: code-coverage-results.md
 
-  #sonarcloud-scan:
-  #  name: CDP SonarCloud Scan
-  #  uses: ./.github/workflows/sonarcloud.yml
-  #  needs: pr-validator
-  #  secrets:
-  #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  sonarcloud-scan:
+    name: CDP SonarCloud Scan
+    uses: ./.github/workflows/sonarcloud.yml
+    needs: pr-validator
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
