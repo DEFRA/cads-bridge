@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
+        services.AddTransient<IS3FileSplitterService, S3FileSplitterService>();
 
         services.AddHostedService<FileImportBackgroundService>();
         services.AddHostedService<FileSplitBackgroundService>();

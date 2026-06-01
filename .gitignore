@@ -270,3 +270,5 @@ library.db
 .env
 /localstack_data/cache
 !.gitkeep
+coverage/*
+coverage-report/*
