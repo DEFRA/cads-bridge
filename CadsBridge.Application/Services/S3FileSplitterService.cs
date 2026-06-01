@@ -2,6 +2,7 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
@@ -35,9 +36,9 @@ public class S3FileSplitterService(
             }
 
             attempt++;
-            if (attempt >= _maxRetries)
+            if (attempt > _maxRetries)
             {
-                throw new Exception($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {request.Key}");
+                throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {request.Key}");
             }
 
             try
@@ -69,6 +70,17 @@ public class S3FileSplitterService(
                     delay.TotalMilliseconds);
 
                 await Task.Delay(delay, cancellationToken);
+            }
+            catch (Exception ex) when (attempt >= _maxRetries)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Error splitting {Key}, attempt {Attempt}/{Max}. Giving up.",
+                    request.Key,
+                    attempt,
+                    _maxRetries);
+
+                return false;
             }
         }
     }
@@ -269,7 +281,7 @@ public class S3FileSplitterService(
         var columnList = columns.Split(delimiter).ToList();
 
         // Remove the first column which is assumed to be a redundant 'RECORD_TYPE' column
-        columnList.Remove(columnList.First());
+        columnList.RemoveAt(0);
 
         return string.Join(delimiter, columnList);
     }

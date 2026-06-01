@@ -17,11 +17,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Channel<DataSeedImportJob>>(Channel.CreateUnbounded<DataSeedImportJob>(new UnboundedChannelOptions() { SingleReader = false }));
         services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
-        
+
         services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
         services.AddTransient<IS3FileSplitterService, S3FileSplitterService>();
-        
+
         services.AddHostedService<FileImportBackgroundService>();
         services.AddHostedService<FileSplitBackgroundService>();
         services.AddHostedService<DataSeedImportService>();
