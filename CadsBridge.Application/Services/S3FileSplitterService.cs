@@ -1,15 +1,111 @@
 using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.Models;
+using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Core.Storage.Clients;
+using CadsBridge.Core.Storage.Factories;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Application.Services;
 
-public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
+public class S3FileSplitterService(
+    IS3ClientFactory s3ClientFactory,
+    ILogger<S3FileSplitterService> logger)
+    : IS3FileSplitterService
 {
-    private readonly ILogger<FileSplitter> _logger = logger;
+    private readonly int _maxRetries = 3;
+    private readonly int _delayBaseMs = 500;
 
-    public async Task SplitFileBySizeAsync(
+    public async Task<bool> ExecuteAsync(FileSplitJob request, CancellationToken cancellationToken)
+    {
+        if (!request.SplitValue.HasValue)
+        {
+            throw new ArgumentException("Split value must be specified for splitting.");
+        }
+
+        var attempt = 0;
+        var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
+        while (true)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Cancellation requested for {Key}, aborting split", request.Key);
+                return false;
+            }
+
+            attempt++;
+            if (attempt >= _maxRetries)
+            {
+                throw new Exception($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {request.Key}");
+            }
+
+            try
+            {
+                logger.LogInformation(
+                    "S3 splitting copy of {Key} from {SourceBucket}, attempt {Attempt}",
+                    request.Key,
+                    internalS3Info.BucketName,
+                    attempt);
+                await SplitFileAsync(request, internalS3Info, cancellationToken);
+
+                logger.LogInformation(
+                    "S3 file split complete: {SourceBucket}/{SourceKey}",
+                    internalS3Info.BucketName,
+                    request.Key);
+                // throw on failure; break and return on success
+                return true;
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                var delay = TimeSpan.FromMilliseconds(_delayBaseMs * Math.Pow(2, attempt - 1));
+
+                logger.LogWarning(
+                    ex,
+                    "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
+                    request.Key,
+                    attempt,
+                    _maxRetries,
+                    delay.TotalMilliseconds);
+
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
+
+    private async Task SplitFileAsync(
+        FileSplitJob request,
+        S3ClientFactory.ClientInfo internalS3Info,
+        CancellationToken cancellationToken)
+    {
+        switch (request.SplitType)
+        {
+            case SplitType.ByLines:
+                await SplitFileByLineAsync(
+                    internalS3Info.Client,
+                    internalS3Info.BucketName,
+                    request.Key,
+                    request.TargetFolder,
+                    request.SplitValue!.Value,
+                    cancellationToken);
+                break;
+
+            case SplitType.BySize:
+                await SplitFileBySizeAsync(
+                    internalS3Info.Client,
+                    internalS3Info.BucketName,
+                    request.Key,
+                    request.TargetFolder,
+                    request.SplitValue!.Value,
+                    cancellationToken);
+                break;
+
+            default:
+                throw new ArgumentException("Invalid SplitType specified");
+        }
+    }
+
+    private async Task SplitFileBySizeAsync(
         IAmazonS3 s3,
         string bucketName,
         string sourceKey,
@@ -23,7 +119,7 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         var metadata = await s3.GetObjectMetadataAsync(bucketName, sourceKey, cancellationToken);
         var totalSize = metadata.ContentLength;
 
-        _logger.LogInformation("Source file size: {SizeMB} MB", totalSize / (1024 * 1024));
+        logger.LogInformation("Source file size: {SizeMB} MB", totalSize / (1024 * 1024));
 
         // Get the object from S3
         using var response = await s3.GetObjectAsync(
@@ -43,7 +139,7 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
+                logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
                 return;
             }
 
@@ -85,7 +181,7 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         }
     }
 
-    public async Task SplitFileByLineAsync(
+    private async Task SplitFileByLineAsync(
         IAmazonS3 s3,
         string bucketName,
         string sourceKey,
@@ -130,7 +226,7 @@ public class FileSplitter(ILogger<FileSplitter> logger) : IFileSplitter
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
+                logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
                 return;
             }
 
