@@ -24,6 +24,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
         services.AddTransient<IS3FileSplitterService, S3FileSplitterService>();
         services.AddTransient<IDataSeedFileCopyService, DataSeedFileCopyService>();
+        services.AddTransient<IFileImportCopyService, FileImportCopyService>();
+        services.AddTransient<IAmazonTransferServiceWrapper, AmazonTransferServiceWrapper>();
 
         services.AddHostedService<FileImportBackgroundService>();
         services.AddHostedService<FileSplitBackgroundService>();

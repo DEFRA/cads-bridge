@@ -31,6 +31,15 @@ public static class S3MockBuilder
                 ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(sourceContent))
             });
 
+        s3.Setup(client => client.GetObjectAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new GetObjectResponse
+            {
+                ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(sourceContent))
+            });
+
         CapturePutObjectContent(s3, uploadedObjects);
 
         return (s3, uploadedObjects);
