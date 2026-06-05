@@ -1,3 +1,4 @@
+using Amazon.S3;
 using CadsBridge.Core.DataSeed.Abstractions;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
@@ -26,6 +27,29 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
         {
             services.RemoveAll<IDataSeedFileLoader>();
             services.AddSingleton(DataSeedFileLoaderMock.Object);
+
+            OverrideAmazonS3(services);
+        });
+    }
+
+    private void OverrideAmazonS3(IServiceCollection services)
+    {
+        services.RemoveAll<IAmazonS3>();
+        services.AddSingleton(AmazonS3Mock.Object);
+
+        services.RemoveAll<IS3ClientFactory>();
+        services.AddSingleton<IS3ClientFactory>(sp =>
+        {
+            var factory = new S3ClientFactory();
+
+            factory.RegisterMockClient<ExternalStorageClient>(
+                TestS3Constants.TestCadsBridgeExternalBucketName,
+                AmazonS3Mock.Object);
+            factory.RegisterMockClient<InternalStorageClient>(
+                TestS3Constants.TestCadsBridgeInternalBucketName,
+                AmazonS3Mock.Object);
+
+            return factory;
         });
     }
 }

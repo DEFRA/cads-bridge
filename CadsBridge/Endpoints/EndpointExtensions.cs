@@ -7,7 +7,6 @@ using CadsBridge.Core.DataSeed.Abstractions;
 
 namespace CadsBridge.Endpoints;
 
-[ExcludeFromCodeCoverage]
 public static class EndpointsExtensions
 {
     public static void CreateEndpoints(this IEndpointRouteBuilder app)
@@ -78,7 +77,7 @@ public static class EndpointsExtensions
 
     private static async Task<IResult> GetImportProgress(string jobId, IImportJobProgressStore progressStore)
     {
-        if (string.IsNullOrEmpty(jobId))
+        if (!string.IsNullOrEmpty(jobId))
         {
             var job = progressStore.GetJob(jobId);
             if (job is null) return Results.NotFound();

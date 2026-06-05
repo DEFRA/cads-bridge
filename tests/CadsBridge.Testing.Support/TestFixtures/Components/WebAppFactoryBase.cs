@@ -1,6 +1,7 @@
 using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.Services;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
@@ -21,6 +22,8 @@ public abstract class WebAppFactoryBase<TStart>(
     where TStart : class
 {
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
+    public List<Action<IServiceCollection>> ServiceOverrides { get; private set; } = new();
+
     private readonly IDictionary<string, string?> _configOverrides = configOverrides ?? new Dictionary<string, string?>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -47,6 +50,20 @@ public abstract class WebAppFactoryBase<TStart>(
             services.AddSingleton(AmazonS3Mock.Object);
             if (disableHostedServices)
                 services.RemoveAll<IHostedService>();
+            foreach (var serviceOverride in ServiceOverrides)
+            {
+                serviceOverride(services);
+            }
+        });
+
+    }
+
+    public void OverrideSingleton<T>(T service) where T : class
+    {
+        ServiceOverrides.Add(x =>
+        {
+            x.RemoveAll<T>();
+            x.AddSingleton<T>(service);
         });
     }
 

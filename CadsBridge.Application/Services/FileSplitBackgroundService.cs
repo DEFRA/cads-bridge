@@ -48,7 +48,7 @@ public class FileSplitBackgroundService(
                         }
                         else
                         {
-                            _progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during splt");
+                            _progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during split");
                         }
                     }
                     catch (Exception ex)

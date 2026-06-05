@@ -9,7 +9,7 @@ public interface ISplitMessageProducer
     ValueTask SendAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default);
 }
 
-internal class SplitMessageProducer(Channel<FileSplitJob> channel, ILogger<SplitMessageProducer> logger) : ISplitMessageProducer
+public class SplitMessageProducer(Channel<FileSplitJob> channel, ILogger<SplitMessageProducer> logger) : ISplitMessageProducer
 {
     public async ValueTask SendAsync(FileSplitJob fileSplitJob, CancellationToken cancellationToken = default)
     {
