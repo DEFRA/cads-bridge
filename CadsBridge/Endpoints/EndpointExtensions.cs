@@ -34,6 +34,7 @@ public static class EndpointsExtensions
         {
             return Results.Ok("Data seeding import is disabled.");
         }
+
         var files = dataSeedFileLoader.GetFiles();
         if (files.Count == 0)
         {
@@ -49,6 +50,7 @@ public static class EndpointsExtensions
                 TargetKey: $"data-seed/{file.FileName}"
             ));
         }
+
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
@@ -109,7 +111,6 @@ public static class EndpointsExtensions
 
     private static async Task<IResult> GetSplitProgress(string jobId, ISplitJobProgressStore progressStore)
     {
-
         if (string.IsNullOrEmpty(jobId))
         {
             var job = progressStore.GetJob(jobId);
@@ -117,7 +118,6 @@ public static class EndpointsExtensions
 
             return Results.Ok(job);
         }
-
 
         return Results.Ok(progressStore.GetJobs());
     }

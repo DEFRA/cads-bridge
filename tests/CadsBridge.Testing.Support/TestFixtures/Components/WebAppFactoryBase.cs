@@ -16,7 +16,8 @@ using Moq;
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 
 public abstract class WebAppFactoryBase<TStart>(
-    IDictionary<string, string?>? configOverrides = null) : WebApplicationFactory<TStart>
+    IDictionary<string, string?>? configOverrides = null,
+    bool disableHostedServices = true) : WebApplicationFactory<TStart>
     where TStart : class
 {
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
@@ -44,7 +45,8 @@ public abstract class WebAppFactoryBase<TStart>(
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(AmazonS3Mock.Object);
-            services.RemoveAll<IHostedService>();
+            if (disableHostedServices)
+                services.RemoveAll<IHostedService>();
         });
     }
 

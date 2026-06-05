@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using CadsBridge.Application.Models;
 using CadsBridge.Core.DataSeed.Abstractions;
-using CadsBridge.Tests.Component.Fixtures;
+using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
