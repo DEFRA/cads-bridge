@@ -80,7 +80,7 @@ public class S3FileSplitterService(
                     attempt,
                     _maxRetries);
 
-                return false;
+                throw;
             }
         }
     }

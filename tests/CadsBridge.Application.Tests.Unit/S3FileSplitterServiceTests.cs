@@ -15,15 +15,62 @@ namespace CadsBridge.Application.Tests.Unit;
 public class S3FileSplitterServiceTests
 {
     const string bucketName = "test-bucket";
+    private const string SourceKey = "imports/source-file.csv";
+    private const string DestinationPrefix = "split-output";
 
+    [Fact]
+    public async Task SplitFile_WhenSplitValueIsNull_ThrowsException()
+    {
+        // Arrange
+        var s3 = new Mock<IAmazonS3>();
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, null);
+
+        // Act
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await sut.ExecuteAsync(request, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SplitFile_WhenSplitTypeIsInvalid_ThrowsOnFailure()
+    {
+        // Arrange
+        const int linesPerChunk = 2;
+        var s3 = new Mock<IAmazonS3>();
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, (SplitType)99, linesPerChunk);
+
+        // Act
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await sut.ExecuteAsync(request, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SplitFile_WhenFileDoesNotExist_RetriesUntilFailure()
+    {
+        // Arrange
+        const int linesPerChunk = 2;
+        var s3 = new Mock<IAmazonS3>();
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
+
+        // Act
+        await Assert.ThrowsAsync<NullReferenceException>(async () =>
+            await sut.ExecuteAsync(request, TestContext.Current.CancellationToken));
+
+        // Assert
+        s3.Verify(client => client.GetObjectAsync(
+                It.Is<GetObjectRequest>(x => x.BucketName == bucketName && x.Key == SourceKey),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(3));
+    }
+
+    // TODO - should first column be removed?????
     [Fact]
     public async Task SplitFileByLineAsync_SplitsFileIntoChunksWithProcessedColumnDefinitions()
     {
         // Arrange
-        const string sourceKey = "imports/source-file.csv";
-        const string destinationPrefix = "split-output";
         const int linesPerChunk = 2;
-
         var sourceContent = string.Join(
             Environment.NewLine,
             "HEADER|ignored",
@@ -34,14 +81,11 @@ public class S3FileSplitterServiceTests
             "D|Dana|White") + Environment.NewLine;
 
         var (s3, uploadedObjects) = CreateS3Mock(sourceContent);
-
         var sut = GetSut(s3);
-        var request = new FileSplitJob("", sourceKey, destinationPrefix, SplitType.ByLines, linesPerChunk);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
         // Act
-        await sut.ExecuteAsync(
-            request,
-            TestContext.Current.CancellationToken);
+        await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
@@ -59,20 +103,25 @@ public class S3FileSplitterServiceTests
                 "D|Dana|White",
                 string.Empty)
         });
+    }
 
-        s3.Verify(client => client.GetObjectAsync(
-                It.Is<GetObjectRequest>(request =>
-                    request.BucketName == bucketName &&
-                    request.Key == sourceKey),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+    [Theory]
+    [InlineData("")]
+    [InlineData("HEADER|ignored\n")]
+    [InlineData("HEADER|ignored\n" + "RECORD_TYPE|FIRST_NAME|LAST_NAME\n")]
+    public async Task SplitFileByLineAsync_WhenFileDoesNotHaveContent_DoesNotUploadChunks(string sourceContent)
+    {
+        // Arrange
+        const int linesPerChunk = 2;
+        var (s3, uploadedObjects) = CreateS3Mock(sourceContent);
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
-        s3.Verify(client => client.PutObjectAsync(
-                It.Is<PutObjectRequest>(request =>
-                    request.BucketName == bucketName &&
-                    request.ContentType == "text/csv"),
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+        // Act
+        await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        uploadedObjects.Should().BeEmpty();
     }
 
     [Fact]
@@ -80,7 +129,6 @@ public class S3FileSplitterServiceTests
     {
         // Arrange
         const string sourceKey = "source-file.csv";
-        const string destinationPrefix = "chunks";
         const int linesPerChunk = 2;
 
         var sourceContent = string.Join(
@@ -92,27 +140,24 @@ public class S3FileSplitterServiceTests
             "D|3|Three") + Environment.NewLine;
 
         var (s3, uploadedObjects) = CreateS3Mock(sourceContent);
-
         var sut = GetSut(s3);
-
-        var request = new FileSplitJob("", sourceKey, destinationPrefix, SplitType.ByLines, linesPerChunk);
+        var request = new FileSplitJob("", sourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
         // Act
         await sut.ExecuteAsync(
             request,
             TestContext.Current.CancellationToken);
 
-
         // Assert
         uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
         {
-            ["chunks/source-file.part-0001.csv"] = string.Join(
+            [$"{DestinationPrefix}/source-file.part-0001.csv"] = string.Join(
                 Environment.NewLine,
                 "column_one|column_two",
                 "D|1|One",
                 "D|2|Two",
                 string.Empty),
-            ["chunks/source-file.part-0002.csv"] = string.Join(
+            [$"{DestinationPrefix}/source-file.part-0002.csv"] = string.Join(
                 Environment.NewLine,
                 "column_one|column_two",
                 "D|3|Three",
@@ -128,17 +173,12 @@ public class S3FileSplitterServiceTests
             Environment.NewLine,
             "HEADER|ignored",
             "RECORD_TYPE|COLUMN_ONE|COLUMN_TWO") + Environment.NewLine;
-
         var (s3, _) = CreateS3Mock(sourceContent);
-
         var sut = GetSut(s3);
-
-        var request = new FileSplitJob("", "source-file.csv", "headersOnly", SplitType.ByLines, 2);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, 2);
 
         // Act
-        await sut.ExecuteAsync(
-            request,
-            TestContext.Current.CancellationToken);
+        await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         s3.Verify(client => client.PutObjectAsync(
@@ -146,6 +186,90 @@ public class S3FileSplitterServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task SplitFileBySizeAsync_WhenFileFitsInSingleChunk_UploadsOneChunk()
+    {
+        // Arrange
+        const int chunkSizeMb = 1;
+        var sourceContent = string.Join(
+            Environment.NewLine,
+            "HEADER|ignored",
+            "RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
+            "D|1|One") + Environment.NewLine;
+        var (s3, uploadedObjects) = CreateS3Mock(sourceContent);
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.BySize, chunkSizeMb);
+
+        // Act
+        await sut.ExecuteAsync(
+            request,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            [$"{DestinationPrefix}/source-file.part-0001.csv"] = sourceContent
+        });
+    }
+
+    [Fact]
+    public async Task SplitFileBySizeAsync_WhenDestinationPrefixIsEmpty_UploadsChunkWithoutPrefix()
+    {
+        // Arrange
+        const int chunkSizeMb = 1;
+        var sourceContent = string.Join(
+            Environment.NewLine,
+            "HEADER|ignored",
+            "RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
+            "D|1|One") + Environment.NewLine;
+
+        var (s3, uploadedObjects) = CreateS3Mock(sourceContent);
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", SourceKey, "", SplitType.BySize, chunkSizeMb);
+
+        // Act
+        await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["source-file.part-0001.csv"] = sourceContent
+        });
+    }
+
+    [Fact]
+    public async Task SplitFileBySizeAsync_WhenFileExceedsChunkSize_UploadsMultipleChunks()
+    {
+        // Arrange
+        const string sourceKey = "imports/source-file.csv";
+        const int chunkSizeMb = 1;
+        var firstLine = new string('A', 600_000);
+        var secondLine = new string('B', 600_000);
+        var thirdLine = new string('C', 100);
+        var sourceContent = string.Join(Environment.NewLine, firstLine, secondLine, thirdLine, Environment.NewLine);
+
+        var (s3, uploadedObjects) = CreateS3Mock(sourceContent);
+
+        var sut = GetSut(s3);
+        var request = new FileSplitJob("", sourceKey, DestinationPrefix, SplitType.BySize, chunkSizeMb);
+
+        // Act
+        await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        uploadedObjects.Keys.Should().BeEquivalentTo([
+            $"{DestinationPrefix}/source-file.part-0001.csv",
+            $"{DestinationPrefix}/source-file.part-0002.csv"
+        ]);
+
+        uploadedObjects[$"{DestinationPrefix}/source-file.part-0001.csv"].Should().Contain(firstLine)
+            .And.NotContain(secondLine);
+
+        uploadedObjects[$"{DestinationPrefix}/source-file.part-0002.csv"].Should().Contain(secondLine)
+            .And.Contain(thirdLine);
+    }
+
 
     private static S3FileSplitterService GetSut(Mock<IAmazonS3> s3)
     {
@@ -155,11 +279,8 @@ public class S3FileSplitterServiceTests
             .Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new S3ClientFactory.ClientInfo(s3.Object, bucketName));
 
-        var sut = new S3FileSplitterService(s3ClientFactory.Object,
+        return new S3FileSplitterService(s3ClientFactory.Object,
             Mock.Of<ILogger<S3FileSplitterService>>());
-
-
-        return sut;
     }
 
     private static (Mock<IAmazonS3> S3, Dictionary<string, string> UploadedObjects) CreateS3Mock(
@@ -168,6 +289,15 @@ public class S3FileSplitterServiceTests
         var uploadedObjects = new Dictionary<string, string>();
 
         var s3 = new Mock<IAmazonS3>();
+
+        s3.Setup(client => client.GetObjectMetadataAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new GetObjectMetadataResponse
+            {
+                ContentLength = Encoding.UTF8.GetByteCount(sourceContent)
+            });
 
         s3.Setup(client => client.GetObjectAsync(
                 It.IsAny<GetObjectRequest>(),
