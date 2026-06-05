@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CadsBridge.Application\CadsBridge.Application.csproj" />
+    <ProjectReference Include="..\CadsBridge.Testing.Support\CadsBridge.Testing.Support.csproj" />
   </ItemGroup>
 
   <ItemGroup>

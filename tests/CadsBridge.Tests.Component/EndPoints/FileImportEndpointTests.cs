@@ -84,7 +84,7 @@ public class FileImportEndpointTests
         ]));
 
         var expectedFileSplitJob = new FileSplitJob(jobId, _importedKey, _fileNameWithoutTypeSuffix, SplitType.ByLines, 1);
-        await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once());
+        await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
         var status = await GetImportJobStatus(jobId, client);
         status!.JobId.Should().Be(jobId);
         status.TotalFiles.Should().Be(1);
