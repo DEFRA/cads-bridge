@@ -5,23 +5,42 @@ namespace CadsBridge.Testing.Support.Utilities.Assertions;
 
 public static class MockExtensions
 {
-    public static async Task AsyncVerify<T>(
-        this Mock<T> mock,
-        Expression<Action<T>> verify,
-        Func<Times> times,
-        int backOffMilliSeconds = 400,
-        int attempts = 5) where T : class
+    extension<T>(Mock<T> mock) where T : class
     {
-        await mock.AsyncVerify(verify, times(), backOffMilliSeconds, attempts);
-    }
+        public async Task AsyncVerify(
+            Expression<Action<T>> verify,
+            Func<Times> times,
+            int backOffMilliSeconds = 400,
+            int attempts = 5)
+        {
+            await mock.AsyncVerify(verify, times(), backOffMilliSeconds, attempts);
+        }
 
-    public static async Task AsyncVerify<T>(
-        this Mock<T> mock,
-        Expression<Action<T>> verify,
-        Times times,
-        int backOffMilliSeconds = 400,
-        int attempts = 5) where T : class
-    {
-        await AsyncAssert.WaitForAssertion(() => { mock.Verify(verify, times); }, backOffMilliSeconds, attempts);
+        public async Task AsyncVerify(
+            Expression<Action<T>> verify,
+            Times times,
+            int backOffMilliSeconds = 400,
+            int attempts = 5)
+        {
+            await AsyncAssert.WaitForAssertion(() => { mock.Verify(verify, times); }, backOffMilliSeconds, attempts);
+        }
+
+        public async Task AsyncVerify<TResult>(
+            Expression<Func<T, TResult>> verify,
+            Func<Times> times,
+            int backOffMilliSeconds = 400,
+            int attempts = 5)
+        {
+            await mock.AsyncVerify(verify, times(), backOffMilliSeconds, attempts);
+        }
+
+        public async Task AsyncVerify<TResult>(
+            Expression<Func<T, TResult>> verify,
+            Times times,
+            int backOffMilliSeconds = 400,
+            int attempts = 5)
+        {
+            await AsyncAssert.WaitForAssertion(() => { mock.Verify(verify, times); }, backOffMilliSeconds, attempts);
+        }
     }
 }
