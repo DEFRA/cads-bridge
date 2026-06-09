@@ -276,7 +276,7 @@ public class S3FileSplitterService(
 
         var columnList = columns.Split(delimiter).ToList();
 
-        // Remove the first column which is assumed to be a redundant 'RECORD_TYPE' column
+        // Remove the first column which is assumed to be a redundant 'C' column
         columnList.RemoveAt(0);
 
         return string.Join(delimiter, columnList);

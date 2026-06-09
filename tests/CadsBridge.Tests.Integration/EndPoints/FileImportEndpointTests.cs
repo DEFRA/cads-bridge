@@ -48,7 +48,7 @@ public class FileImportEndpointTests
         var fileContents = string.Join(
             Environment.NewLine,
             "HEADER|ignored",
-            "RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
+            "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
             "D|1|One",
             "D|2|Two",
             "D|3|Three") + Environment.NewLine;
