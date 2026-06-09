@@ -3,8 +3,10 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
 using CadsBridge.Core.Crypto;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
+using CadsBridge.Core.Storage.Factories;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Application.Services;
@@ -48,29 +50,19 @@ public class FileImportCopyService(
             {
                 if (attempt > _maxRetries)
                 {
-                    throw new Exception($"Exceeded maximum retry attempts ({_maxRetries}) for copying {request.SourceKey}");
+                    throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {request.SourceKey}");
                 }
 
                 _logger.LogInformation(
                     "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
                     request.SourceKey, externalS3Info.BucketName, internalS3Info.BucketName, attempt);
 
-                await DecryptAndCopyAsync(
-                    externalS3,
-                    internalS3,
-                    externalS3Info.BucketName,
-                    request.SourceKey,
-                    internalS3Info.BucketName,
-                    request.TargetKey,
-                    request.Password,
-                    request.Salt,
-                    cancellationToken);
+                await DecryptAndCopyAsync(request, cancellationToken, externalS3Info, internalS3Info, externalS3, internalS3);
 
                 _logger.LogInformation(
                     "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
                     externalS3Info.BucketName, request.SourceKey,
                     internalS3Info.BucketName, request.TargetKey);
-
                 break;
             }
             catch (Exception ex) when (attempt < _maxRetries)
@@ -90,58 +82,41 @@ public class FileImportCopyService(
     }
 
     private async Task DecryptAndCopyAsync(
-        IAmazonS3 sourceS3,
-        IAmazonS3 targetS3,
-        string sourceBucket,
-        string sourceKey,
-        string destinationBucket,
-        string destinationKey,
-        string password,
-        string salt,
-        CancellationToken cancellationToken = default)
+        FileImportJob request,
+        CancellationToken cancellationToken,
+        S3ClientFactory.ClientInfo externalS3Info,
+        S3ClientFactory.ClientInfo internalS3Info,
+        IAmazonS3 externalS3,
+        IAmazonS3 internalS3)
     {
-        try
+        using var getResponse = await externalS3.GetObjectAsync(externalS3Info.BucketName, request.SourceKey, cancellationToken);
+        using var encryptedStream = getResponse.ResponseStream;
+
+        // Determine file size to decide whether to use multipart upload or single upload
+        var fileSize = await GetRemoteFileSizeAsync(externalS3, externalS3Info.BucketName, request.SourceKey, cancellationToken);
+
+        // if file is small enough to avoid multipart overhead, otherwise use streaming with multipart upload
+        if (fileSize < MaxSingleFileSize)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                _logger.LogInformation("Cancellation requested for {Key}, aborting copy", sourceKey);
-                return;
-            }
-
-            // Stream encrypted file from S3
-            using var getResponse = await sourceS3.GetObjectAsync(sourceBucket, sourceKey, cancellationToken);
-            using var encryptedStream = getResponse.ResponseStream;
-
-            // Determine file size to decide whether to use multipart upload or single upload
-            var fileSize = await GetRemoteFileSizeAsync(sourceS3, sourceBucket, sourceKey, cancellationToken);
-
-            // if file is small enough to avoid multipart overhead, otherwise use streaming with multipart upload
-            if (fileSize < MaxSingleFileSize)
-            {
-                using var memoryStream = new MemoryStream();
-                memoryStream.Position = 0;
-                await _aesCryptoTransform.DecryptStreamAsync(encryptedStream, memoryStream, password, salt, cancellationToken: cancellationToken);
-                await PutAsync(targetS3, memoryStream, destinationBucket, destinationKey, cancellationToken: cancellationToken);
-            }
-            else
-            {
-                // Create decryptor
-                using var decryptor = AesCryptoTransform.CreateDecryptor(password, salt);
-                using var cryptoStream = new CryptoStream(encryptedStream, decryptor, CryptoStreamMode.Read);
-
-                var partitionSize = CalculateOptimalPartSize(fileSize);
-
-                await transferWrapper.TransferAsync(targetS3, cryptoStream, destinationBucket, destinationKey, partitionSize, cancellationToken: cancellationToken);
-            }
-
-            _logger.LogInformation("Successfully decrypted and uploaded {Key}", destinationKey);
+            using var memoryStream = new MemoryStream();
+            memoryStream.Position = 0;
+            await _aesCryptoTransform.DecryptStreamAsync(encryptedStream, memoryStream, request.Password, request.Salt, cancellationToken: cancellationToken);
+            await PutAsync(internalS3, memoryStream, internalS3Info.BucketName, request.TargetKey, cancellationToken: cancellationToken);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Error decrypting file");
+            // Create decryptor
+            using var decryptor = AesCryptoTransform.CreateDecryptor(request.Password, request.Salt);
+            using var cryptoStream = new CryptoStream(encryptedStream, decryptor, CryptoStreamMode.Read);
 
-            throw;
+            var partitionSize = CalculateOptimalPartSize(fileSize);
+
+            await transferWrapper.TransferAsync(internalS3, cryptoStream, internalS3Info.BucketName, request.TargetKey, partitionSize, cancellationToken: cancellationToken);
         }
+
+        _logger.LogInformation("Successfully decrypted and uploaded {Key}", request.TargetKey);
+
+        // Stream encrypted file from S3
     }
 
     private static long CalculateOptimalPartSize(long fileSizeBytes)

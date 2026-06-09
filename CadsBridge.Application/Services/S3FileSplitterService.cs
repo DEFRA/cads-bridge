@@ -71,17 +71,6 @@ public class S3FileSplitterService(
 
                 await Task.Delay(delay, cancellationToken);
             }
-            catch (Exception ex) when (attempt >= _maxRetries)
-            {
-                logger.LogWarning(
-                    ex,
-                    "Error splitting {Key}, attempt {Attempt}/{Max}. Giving up.",
-                    request.Key,
-                    attempt,
-                    _maxRetries);
-
-                throw;
-            }
         }
     }
 

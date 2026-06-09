@@ -52,7 +52,7 @@ public class FileImportEndpointTests
             "D|1|One",
             "D|2|Two",
             "D|3|Three") + Environment.NewLine;
-        
+
         using var encryptedStream = await fileContents.Encrypt(password, salt, TestContext.Current.CancellationToken);
         await fixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
         {
@@ -60,7 +60,7 @@ public class FileImportEndpointTests
             Key = incomingTestFileCsv,
             InputStream = encryptedStream
         }, TestContext.Current.CancellationToken);
-            
+
         // Act
         var jobId = await TriggerImportJob(fixture, new ImportRequest([
             new ImportRequestItem(
@@ -87,7 +87,8 @@ public class FileImportEndpointTests
                 var listObjectsV2Response = await fixture.LocalStackFixture.S3Client.ListObjectsV2Async(
                     new ListObjectsV2Request()
                     {
-                        BucketName = TestS3Constants.TestCadsBridgeInternalBucketName, Prefix = fileNameWithoutFileType
+                        BucketName = TestS3Constants.TestCadsBridgeInternalBucketName,
+                        Prefix = fileNameWithoutFileType
                     },
                     TestContext.Current.CancellationToken);
                 listObjectsV2Response.S3Objects.Should().HaveCount(2);
@@ -95,7 +96,7 @@ public class FileImportEndpointTests
                 listObjectsV2Response.S3Objects[1].Key.Should().Be($"{fileNameWithoutFileType}/{fileNameWithoutFileType}.part-0002.csv");
             });
     }
-    
+
     private sealed record ImportJobResponse(string JobId);
     private static async Task<string> TriggerImportJob(ApiContainerFixture fixture, ImportRequest? request = null)
     {

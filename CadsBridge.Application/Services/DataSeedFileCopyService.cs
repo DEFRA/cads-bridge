@@ -36,7 +36,7 @@ public class DataSeedFileCopyService(
         {
             logger.LogError(
                 ex,
-                "Failed to copy data seed file from {fileName} to {targetKey}",
+                "Failed to copy data seed file from {FileName} to {TargetKey}",
                 request.FileName,
                 request.TargetKey);
 
