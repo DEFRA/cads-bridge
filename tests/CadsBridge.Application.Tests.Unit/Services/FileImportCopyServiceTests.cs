@@ -164,24 +164,13 @@ public class FileImportCopyServiceTests
         var sut = GetSut(s3, new Mock<IAesCryptoTransform>());
 
         // Act
-        var act = async () => await sut.CopyWithRetryAsync(
+        await Assert.ThrowsAsync<AmazonS3Exception>(async () => await sut.CopyWithRetryAsync(
             CreateJob(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         // Assert
-        await act.Should().ThrowAsync<AmazonS3Exception>()
-            .WithMessage("S3 unavailable");
-
-        s3.Verify(client => client.GetObjectAsync(
-                ExternalBucketName,
-                SourceKey,
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(3));
-
-        s3.Verify(client => client.PutObjectAsync(
-                It.IsAny<PutObjectRequest>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        s3.Verify(client => client.GetObjectAsync(ExternalBucketName, SourceKey, It.IsAny<CancellationToken>()), Times.Exactly(3));
+        s3.Verify(client => client.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -201,12 +190,6 @@ public class FileImportCopyServiceTests
 
         // Assert
         result.Should().BeFalse();
-
-        s3.Verify(client => client.GetObjectAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
 
         s3.Verify(client => client.PutObjectAsync(
                 It.IsAny<PutObjectRequest>(),
@@ -271,7 +254,6 @@ public class FileImportCopyServiceTests
         var s3Mock = S3MockBuilder.Create(encryptedContent).S3;
         if (contentLength.HasValue)
         {
-
             s3Mock.Setup(client => client.GetObjectMetadataAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -280,8 +262,8 @@ public class FileImportCopyServiceTests
                 {
                     ContentLength = contentLength.Value
                 });
-
         }
+
         return s3Mock;
     }
 

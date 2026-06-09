@@ -33,7 +33,7 @@ public class DataSeedFileCopyServiceTests
         const string fileContent = "CREATE TABLE test_table (id int);";
         var sourceFilePath = "abc/001_seed.sql";
 
-        CreateTemporaryFile(fileContent, sourceFilePath);
+        MockLocalFile(fileContent, sourceFilePath);
         var (s3, uploadedObjects) = S3MockBuilder.CreateCapturingUploads();
 
         var sut = GetSut(s3);
@@ -103,7 +103,7 @@ public class DataSeedFileCopyServiceTests
             Mock.Of<ILogger<DataSeedFileCopyService>>());
     }
 
-    private void CreateTemporaryFile(string content, string path)
+    private void MockLocalFile(string content, string path)
     {
         _mockFileSystemWrapper
             .Setup(x => x.OpenRead(path))
