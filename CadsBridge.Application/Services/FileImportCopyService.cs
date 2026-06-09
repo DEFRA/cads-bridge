@@ -53,16 +53,7 @@ public class FileImportCopyService(
                     throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {request.SourceKey}");
                 }
 
-                _logger.LogInformation(
-                    "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
-                    request.SourceKey, externalS3Info.BucketName, internalS3Info.BucketName, attempt);
-
-                await DecryptAndCopyAsync(request, cancellationToken, externalS3Info, internalS3Info, externalS3, internalS3);
-
-                _logger.LogInformation(
-                    "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
-                    externalS3Info.BucketName, request.SourceKey,
-                    internalS3Info.BucketName, request.TargetKey);
+                await DecryptAndCopyAsync(request, cancellationToken, externalS3Info, internalS3Info, externalS3, internalS3, attempt);
                 break;
             }
             catch (Exception ex) when (attempt < _maxRetries)
@@ -87,8 +78,13 @@ public class FileImportCopyService(
         S3ClientFactory.ClientInfo externalS3Info,
         S3ClientFactory.ClientInfo internalS3Info,
         IAmazonS3 externalS3,
-        IAmazonS3 internalS3)
+        IAmazonS3 internalS3,
+        int attempt)
     {
+        _logger.LogInformation(
+            "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
+            request.SourceKey, externalS3Info.BucketName, internalS3Info.BucketName, attempt);
+
         using var getResponse = await externalS3.GetObjectAsync(externalS3Info.BucketName, request.SourceKey, cancellationToken);
         using var encryptedStream = getResponse.ResponseStream;
 
@@ -116,6 +112,10 @@ public class FileImportCopyService(
 
         _logger.LogInformation("Successfully decrypted and uploaded {Key}", request.TargetKey);
 
+        _logger.LogInformation(
+            "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
+            externalS3Info.BucketName, request.SourceKey,
+            internalS3Info.BucketName, request.TargetKey);
         // Stream encrypted file from S3
     }
 
