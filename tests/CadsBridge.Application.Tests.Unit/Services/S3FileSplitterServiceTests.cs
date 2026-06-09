@@ -278,7 +278,10 @@ public class S3FileSplitterServiceTests
             .Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new S3ClientFactory.ClientInfo(s3.Object, bucketName));
 
+        var logger = new Mock<ILogger<S3FileSplitterService>>();
+        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         return new S3FileSplitterService(s3ClientFactory.Object,
-            Mock.Of<ILogger<S3FileSplitterService>>());
+            logger.Object
+            );
     }
 }

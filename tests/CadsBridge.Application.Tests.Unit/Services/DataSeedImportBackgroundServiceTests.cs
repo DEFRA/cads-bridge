@@ -20,7 +20,7 @@ public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
         _channel = Channel.CreateUnbounded<DataSeedImportJob>();
         _copyService = new Mock<IDataSeedFileCopyService>();
         _logger = new Mock<ILogger<DataSeedImportBackgroundService>>();
-
+        _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         _copyService
             .Setup(x => x.ExecuteAsync(
                 It.IsAny<DataSeedImportJob>(),

@@ -238,11 +238,13 @@ public class FileImportCopyServiceTests
             .Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new S3ClientFactory.ClientInfo(s3.Object, InternalBucketName));
 
+        var logger = new Mock<ILogger<FileImportCopyService>>();
+        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         return new FileImportCopyService(
             s3ClientFactory.Object,
             aesCryptoTransform.Object,
             _mockTransferWrapper.Object,
-            Mock.Of<ILogger<FileImportCopyService>>());
+            logger.Object);
     }
 
     private static Mock<IAmazonS3> CreateS3Mock(

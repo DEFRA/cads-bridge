@@ -18,7 +18,7 @@ public class FileSplitBackgroundService(
     private readonly ISplitJobProgressStore _progressStore = progressStore;
     private readonly int _maxParallelDownloads = 4;
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         var semaphore = new SemaphoreSlim(_maxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
