@@ -29,8 +29,6 @@ public class DataSeedFileCopyService(
             };
 
             await internalS3.PutObjectAsync(putFile, cancellationToken);
-
-            return true;
         }
         catch (Exception ex)
         {
@@ -42,5 +40,7 @@ public class DataSeedFileCopyService(
 
             return false;
         }
+        
+        return true;
     }
 }
