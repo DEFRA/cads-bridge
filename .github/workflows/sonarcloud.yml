@@ -76,11 +76,7 @@ jobs:
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.projectBaseDir="${{ github.workspace }}" \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
-            /d:sonar.cpd.exclusions=**/changelog/**/*seed*.sql,**/changelog/**/*view*.sql \
-            /d:sonar.issue.ignore.multicriteria=e1 \
-            /d:sonar.issue.ignore.multicriteria.e1.ruleKey=plsql:S1192 \
-            /d:sonar.issue.ignore.multicriteria.e1.resourceKey=**/*.sql
+            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
           dotnet build CadsBridge.sln --no-incremental
           ./.sonar/coverage/dotnet-coverage collect "dotnet test CadsBridge.sln --filter \"Dependence!=testcontainers\"" -f xml -o "coverage.xml"
           ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
