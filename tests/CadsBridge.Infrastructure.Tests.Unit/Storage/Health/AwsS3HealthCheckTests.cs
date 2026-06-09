@@ -25,7 +25,7 @@ public class AwsS3HealthCheckTests
         factoryMock.Setup(x => x.GetClient("client1")).Returns(_s3Mock.Object);
         factoryMock.Setup(x => x.GetClientBucketName("client1")).Returns("bucket1");
     }
-    
+
     [Fact]
     public async Task ShouldReturnHealthy_WhenS3IsHealthy()
     {
@@ -33,9 +33,9 @@ public class AwsS3HealthCheckTests
                 It.Is<ListObjectsV2Request>(x => x.BucketName == "bucket1"),
                 It.IsAny<CancellationToken>())).
             ReturnsAsync(new ListObjectsV2Response() { HttpStatusCode = HttpStatusCode.OK });
-        
+
         var result = await _sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
-        
+
         result.Status.Should().Be(HealthStatus.Healthy);
         result.Data["client1"].Should().BeEquivalentTo(new
         {
@@ -43,7 +43,7 @@ public class AwsS3HealthCheckTests
             Status = "Healthy"
         });
     }
-    
+
     [Fact]
     public async Task ShouldReturnUnhealthy_WhenS3IsUnhealthy()
     {
@@ -51,9 +51,9 @@ public class AwsS3HealthCheckTests
                 It.Is<ListObjectsV2Request>(x => x.BucketName == "bucket1"),
                 It.IsAny<CancellationToken>())).
             ReturnsAsync(new ListObjectsV2Response() { HttpStatusCode = HttpStatusCode.InternalServerError });
-        
+
         var result = await _sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
-        
+
         result.Status.Should().Be(HealthStatus.Unhealthy);
         result.Data["client1"].Should().BeEquivalentTo(new
         {
@@ -61,7 +61,7 @@ public class AwsS3HealthCheckTests
             Status = $"Degraded (Status: {HttpStatusCode.InternalServerError})"
         });
     }
-    
+
     [Fact]
     public async Task ShouldReturnUnhealthy_WhenS3ThrowsAmazonS3Exception()
     {
@@ -69,12 +69,12 @@ public class AwsS3HealthCheckTests
                 It.Is<ListObjectsV2Request>(x => x.BucketName == "bucket1"),
                 It.IsAny<CancellationToken>())).
             Throws(new AmazonS3Exception { StatusCode = HttpStatusCode.NotFound });
-        
+
         var result = await _sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
-        
+
         result.Status.Should().Be(HealthStatus.Unhealthy);
     }
-    
+
     [Fact]
     public async Task ShouldReturnUnhealthy_WhenS3Throws()
     {
@@ -82,9 +82,9 @@ public class AwsS3HealthCheckTests
                 It.Is<ListObjectsV2Request>(x => x.BucketName == "bucket1"),
                 It.IsAny<CancellationToken>())).
             Throws<Exception>();
-        
+
         var result = await _sut.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
-        
+
         result.Status.Should().Be(HealthStatus.Unhealthy);
     }
 }

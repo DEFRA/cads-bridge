@@ -16,7 +16,7 @@ public static class S3MockBuilder
     public static (Mock<IAmazonS3> S3, Mock<IS3ClientFactory> clientFactory, Dictionary<string, string> UploadedObjects) Create(string sourceContent)
     {
         var (s3, s3ClientFactory, uploadedObjects) = Create();
-            
+
         s3.Setup(client => client.GetObjectMetadataAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -42,10 +42,10 @@ public static class S3MockBuilder
             {
                 ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(sourceContent))
             });
-        
+
         return (s3, s3ClientFactory, uploadedObjects);
     }
-    
+
 
     public static (Mock<IAmazonS3> S3, Mock<IS3ClientFactory> clientFactory, Dictionary<string, string> UploadedObjects) Create()
     {
@@ -64,7 +64,7 @@ public static class S3MockBuilder
         s3ClientFactory
             .Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new S3ClientFactory.ClientInfo(s3.Object, InternalBucketName));
-        
+
         return (s3, s3ClientFactory, uploadedObjects);
     }
 

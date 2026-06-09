@@ -198,7 +198,7 @@ public class S3FileSplitterServiceTests
             Environment.NewLine,
             "HEADER|ignored",
             "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO") + Environment.NewLine;
-        
+
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(sourceContent);
         var sut = GetSut(s3, factory);
         var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, 2);

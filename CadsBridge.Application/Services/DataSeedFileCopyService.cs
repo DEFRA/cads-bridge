@@ -40,7 +40,7 @@ public class DataSeedFileCopyService(
 
             return false;
         }
-        
+
         return true;
     }
 }
