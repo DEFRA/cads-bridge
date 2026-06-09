@@ -69,8 +69,6 @@ public class FileImportCopyServiceTests
     {
         // Arrange
         const long fileSize = 150L * 1024L * 1024L;
-        const long expectedPartSize = 8L * 1024L * 1024L;
-
         var s3 = CreateS3Mock(encryptedContent: "large decrypted file content", contentLength: fileSize);
         var aesCryptoTransform = new Mock<IAesCryptoTransform>();
         var sut = GetSut(s3, aesCryptoTransform);
