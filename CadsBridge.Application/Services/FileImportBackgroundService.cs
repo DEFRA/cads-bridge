@@ -21,20 +21,20 @@ public class FileImportBackgroundService(
     private readonly IFileImportCopyService _fileImportCopyService = fileImportCopyService;
     private readonly int _maxParallelDownloads = 4;
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var semaphore = new SemaphoreSlim(_maxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in _channel.Reader.ReadAllAsync(cancellationToken))
+        await foreach (var request in _channel.Reader.ReadAllAsync(stoppingToken))
         {
-            if (cancellationToken.IsCancellationRequested)
+            if (stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Cancellation requested, aborting copy");
                 return;
             }
 
-            await semaphore.WaitAsync(cancellationToken);
+            await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
                 async () =>
@@ -42,7 +42,7 @@ public class FileImportBackgroundService(
                     try
                     {
                         _progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                        var result = await _fileImportCopyService.CopyWithRetryAsync(request, cancellationToken);
+                        var result = await _fileImportCopyService.CopyWithRetryAsync(request, stoppingToken);
 
                         if (result)
                         {
@@ -58,7 +58,7 @@ public class FileImportBackgroundService(
                                         SplitType: request.SplitType,
                                         SplitValue: request.SplitValue
                                     ),
-                                    cancellationToken);
+                                    stoppingToken);
                             }
                         }
                         else
@@ -76,7 +76,7 @@ public class FileImportBackgroundService(
                         semaphore.Release();
                     }
                 },
-                cancellationToken);
+                stoppingToken);
 
             runningTasks.Add(task);
         }

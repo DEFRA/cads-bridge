@@ -10,7 +10,7 @@ public class AmazonTransferServiceWrapper : IAmazonTransferServiceWrapper
         Stream inputStream,
         string bucketName,
         string key,
-        long partSize = FileImportCopyService.MinPartitionSize, // 5 MB minimum for multipart
+        long partSize, // 5 MB minimum for multipart
         string contentType = "text/plain",
         CancellationToken cancellationToken = default)
     {

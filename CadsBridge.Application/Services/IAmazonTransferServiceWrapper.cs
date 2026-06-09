@@ -9,7 +9,7 @@ public interface IAmazonTransferServiceWrapper
         Stream inputStream,
         string bucketName,
         string key,
-        long partSize = FileImportCopyService.MinPartitionSize,
+        long partSize,
         string contentType = "text/plain",
         CancellationToken cancellationToken = default);
 }
