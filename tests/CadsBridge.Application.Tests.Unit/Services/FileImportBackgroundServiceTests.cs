@@ -322,7 +322,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
     {
         _channel.Writer.Complete();
         await _sut.StopAsync(TestContext.Current.CancellationToken);
-
         _sut.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

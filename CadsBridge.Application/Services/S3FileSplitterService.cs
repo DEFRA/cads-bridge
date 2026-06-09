@@ -31,7 +31,8 @@ public class S3FileSplitterService(
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                logger.LogInformation("Cancellation requested for {Key}, aborting split", request.Key);
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", request.Key);
                 return false;
             }
 
@@ -43,18 +44,21 @@ public class S3FileSplitterService(
 
             try
             {
-                logger.LogInformation(
-                    "S3 splitting copy of {Key} from {SourceBucket}, attempt {Attempt}",
-                    request.Key,
-                    internalS3Info.BucketName,
-                    attempt);
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "S3 splitting copy of {Key} from {SourceBucket}, attempt {Attempt}",
+                        request.Key,
+                        internalS3Info.BucketName,
+                        attempt);
+
                 await SplitFileAsync(request, internalS3Info, cancellationToken);
 
-                logger.LogInformation(
-                    "S3 file split complete: {SourceBucket}/{SourceKey}",
-                    internalS3Info.BucketName,
-                    request.Key);
-                // throw on failure; break and return on success
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "S3 file split complete: {SourceBucket}/{SourceKey}",
+                        internalS3Info.BucketName,
+                        request.Key);
+
                 return true;
             }
             catch (Exception ex) when (attempt < _maxRetries)
@@ -120,7 +124,8 @@ public class S3FileSplitterService(
         var metadata = await s3.GetObjectMetadataAsync(bucketName, sourceKey, cancellationToken);
         var totalSize = metadata.ContentLength;
 
-        logger.LogInformation("Source file size: {SizeMB} MB", totalSize / (1024 * 1024));
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Source file size: {SizeMB} MB", totalSize / (1024 * 1024));
 
         // Get the object from S3
         using var response = await s3.GetObjectAsync(
@@ -140,7 +145,8 @@ public class S3FileSplitterService(
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
                 return;
             }
 
@@ -165,7 +171,7 @@ public class S3FileSplitterService(
             }
 
             await chunkWriter.WriteAsync(line + Environment.NewLine);
-            await chunkWriter.FlushAsync();
+            await chunkWriter.FlushAsync(cancellationToken);
             bytesInChunk += lineBytes.Length;
         }
 
@@ -227,7 +233,8 @@ public class S3FileSplitterService(
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
                 return;
             }
 

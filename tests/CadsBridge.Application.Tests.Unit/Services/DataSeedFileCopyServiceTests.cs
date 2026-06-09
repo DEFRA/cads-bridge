@@ -18,7 +18,7 @@ public class DataSeedFileCopyServiceTests
 {
     private const string BucketName = "test-bucket";
 
-    private static Mock<IFileSytemWrapper> _mockFileSystemWrapper = new();
+    private Mock<IFileSytemWrapper> _mockFileSystemWrapper = new();
 
     public DataSeedFileCopyServiceTests()
     {
@@ -30,7 +30,7 @@ public class DataSeedFileCopyServiceTests
     {
         // Arrange
         const string targetKey = "data-seed/001_seed.sql";
-        const string fileContent = "CREATE TABLE test_table (id int);";
+        const string fileContent = "FILE CONTENT;";
         var sourceFilePath = "abc/001_seed.sql";
 
         MockLocalFile(fileContent, sourceFilePath);
@@ -90,7 +90,7 @@ public class DataSeedFileCopyServiceTests
             Times.Never);
     }
 
-    private static DataSeedFileCopyService GetSut(Mock<IAmazonS3> s3)
+    private DataSeedFileCopyService GetSut(Mock<IAmazonS3> s3)
     {
         var s3ClientFactory = new Mock<IS3ClientFactory>();
         s3ClientFactory

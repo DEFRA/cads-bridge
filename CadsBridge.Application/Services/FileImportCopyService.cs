@@ -19,7 +19,6 @@ public class FileImportCopyService(
 {
     private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
     private readonly IAesCryptoTransform _aesCryptoTransform = aesCryptoTransform;
-    private readonly ILogger<FileImportCopyService> _logger = logger;
 
     private readonly int _maxRetries = 3;
     public const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
@@ -40,7 +39,8 @@ public class FileImportCopyService(
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested for {Key}, aborting copy", request.SourceKey);
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Cancellation requested for {Key}, aborting copy", request.SourceKey);
                 return false;
             }
 
@@ -53,14 +53,32 @@ public class FileImportCopyService(
                     throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {request.SourceKey}");
                 }
 
-                await DecryptAndCopyAsync(request, cancellationToken, externalS3Info, internalS3Info, externalS3, internalS3, attempt);
+
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
+                        request.SourceKey,
+                        externalS3Info.BucketName,
+                        internalS3Info.BucketName,
+                        attempt);
+
+                await DecryptAndCopyAsync(request, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
+
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
+                        externalS3Info.BucketName,
+                        request.SourceKey,
+                        internalS3Info.BucketName,
+                        request.TargetKey);
+
                 break;
             }
             catch (Exception ex) when (attempt < _maxRetries)
             {
                 var delay = TimeSpan.FromMilliseconds(delayBaseMs * Math.Pow(2, attempt - 1));
 
-                _logger.LogWarning(
+                logger.LogWarning(
                     ex,
                     "Error copying {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
                     request.SourceKey, attempt, _maxRetries, delay.TotalMilliseconds);
@@ -74,16 +92,12 @@ public class FileImportCopyService(
 
     private async Task DecryptAndCopyAsync(
         FileImportJob request,
-        CancellationToken cancellationToken,
         S3ClientFactory.ClientInfo externalS3Info,
         S3ClientFactory.ClientInfo internalS3Info,
         IAmazonS3 externalS3,
         IAmazonS3 internalS3,
-        int attempt)
+        CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
-            request.SourceKey, externalS3Info.BucketName, internalS3Info.BucketName, attempt);
 
         using var getResponse = await externalS3.GetObjectAsync(externalS3Info.BucketName, request.SourceKey, cancellationToken);
         using var encryptedStream = getResponse.ResponseStream;
@@ -110,12 +124,8 @@ public class FileImportCopyService(
             await transferWrapper.TransferAsync(internalS3, cryptoStream, internalS3Info.BucketName, request.TargetKey, partitionSize, cancellationToken: cancellationToken);
         }
 
-        _logger.LogInformation("Successfully decrypted and uploaded {Key}", request.TargetKey);
-
-        _logger.LogInformation(
-            "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
-            externalS3Info.BucketName, request.SourceKey,
-            internalS3Info.BucketName, request.TargetKey);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Successfully decrypted and uploaded {Key}", request.TargetKey);
         // Stream encrypted file from S3
     }
 

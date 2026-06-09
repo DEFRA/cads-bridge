@@ -32,7 +32,8 @@ public class DataSeedImportBackgroundService(Channel<DataSeedImportJob> channel,
                     var result = await dataSeedFileCopyService.ExecuteAsync(request, stoppingToken);
                     if (result)
                     {
-                        logger.LogInformation("Successfully imported data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
+                        if (logger.IsEnabled(LogLevel.Information))
+                            logger.LogInformation("Successfully imported data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
                     }
                     else
                     {

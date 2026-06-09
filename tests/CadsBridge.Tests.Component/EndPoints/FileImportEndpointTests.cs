@@ -93,7 +93,7 @@ public class FileImportEndpointTests
     }
 
     private sealed record ImportJobResponse(string JobId);
-    private async Task<string> TriggerImportJob(HttpClient httpClient, ImportRequest? request = null)
+    private static async Task<string> TriggerImportJob(HttpClient httpClient, ImportRequest? request = null)
     {
         var content = HttpContentUtility.CreateApplicationJsonAsStringContent(request ?? new ImportRequest([]));
 
@@ -106,7 +106,7 @@ public class FileImportEndpointTests
         return jobId;
     }
 
-    private async Task<JobProgress?> GetImportJobStatus(string jobId, HttpClient httpClient)
+    private static async Task<JobProgress?> GetImportJobStatus(string jobId, HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"import/{jobId}/progress", TestContext.Current.CancellationToken);
 
