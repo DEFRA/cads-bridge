@@ -4,9 +4,12 @@ using CadsBridge.Application.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Application.DataSeed.Services;
 
-public class DataSeedImportBackgroundService(Channel<DataSeedImportJob> channel, ILogger<DataSeedImportBackgroundService> logger, IDataSeedFileCopyService dataSeedFileCopyService) : BackgroundService
+public class DataSeedImportBackgroundService(
+    Channel<DataSeedImportJob> channel,
+    IFileSystemToS3CopyService fileSystemToS3CopyService,
+    ILogger<DataSeedImportBackgroundService> logger) : BackgroundService
 {
     private readonly int _maxParallelFileTransfers = 4;
 
@@ -29,7 +32,7 @@ public class DataSeedImportBackgroundService(Channel<DataSeedImportJob> channel,
             {
                 try
                 {
-                    var result = await dataSeedFileCopyService.ExecuteAsync(request, stoppingToken);
+                    var result = await fileSystemToS3CopyService.ExecuteAsync(request, stoppingToken);
                     if (result)
                     {
                         if (logger.IsEnabled(LogLevel.Information))

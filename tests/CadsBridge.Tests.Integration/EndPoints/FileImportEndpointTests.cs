@@ -9,7 +9,6 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
-using Moq;
 
 namespace CadsBridge.Tests.Integration.EndPoints;
 

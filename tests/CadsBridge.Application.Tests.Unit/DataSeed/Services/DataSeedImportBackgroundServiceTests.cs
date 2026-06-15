@@ -1,16 +1,16 @@
 using System.Threading.Channels;
+using CadsBridge.Application.DataSeed.Services;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Application.Tests.Unit.DataSeed.Services;
 
 public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
 {
     private readonly Channel<DataSeedImportJob> _channel;
-    private readonly Mock<IDataSeedFileCopyService> _copyService;
+    private readonly Mock<IFileSystemToS3CopyService> _copyService;
     private readonly Mock<ILogger<DataSeedImportBackgroundService>> _logger;
     private readonly DataSeedImportBackgroundService _sut;
     private DataSeedImportJob _job1 = CreateJob();
@@ -18,7 +18,7 @@ public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
     public DataSeedImportBackgroundServiceTests()
     {
         _channel = Channel.CreateUnbounded<DataSeedImportJob>();
-        _copyService = new Mock<IDataSeedFileCopyService>();
+        _copyService = new Mock<IFileSystemToS3CopyService>();
         _logger = new Mock<ILogger<DataSeedImportBackgroundService>>();
         _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         _copyService
@@ -29,8 +29,8 @@ public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
 
         _sut = new DataSeedImportBackgroundService(
             _channel,
-            _logger.Object,
-            _copyService.Object);
+            _copyService.Object,
+            _logger.Object);
     }
 
     [Fact]

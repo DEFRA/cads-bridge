@@ -2,25 +2,25 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Services;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
 using CadsBridge.Core.Storage.FileSystem;
+using CadsBridge.Infrastructure.DataSeed.Services;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.DataSeed.Services;
 
-public class DataSeedFileCopyServiceTests
+public class FileSystemToS3CopyServiceTests
 {
     private const string BucketName = "test-bucket";
 
-    private Mock<IFileSytemWrapper> _mockFileSystemWrapper = new();
+    private readonly Mock<IFileSytemWrapper> _mockFileSystemWrapper = new();
 
-    public DataSeedFileCopyServiceTests()
+    public FileSystemToS3CopyServiceTests()
     {
         _mockFileSystemWrapper.Setup(x => x.OpenRead(It.IsAny<string>())).Throws<FileNotFoundException>();
     }
@@ -90,17 +90,17 @@ public class DataSeedFileCopyServiceTests
             Times.Never);
     }
 
-    private DataSeedFileCopyService GetSut(Mock<IAmazonS3> s3)
+    private FileSystemToS3CopyService GetSut(Mock<IAmazonS3> s3)
     {
         var s3ClientFactory = new Mock<IS3ClientFactory>();
         s3ClientFactory
             .Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new S3ClientFactory.ClientInfo(s3.Object, BucketName));
 
-        return new DataSeedFileCopyService(
+        return new FileSystemToS3CopyService(
             s3ClientFactory.Object,
             _mockFileSystemWrapper.Object,
-            Mock.Of<ILogger<DataSeedFileCopyService>>());
+            Mock.Of<ILogger<FileSystemToS3CopyService>>());
     }
 
     private void MockLocalFile(string content, string path)
