@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Channels;
 using CadsBridge.Application.DataSeed.Services;
+using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Core.Storage.FileSystem;
 
 namespace CadsBridge.Application.Setup;
@@ -24,7 +25,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
         services.AddTransient<IS3FileSplitterService, S3FileSplitterService>();
-        services.AddTransient<IFileImportCopyService, FileImportCopyService>();
         services.AddTransient<IAmazonTransferServiceWrapper, AmazonTransferServiceWrapper>();
 
         services.AddHostedService<FileImportBackgroundService>();

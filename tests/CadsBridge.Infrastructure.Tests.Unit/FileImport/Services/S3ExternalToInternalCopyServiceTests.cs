@@ -9,14 +9,15 @@ using CadsBridge.Core.Crypto;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Infrastructure.FileImport.Services;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.FileImport.Services;
 
-public class FileImportCopyServiceTests
+public class S3ExternalToInternalCopyServiceTests
 {
     private static Mock<IAmazonTransferServiceWrapper> _mockTransferWrapper = new();
     private const string ExternalBucketName = "external-bucket";
@@ -38,7 +39,7 @@ public class FileImportCopyServiceTests
         var request = CreateJob();
 
         // Act
-        var result = await sut.CopyWithRetryAsync(request, TestContext.Current.CancellationToken);
+        var result = await sut.ExecAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
@@ -75,7 +76,7 @@ public class FileImportCopyServiceTests
         var request = CreateJob();
 
         // Act
-        var result = await sut.CopyWithRetryAsync(request, TestContext.Current.CancellationToken);
+        var result = await sut.ExecAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
@@ -128,7 +129,7 @@ public class FileImportCopyServiceTests
         var sut = GetSut(s3, aesCryptoTransform);
 
         // Act
-        var result = await sut.CopyWithRetryAsync(
+        var result = await sut.ExecAsync(
             CreateJob(),
             TestContext.Current.CancellationToken);
 
@@ -162,7 +163,7 @@ public class FileImportCopyServiceTests
         var sut = GetSut(s3, new Mock<IAesCryptoTransform>());
 
         // Act
-        await Assert.ThrowsAsync<AmazonS3Exception>(async () => await sut.CopyWithRetryAsync(
+        await Assert.ThrowsAsync<AmazonS3Exception>(async () => await sut.ExecAsync(
             CreateJob(),
             TestContext.Current.CancellationToken));
 
@@ -182,7 +183,7 @@ public class FileImportCopyServiceTests
         var sut = GetSut(s3, new Mock<IAesCryptoTransform>());
 
         // Act
-        var result = await sut.CopyWithRetryAsync(
+        var result = await sut.ExecAsync(
             CreateJob(),
             cancellationTokenSource.Token);
 
@@ -207,7 +208,7 @@ public class FileImportCopyServiceTests
 
         // Act
         await Assert.ThrowsAsync<AmazonS3Exception>(async () =>
-            await sut.CopyWithRetryAsync(
+            await sut.ExecAsync(
                 CreateJob(),
                 TestContext.Current.CancellationToken));
 
@@ -224,7 +225,7 @@ public class FileImportCopyServiceTests
             Times.Never);
     }
 
-    private static FileImportCopyService GetSut(
+    private static S3ExternalToInternalCopyService GetSut(
         Mock<IAmazonS3> s3,
         Mock<IAesCryptoTransform> aesCryptoTransform)
     {
@@ -238,9 +239,9 @@ public class FileImportCopyServiceTests
             .Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new S3ClientFactory.ClientInfo(s3.Object, InternalBucketName));
 
-        var logger = new Mock<ILogger<FileImportCopyService>>();
+        var logger = new Mock<ILogger<S3ExternalToInternalCopyService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
-        return new FileImportCopyService(
+        return new S3ExternalToInternalCopyService(
             s3ClientFactory.Object,
             aesCryptoTransform.Object,
             _mockTransferWrapper.Object,

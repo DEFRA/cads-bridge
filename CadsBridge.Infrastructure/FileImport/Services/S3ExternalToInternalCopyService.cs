@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Application.Models;
+using CadsBridge.Application.Services;
 using CadsBridge.Core.Crypto;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Core.Storage.Abstractions;
@@ -9,13 +11,13 @@ using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Infrastructure.FileImport.Services;
 
-public class FileImportCopyService(
+public class S3ExternalToInternalCopyService(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
     IAmazonTransferServiceWrapper transferWrapper,
-    ILogger<FileImportCopyService> logger) : IFileImportCopyService
+    ILogger<S3ExternalToInternalCopyService> logger) : IS3ExternalToInternalCopyService
 {
     private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
     private readonly IAesCryptoTransform _aesCryptoTransform = aesCryptoTransform;
@@ -24,7 +26,7 @@ public class FileImportCopyService(
     public const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
     private const long MaxSingleFileSize = 100L * 1024 * 1024;
 
-    public async Task<bool> CopyWithRetryAsync(FileImportJob request, CancellationToken cancellationToken = default)
+    public async Task<bool> ExecAsync(FileImportJob job, CancellationToken cancellationToken = default)
     {
         var attempt = 0;
         var delayBaseMs = 500;
@@ -40,7 +42,7 @@ public class FileImportCopyService(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation("Cancellation requested for {Key}, aborting copy", request.SourceKey);
+                    logger.LogInformation("Cancellation requested for {Key}, aborting copy", job.SourceKey);
                 return false;
             }
 
@@ -50,27 +52,27 @@ public class FileImportCopyService(
             {
                 if (attempt > _maxRetries)
                 {
-                    throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {request.SourceKey}");
+                    throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {job.SourceKey}");
                 }
 
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
-                        request.SourceKey,
+                        job.SourceKey,
                         externalS3Info.BucketName,
                         internalS3Info.BucketName,
                         attempt);
 
-                await DecryptAndCopyAsync(request, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
+                await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
                         externalS3Info.BucketName,
-                        request.SourceKey,
+                        job.SourceKey,
                         internalS3Info.BucketName,
-                        request.TargetKey);
+                        job.TargetKey);
 
                 break;
             }
@@ -81,7 +83,7 @@ public class FileImportCopyService(
                 logger.LogWarning(
                     ex,
                     "Error copying {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
-                    request.SourceKey, attempt, _maxRetries, delay.TotalMilliseconds);
+                    job.SourceKey, attempt, _maxRetries, delay.TotalMilliseconds);
 
                 await Task.Delay(delay, cancellationToken);
             }

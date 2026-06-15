@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
 using CadsBridge.Application.Services;
@@ -6,7 +7,7 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Application.Tests.Unit.FileImport.Services;
 
 public class FileImportBackgroundServiceTests : IAsyncDisposable
 {
@@ -14,7 +15,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
     private readonly Mock<ILogger<FileImportBackgroundService>> _logger;
     private readonly Mock<IImportJobProgressStore> _progressStore;
     private readonly Mock<ISplitMessageProducer> _splitMessageProducer;
-    private readonly Mock<IFileImportCopyService> _fileImportCopyService;
+    private readonly Mock<IS3ExternalToInternalCopyService> _fileImportCopyService;
     private readonly FileImportBackgroundService _sut;
 
     private readonly FileImportJob _job = CreateJob();
@@ -25,10 +26,10 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
         _logger = new Mock<ILogger<FileImportBackgroundService>>();
         _progressStore = new Mock<IImportJobProgressStore>();
         _splitMessageProducer = new Mock<ISplitMessageProducer>();
-        _fileImportCopyService = new Mock<IFileImportCopyService>();
+        _fileImportCopyService = new Mock<IS3ExternalToInternalCopyService>();
 
         _fileImportCopyService
-            .Setup(x => x.CopyWithRetryAsync(
+            .Setup(x => x.ExecAsync(
                 It.IsAny<FileImportJob>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -58,7 +59,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
 
         // Assert
         await _progressStore.AsyncVerify(x => x.MarkInProgress(_job.JobId, _job.SourceKey), Times.Once);
-        await _fileImportCopyService.AsyncVerify(x => x.CopyWithRetryAsync(_job, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportCopyService.AsyncVerify(x => x.ExecAsync(_job, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -129,7 +130,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
     {
         // Arrange
         _fileImportCopyService
-            .Setup(x => x.CopyWithRetryAsync(_job, It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecAsync(_job, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         await _sut.StartAsync(TestContext.Current.CancellationToken);
@@ -167,7 +168,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
         var exception = new InvalidOperationException("Copy failed.");
 
         _fileImportCopyService
-            .Setup(x => x.CopyWithRetryAsync(_job, It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecAsync(_job, It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         await _sut.StartAsync(TestContext.Current.CancellationToken);
@@ -259,13 +260,13 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
 
         // Assert
         await _fileImportCopyService.AsyncVerify(
-            x => x.CopyWithRetryAsync(
+            x => x.ExecAsync(
                 It.IsAny<FileImportJob>(),
                 It.IsAny<CancellationToken>()),
             Times.Exactly(2));
 
-        await _fileImportCopyService.AsyncVerify(x => x.CopyWithRetryAsync(firstJob, It.IsAny<CancellationToken>()), Times.Once);
-        await _fileImportCopyService.AsyncVerify(x => x.CopyWithRetryAsync(secondJob, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportCopyService.AsyncVerify(x => x.ExecAsync(firstJob, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportCopyService.AsyncVerify(x => x.ExecAsync(secondJob, It.IsAny<CancellationToken>()), Times.Once);
 
         await _progressStore.AsyncVerify(
             x => x.MarkSucceeded(

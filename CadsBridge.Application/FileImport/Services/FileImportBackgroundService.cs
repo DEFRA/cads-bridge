@@ -1,24 +1,25 @@
-using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Application.Models;
+using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Services;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Application.FileImport.Services;
 
 public class FileImportBackgroundService(
     Channel<FileImportJob> channel,
     ILogger<FileImportBackgroundService> logger,
     IImportJobProgressStore progressStore,
     ISplitMessageProducer splitMessageProducer,
-    IFileImportCopyService fileImportCopyService) : BackgroundService
+    IS3ExternalToInternalCopyService s3ExternalToInternalCopyService) : BackgroundService
 {
     private readonly Channel<FileImportJob> _channel = channel;
     private readonly ILogger<FileImportBackgroundService> _logger = logger;
     private readonly IImportJobProgressStore _progressStore = progressStore;
     private readonly ISplitMessageProducer _splitMessageProducer = splitMessageProducer;
-    private readonly IFileImportCopyService _fileImportCopyService = fileImportCopyService;
+    private readonly IS3ExternalToInternalCopyService _s3ExternalToInternalCopyService = s3ExternalToInternalCopyService;
     private readonly int _maxParallelDownloads = 4;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,7 +43,7 @@ public class FileImportBackgroundService(
                     try
                     {
                         _progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                        var result = await _fileImportCopyService.CopyWithRetryAsync(request, stoppingToken);
+                        var result = await _s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
 
                         if (result)
                         {
