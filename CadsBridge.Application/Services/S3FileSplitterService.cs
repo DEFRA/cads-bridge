@@ -18,9 +18,9 @@ public class S3FileSplitterService(
     private readonly int _maxRetries = 3;
     private readonly int _delayBaseMs = 500;
 
-    public async Task<bool> ExecuteAsync(FileSplitJob request, CancellationToken cancellationToken)
+    public async Task<bool> ExecuteAsync(FileSplitJob job, CancellationToken cancellationToken)
     {
-        if (!request.SplitValue.HasValue)
+        if (!job.SplitValue.HasValue)
         {
             throw new ArgumentException("Split value must be specified for splitting.");
         }
@@ -32,14 +32,14 @@ public class S3FileSplitterService(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation("Cancellation requested for {Key}, aborting split", request.Key);
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.Key);
                 return false;
             }
 
             attempt++;
             if (attempt > _maxRetries)
             {
-                throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {request.Key}");
+                throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {job.Key}");
             }
 
             try
@@ -47,17 +47,17 @@ public class S3FileSplitterService(
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 splitting copy of {Key} from {SourceBucket}, attempt {Attempt}",
-                        request.Key,
+                        job.Key,
                         internalS3Info.BucketName,
                         attempt);
 
-                await SplitFileAsync(request, internalS3Info, cancellationToken);
+                await SplitFileAsync(job, internalS3Info, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 file split complete: {SourceBucket}/{SourceKey}",
                         internalS3Info.BucketName,
-                        request.Key);
+                        job.Key);
 
                 return true;
             }
@@ -68,7 +68,7 @@ public class S3FileSplitterService(
                 logger.LogWarning(
                     ex,
                     "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
-                    request.Key,
+                    job.Key,
                     attempt,
                     _maxRetries,
                     delay.TotalMilliseconds);

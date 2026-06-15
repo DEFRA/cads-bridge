@@ -2,10 +2,10 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
+using CadsBridge.Application.Persistance;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
-using CadsBridge.Core.Storage.FileSystem;
 using CadsBridge.Infrastructure.DataSeed.Services;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
@@ -18,7 +18,7 @@ public class FileSystemToS3CopyServiceTests
 {
     private const string BucketName = "test-bucket";
 
-    private readonly Mock<IFileSytemWrapper> _mockFileSystemWrapper = new();
+    private readonly Mock<IFileSystemWrapper> _mockFileSystemWrapper = new();
 
     public FileSystemToS3CopyServiceTests()
     {

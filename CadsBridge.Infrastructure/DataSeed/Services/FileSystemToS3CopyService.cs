@@ -1,17 +1,17 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataSeed.Services;
 using CadsBridge.Application.Models;
+using CadsBridge.Application.Persistance;
 using CadsBridge.Application.Services;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
-using CadsBridge.Core.Storage.FileSystem;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataSeed.Services;
 
 public class FileSystemToS3CopyService(
     IS3ClientFactory s3ClientFactory,
-    IFileSytemWrapper fileSystemWrapper,
+    IFileSystemWrapper fileSystemWrapper,
     ILogger<FileSystemToS3CopyService> logger) : IFileSystemToS3CopyService
 {
     public async Task<bool> ExecuteAsync(DataSeedImportJob request, CancellationToken cancellationToken)

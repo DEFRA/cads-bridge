@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Channels;
 using CadsBridge.Application.DataSeed.Services;
 using CadsBridge.Application.FileImport.Services;
-using CadsBridge.Core.Storage.FileSystem;
 
 namespace CadsBridge.Application.Setup;
 
@@ -20,7 +19,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Channel<DataSeedImportJob>>(Channel.CreateUnbounded<DataSeedImportJob>(new UnboundedChannelOptions() { SingleReader = false }));
         services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
-        services.AddSingleton<IFileSytemWrapper, FileSystemWrapper>();
 
         services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
