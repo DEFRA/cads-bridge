@@ -1,5 +1,4 @@
 using CadsBridge.Application.DataSeed.Services;
-using CadsBridge.Application.Services;
 using CadsBridge.Core.DataSeed.Abstractions;
 using CadsBridge.Infrastructure.DataSeed.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +11,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IDataSeedFileLoader, DataSeedFileLoader>();
         services.AddTransient<IFileSystemToS3CopyService, FileSystemToS3CopyService>();
+        services.AddHostedService<DataSeedImportBackgroundService>();
 
         return services;
     }

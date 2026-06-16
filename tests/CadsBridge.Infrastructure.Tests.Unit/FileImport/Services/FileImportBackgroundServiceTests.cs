@@ -2,12 +2,13 @@ using System.Threading.Channels;
 using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
-using CadsBridge.Application.Services;
+using CadsBridge.Infrastructure.FileImport.Services;
+using CadsBridge.Infrastructure.FileSplit;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.FileImport.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.FileImport.Services;
 
 public class FileImportBackgroundServiceTests : IAsyncDisposable
 {

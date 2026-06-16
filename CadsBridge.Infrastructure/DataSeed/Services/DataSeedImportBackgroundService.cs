@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Application.DataSeed.Services;
 using CadsBridge.Application.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Application.DataSeed.Services;
+namespace CadsBridge.Infrastructure.DataSeed.Services;
 
 public class DataSeedImportBackgroundService(
     Channel<DataSeedImportJob> channel,

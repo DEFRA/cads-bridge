@@ -1,6 +1,6 @@
 using CadsBridge.Application.Models;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Application.FileSplit.Services;
 
 public interface IS3FileSplitterService
 {

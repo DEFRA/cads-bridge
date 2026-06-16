@@ -1,11 +1,11 @@
 using System.Threading.Channels;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Services;
+using CadsBridge.Infrastructure.FileSplit;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.FileSplit;
 
 public class SplitMessageProducerTests
 {

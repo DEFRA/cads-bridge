@@ -1,7 +1,7 @@
 using Amazon.S3;
 using Amazon.S3.Transfer;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Infrastructure.Storage;
 
 public class AmazonTransferServiceWrapper : IAmazonTransferServiceWrapper
 {

@@ -2,7 +2,6 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataSeed.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
-using CadsBridge.Application.Services;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using Microsoft.Extensions.Logging;

@@ -3,12 +3,12 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Services;
 using CadsBridge.Core.Crypto;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.FileImport.Services;

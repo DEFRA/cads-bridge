@@ -1,15 +1,15 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Services;
 using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Infrastructure.FileSplit.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.FileSplit.Services;
 
 public class S3FileSplitterServiceTests
 {

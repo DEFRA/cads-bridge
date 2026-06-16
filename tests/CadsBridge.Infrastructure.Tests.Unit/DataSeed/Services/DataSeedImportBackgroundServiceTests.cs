@@ -1,11 +1,12 @@
 using System.Threading.Channels;
 using CadsBridge.Application.DataSeed.Services;
 using CadsBridge.Application.Models;
+using CadsBridge.Infrastructure.DataSeed.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.DataSeed.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.DataSeed.Services;
 
 public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
 {

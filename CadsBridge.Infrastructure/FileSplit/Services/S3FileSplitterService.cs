@@ -1,6 +1,7 @@
 using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.FileSplit.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Core.Storage.Abstractions;
@@ -8,7 +9,7 @@ using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Infrastructure.FileSplit.Services;
 
 public class S3FileSplitterService(
     IS3ClientFactory s3ClientFactory,

@@ -1,12 +1,13 @@
 using System.Threading.Channels;
+using CadsBridge.Application.FileSplit.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
-using CadsBridge.Application.Services;
+using CadsBridge.Infrastructure.FileSplit.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Application.Tests.Unit.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.FileSplit.Services;
 
 public class FileSplitBackgroundServiceTests : IAsyncDisposable
 {

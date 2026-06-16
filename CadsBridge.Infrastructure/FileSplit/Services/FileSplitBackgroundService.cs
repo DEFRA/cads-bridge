@@ -1,11 +1,12 @@
+using System.Collections.Concurrent;
+using System.Threading.Channels;
+using CadsBridge.Application.FileSplit.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
-using System.Threading.Channels;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Infrastructure.FileSplit.Services;
 
 public class FileSplitBackgroundService(
     Channel<FileSplitJob> channel,

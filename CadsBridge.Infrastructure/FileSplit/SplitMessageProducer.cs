@@ -1,8 +1,8 @@
+using System.Threading.Channels;
 using CadsBridge.Application.Models;
 using Microsoft.Extensions.Logging;
-using System.Threading.Channels;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Infrastructure.FileSplit;
 
 public interface ISplitMessageProducer
 {

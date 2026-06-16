@@ -1,6 +1,6 @@
 using Amazon.S3;
 
-namespace CadsBridge.Application.Services;
+namespace CadsBridge.Infrastructure.Storage;
 
 public interface IAmazonTransferServiceWrapper
 {

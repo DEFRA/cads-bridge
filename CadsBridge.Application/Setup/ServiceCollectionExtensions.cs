@@ -1,12 +1,9 @@
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
-using CadsBridge.Application.Services;
 using CadsBridge.Core.Crypto;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Channels;
-using CadsBridge.Application.DataSeed.Services;
-using CadsBridge.Application.FileImport.Services;
 
 namespace CadsBridge.Application.Setup;
 
@@ -21,13 +18,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
 
         services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
-        services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
-        services.AddTransient<IS3FileSplitterService, S3FileSplitterService>();
-        services.AddTransient<IAmazonTransferServiceWrapper, AmazonTransferServiceWrapper>();
-
-        services.AddHostedService<FileImportBackgroundService>();
-        services.AddHostedService<FileSplitBackgroundService>();
-        services.AddHostedService<DataSeedImportBackgroundService>();
 
         return services;
     }

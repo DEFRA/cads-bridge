@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistance;
-using CadsBridge.Application.Services;
+using CadsBridge.Infrastructure.FileSplit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Application.FileImport.Services;
+namespace CadsBridge.Infrastructure.FileImport.Services;
 
 public class FileImportBackgroundService(
     Channel<FileImportJob> channel,

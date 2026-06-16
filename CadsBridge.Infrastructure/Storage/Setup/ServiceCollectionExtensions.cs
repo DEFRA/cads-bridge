@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(configSection);
 
         services.AddSingleton<IConfigureS3Clients, StorageS3Configurator>();
+        services.AddTransient<IAmazonTransferServiceWrapper, AmazonTransferServiceWrapper>();
 
         if (configSection.Internal.HealthcheckEnabled || configSection.External.HealthcheckEnabled)
         {
@@ -30,7 +31,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
 
     public static IServiceCollection AddAmazonS3Core(this IServiceCollection services, IConfiguration configuration)
     {
