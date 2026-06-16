@@ -42,8 +42,8 @@ public class HistoricCattleDataFileImportEndpointTests
         await using var factory = new CadsBridgeWebAppFactory(null, false);
         var client = factory.CreateClient();
 
-        var request = new ImportRequest([
-            new ImportRequestItem(
+        var request = new ImportHistoricCattleDataRequest([
+            new ImportHistoricFileRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
                 targetKey: _importedKey,
@@ -73,8 +73,8 @@ public class HistoricCattleDataFileImportEndpointTests
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testPassword, _testSalt, TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
-        var jobId = await TriggerImportJob(client, new ImportRequest([
-            new ImportRequestItem(
+        var jobId = await TriggerImportJob(client, new ImportHistoricCattleDataRequest([
+            new ImportHistoricFileRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
                 targetKey: _importedKey,
@@ -84,7 +84,7 @@ public class HistoricCattleDataFileImportEndpointTests
                 SplitValue: 1)
         ]));
 
-        var expectedFileSplitJob = new FileSplitJob(jobId, _importedKey, _fileNameWithoutTypeSuffix, SplitType.ByLines, 1);
+        var expectedFileSplitJob = new HistoricDataFileSplitJob(jobId, _importedKey, _fileNameWithoutTypeSuffix, SplitType.ByLines, 1);
         await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
         var status = await GetImportJobStatus(jobId, client);
         status!.JobId.Should().Be(jobId);
@@ -93,9 +93,9 @@ public class HistoricCattleDataFileImportEndpointTests
     }
 
     private sealed record ImportJobResponse(string JobId);
-    private static async Task<string> TriggerImportJob(HttpClient httpClient, ImportRequest? request = null)
+    private static async Task<string> TriggerImportJob(HttpClient httpClient, ImportHistoricCattleDataRequest? request = null)
     {
-        var content = HttpContentUtility.CreateApplicationJsonAsStringContent(request ?? new ImportRequest([]));
+        var content = HttpContentUtility.CreateApplicationJsonAsStringContent(request ?? new ImportHistoricCattleDataRequest([]));
 
         var response = await httpClient.PostAsync("import", content, TestContext.Current.CancellationToken);
 

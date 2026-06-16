@@ -8,8 +8,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddFileSplit(this IServiceCollection services)
     {
-        services.AddHostedService<FileSplitBackgroundService>();
-        services.AddTransient<IS3FileSplitterService, S3FileSplitterService>();
+        services.AddHostedService<HistoricDataCsvFileSplitBackgroundService>();
+        services.AddTransient<Application.FileSplit.Services.IS3HistoricDataFileSplitterService, S3HistoricDataFileSplitterService>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 
         return services;

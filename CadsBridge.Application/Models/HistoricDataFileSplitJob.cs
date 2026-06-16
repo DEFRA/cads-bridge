@@ -1,6 +1,7 @@
 namespace CadsBridge.Application.Models;
 
-public record SplitRequestItem(
+public record HistoricDataFileSplitJob(
+    string JobId,
     string Key,
     string TargetFolder,
     SplitType SplitType,

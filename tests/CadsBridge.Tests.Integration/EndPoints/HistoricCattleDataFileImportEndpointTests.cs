@@ -61,8 +61,8 @@ public class HistoricCattleDataFileImportEndpointTests
         }, TestContext.Current.CancellationToken);
 
         // Act
-        var jobId = await TriggerImportJob(fixture, new ImportRequest([
-            new ImportRequestItem(
+        var jobId = await TriggerImportJob(fixture, new ImportHistoricCattleDataRequest([
+            new ImportHistoricFileRequestItem(
                 JobId: string.Empty,
                 sourceKey: incomingTestFileCsv,
                 targetKey: importedTestFileCsv,
@@ -97,7 +97,7 @@ public class HistoricCattleDataFileImportEndpointTests
     }
 
     private sealed record ImportJobResponse(string JobId);
-    private static async Task<string> TriggerImportJob(ApiContainerFixture fixture, ImportRequest? request = null)
+    private static async Task<string> TriggerImportJob(ApiContainerFixture fixture, ImportHistoricCattleDataRequest? request = null)
     {
         var requestContent = request != null ? HttpContentUtility.CreateApplicationJsonAsStringContent(request) : EmptyImportRequest;
         var response = await fixture.HttpClient!.PostAsync("import", requestContent, TestContext.Current.CancellationToken);
@@ -116,6 +116,6 @@ public class HistoricCattleDataFileImportEndpointTests
     }
 
     private static StringContent? EmptyImportRequest =>
-        HttpContentUtility.CreateApplicationJsonAsStringContent(new ImportRequest(new List<ImportRequestItem>()));
+        HttpContentUtility.CreateApplicationJsonAsStringContent(new ImportHistoricCattleDataRequest(new List<ImportHistoricFileRequestItem>()));
 
 }

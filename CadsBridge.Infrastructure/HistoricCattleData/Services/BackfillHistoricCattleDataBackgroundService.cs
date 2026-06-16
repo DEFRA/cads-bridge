@@ -53,7 +53,7 @@ public class BackfillHistoricCattleDataBackgroundService(
                             if (request.SplitType != SplitType.None)
                             {
                                 await _splitMessageProducer.SendAsync(
-                                    new FileSplitJob(
+                                    new HistoricDataFileSplitJob(
                                         JobId: request.JobId,
                                         Key: request.TargetKey,
                                         TargetFolder: Path.GetFileNameWithoutExtension(request.TargetKey),

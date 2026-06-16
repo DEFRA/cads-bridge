@@ -6,35 +6,36 @@ using CadsBridge.Infrastructure.FileSplit.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using IS3HistoricDataFileSplitterService = CadsBridge.Application.FileSplit.Services.IS3HistoricDataFileSplitterService;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.FileSplit.Services;
 
-public class FileSplitBackgroundServiceTests : IAsyncDisposable
+public class HistoricDataCsvFileSplitBackgroundServiceTests : IAsyncDisposable
 {
-    private readonly Channel<FileSplitJob> _channel;
-    private readonly Mock<ILogger<FileSplitBackgroundService>> _logger;
+    private readonly Channel<HistoricDataFileSplitJob> _channel;
+    private readonly Mock<ILogger<HistoricDataCsvFileSplitBackgroundService>> _logger;
     private readonly Mock<ISplitJobProgressStore> _progressStore;
-    private readonly Mock<IS3FileSplitterService> _s3FileSplitter;
-    private readonly FileSplitBackgroundService _sut;
+    private readonly Mock<IS3HistoricDataFileSplitterService> _s3FileSplitter;
+    private readonly HistoricDataCsvFileSplitBackgroundService _sut;
 
-    private readonly FileSplitJob _job1 = CreateJob();
+    private readonly HistoricDataFileSplitJob _job1 = CreateJob();
 
 
-    public FileSplitBackgroundServiceTests()
+    public HistoricDataCsvFileSplitBackgroundServiceTests()
     {
-        _channel = Channel.CreateUnbounded<FileSplitJob>();
-        _logger = new Mock<ILogger<FileSplitBackgroundService>>();
+        _channel = Channel.CreateUnbounded<HistoricDataFileSplitJob>();
+        _logger = new Mock<ILogger<HistoricDataCsvFileSplitBackgroundService>>();
         _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         _progressStore = new Mock<ISplitJobProgressStore>();
-        _s3FileSplitter = new Mock<IS3FileSplitterService>();
+        _s3FileSplitter = new Mock<IS3HistoricDataFileSplitterService>();
 
         _s3FileSplitter
             .Setup(x => x.ExecuteAsync(
-                It.IsAny<FileSplitJob>(),
+                It.IsAny<HistoricDataFileSplitJob>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        _sut = new FileSplitBackgroundService(
+        _sut = new HistoricDataCsvFileSplitBackgroundService(
             _channel,
             _logger.Object,
             _progressStore.Object,
@@ -117,15 +118,15 @@ public class FileSplitBackgroundServiceTests : IAsyncDisposable
         await _channel.Writer.WriteAsync(secondJob, TestContext.Current.CancellationToken);
 
         // Assert
-        await _s3FileSplitter.AsyncVerify(x => x.ExecuteAsync(It.IsAny<FileSplitJob>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        await _s3FileSplitter.AsyncVerify(x => x.ExecuteAsync(It.IsAny<HistoricDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         await _s3FileSplitter.AsyncVerify(x => x.ExecuteAsync(firstJob, It.IsAny<CancellationToken>()), Times.Once);
         await _s3FileSplitter.AsyncVerify(x => x.ExecuteAsync(secondJob, It.IsAny<CancellationToken>()), Times.Once);
         await _progressStore.AsyncVerify(x => x.MarkSucceeded(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
     }
 
-    private static FileSplitJob CreateJob(int jobNo = 1)
+    private static HistoricDataFileSplitJob CreateJob(int jobNo = 1)
     {
-        return new FileSplitJob(
+        return new HistoricDataFileSplitJob(
             JobId: $"job-{jobNo}",
             Key: $"imported/file-{jobNo}.csv",
             TargetFolder: $"split-output/file-{jobNo}",

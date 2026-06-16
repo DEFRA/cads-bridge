@@ -1,6 +1,6 @@
 namespace CadsBridge.Application.Models;
 
-public record ImportRequestItem(
+public record ImportHistoricFileRequestItem(
     string JobId,
     string sourceKey,
     string targetKey,

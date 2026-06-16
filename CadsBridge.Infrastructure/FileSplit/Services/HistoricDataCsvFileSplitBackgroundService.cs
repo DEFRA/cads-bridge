@@ -8,14 +8,14 @@ using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.FileSplit.Services;
 
-public class FileSplitBackgroundService(
-    Channel<FileSplitJob> channel,
-    ILogger<FileSplitBackgroundService> logger,
+public class HistoricDataCsvFileSplitBackgroundService(
+    Channel<HistoricDataFileSplitJob> channel,
+    ILogger<HistoricDataCsvFileSplitBackgroundService> logger,
     ISplitJobProgressStore progressStore,
-    IS3FileSplitterService s3FileSplitter) : BackgroundService
+    Application.FileSplit.Services.IS3HistoricDataFileSplitterService is3HistoricDataFileSplitter) : BackgroundService
 {
-    private readonly Channel<FileSplitJob> _channel = channel;
-    private readonly ILogger<FileSplitBackgroundService> _logger = logger;
+    private readonly Channel<HistoricDataFileSplitJob> _channel = channel;
+    private readonly ILogger<HistoricDataCsvFileSplitBackgroundService> _logger = logger;
     private readonly ISplitJobProgressStore _progressStore = progressStore;
     private readonly int _maxParallelDownloads = 4;
 
@@ -41,7 +41,7 @@ public class FileSplitBackgroundService(
                     {
                         _progressStore.MarkInProgress(request.JobId, request.Key);
 
-                        var result = await s3FileSplitter.ExecuteAsync(request, cancellationToken);
+                        var result = await is3HistoricDataFileSplitter.ExecuteAsync(request, cancellationToken);
 
                         if (result)
                         {

@@ -53,13 +53,13 @@ public static class EndpointsExtensions
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
-    private static async Task<IResult> Import([FromBody] ImportRequest request, Channel<ImportHistoricCattleFileJob> channel, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Import([FromBody] ImportHistoricCattleDataRequest historicCattleDataRequest, Channel<ImportHistoricCattleFileJob> channel, IImportJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
-        progressStore.InitJob(jobId, request.Files.Count);
+        progressStore.InitJob(jobId, historicCattleDataRequest.Files.Count);
 
-        foreach (var importFile in request.Files)
+        foreach (var importFile in historicCattleDataRequest.Files)
         {
             await channel.Writer.WriteAsync(new ImportHistoricCattleFileJob(
                 JobId: jobId,
@@ -88,7 +88,7 @@ public static class EndpointsExtensions
         return Results.Ok(progressStore.GetJobs());
     }
 
-    private static async Task<IResult> Split([FromBody] SplitRequest request, Channel<FileSplitJob> channel, ISplitJobProgressStore progressStore)
+    private static async Task<IResult> Split([FromBody] HistoricDataFileSplitRequest request, Channel<HistoricDataFileSplitJob> channel, ISplitJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -96,7 +96,7 @@ public static class EndpointsExtensions
 
         foreach (var file in request.Files)
         {
-            await channel.Writer.WriteAsync(new FileSplitJob(
+            await channel.Writer.WriteAsync(new HistoricDataFileSplitJob(
                 JobId: jobId,
                 Key: file.Key,
                 TargetFolder: file.TargetFolder,

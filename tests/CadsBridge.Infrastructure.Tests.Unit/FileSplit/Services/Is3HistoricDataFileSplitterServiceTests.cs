@@ -11,7 +11,7 @@ using Moq;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.FileSplit.Services;
 
-public class S3FileSplitterServiceTests
+public class Is3HistoricDataFileSplitterServiceTests
 {
     private const string BucketName = "internal-bucket";
     private const string SourceKey = "imports/source-file.csv";
@@ -29,7 +29,7 @@ public class S3FileSplitterServiceTests
         // Arrange
         var s3 = new Mock<IAmazonS3>();
         var sut = GetSut(s3, new Mock<IS3ClientFactory>());
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, null);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, null);
 
         // Act
         await Assert.ThrowsAsync<ArgumentException>(async () =>
@@ -43,7 +43,7 @@ public class S3FileSplitterServiceTests
         const int linesPerChunk = 2;
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create();
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, (SplitType)99, linesPerChunk);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, (SplitType)99, linesPerChunk);
 
         // Act
         await Assert.ThrowsAsync<ArgumentException>(async () =>
@@ -58,7 +58,7 @@ public class S3FileSplitterServiceTests
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create();
         var sut = GetSut(s3, factory);
         s3.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), It.IsAny<CancellationToken>())).Throws<NullReferenceException>();
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
         // Act
         await Assert.ThrowsAsync<NullReferenceException>(async () =>
@@ -87,7 +87,7 @@ public class S3FileSplitterServiceTests
 
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(sourceContent);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
         // Act
         var result = await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
@@ -119,7 +119,7 @@ public class S3FileSplitterServiceTests
         await cancellationTokenSource.CancelAsync();
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(SmallInputFile);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.BySize, 1);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.BySize, 1);
 
         // Act
         var result = await sut.ExecuteAsync(request, cancellationTokenSource.Token);
@@ -140,7 +140,7 @@ public class S3FileSplitterServiceTests
         const int linesPerChunk = 2;
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(sourceContent);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
         // Act
         await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
@@ -166,7 +166,7 @@ public class S3FileSplitterServiceTests
 
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(sourceContent);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", sourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
+        var request = new HistoricDataFileSplitJob("", sourceKey, DestinationPrefix, SplitType.ByLines, linesPerChunk);
 
         // Act
         await sut.ExecuteAsync(
@@ -201,7 +201,7 @@ public class S3FileSplitterServiceTests
 
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(sourceContent);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, 2);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, 2);
 
         // Act
         await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
@@ -220,7 +220,7 @@ public class S3FileSplitterServiceTests
         const int chunkSizeMb = 1;
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(SmallInputFile);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, DestinationPrefix, SplitType.BySize, chunkSizeMb);
+        var request = new HistoricDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.BySize, chunkSizeMb);
 
         // Act
         await sut.ExecuteAsync(
@@ -241,7 +241,7 @@ public class S3FileSplitterServiceTests
         const int chunkSizeMb = 1;
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(SmallInputFile);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", SourceKey, "", SplitType.BySize, chunkSizeMb);
+        var request = new HistoricDataFileSplitJob("", SourceKey, "", SplitType.BySize, chunkSizeMb);
 
         // Act
         await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
@@ -266,7 +266,7 @@ public class S3FileSplitterServiceTests
 
         var (s3, factory, uploadedObjects) = S3MockBuilder.Create(sourceContent);
         var sut = GetSut(s3, factory);
-        var request = new FileSplitJob("", sourceKey, DestinationPrefix, SplitType.BySize, chunkSizeMb);
+        var request = new HistoricDataFileSplitJob("", sourceKey, DestinationPrefix, SplitType.BySize, chunkSizeMb);
 
         // Act
         await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
@@ -284,12 +284,12 @@ public class S3FileSplitterServiceTests
             .And.Contain(thirdLine);
     }
 
-    private static S3FileSplitterService GetSut(Mock<IAmazonS3> s3, Mock<IS3ClientFactory> s3ClientFactory)
+    private static S3HistoricDataFileSplitterService GetSut(Mock<IAmazonS3> s3, Mock<IS3ClientFactory> s3ClientFactory)
     {
-        var logger = new Mock<ILogger<S3FileSplitterService>>();
+        var logger = new Mock<ILogger<S3HistoricDataFileSplitterService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        return new S3FileSplitterService(s3ClientFactory.Object,
+        return new S3HistoricDataFileSplitterService(s3ClientFactory.Object,
             logger.Object
             );
     }

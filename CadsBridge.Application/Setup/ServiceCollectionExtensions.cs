@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationLayer(this IServiceCollection services, IConfiguration config)
     {
         services.AddSingleton<Channel<ImportHistoricCattleFileJob>>(Channel.CreateUnbounded<ImportHistoricCattleFileJob>(new UnboundedChannelOptions() { SingleReader = false }));
-        services.AddSingleton<Channel<FileSplitJob>>(Channel.CreateUnbounded<FileSplitJob>(new UnboundedChannelOptions() { SingleReader = false }));
+        services.AddSingleton<Channel<HistoricDataFileSplitJob>>(Channel.CreateUnbounded<HistoricDataFileSplitJob>(new UnboundedChannelOptions() { SingleReader = false }));
         services.AddSingleton<Channel<DataSeedImportJob>>(Channel.CreateUnbounded<DataSeedImportJob>(new UnboundedChannelOptions() { SingleReader = false }));
         services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();

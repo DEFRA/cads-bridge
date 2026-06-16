@@ -37,7 +37,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
 
         _splitMessageProducer
             .Setup(x => x.SendAsync(
-                It.IsAny<FileSplitJob>(),
+                It.IsAny<HistoricDataFileSplitJob>(),
                 It.IsAny<CancellationToken>()))
             .Returns(ValueTask.CompletedTask);
 
@@ -95,7 +95,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
         await _progressStore.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.SourceKey), Times.Once);
 
         _splitMessageProducer.Verify(x => x.SendAsync(
-                It.IsAny<FileSplitJob>(),
+                It.IsAny<HistoricDataFileSplitJob>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -109,7 +109,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
             splitType: SplitType.ByLines,
             splitValue: 10);
 
-        var expectedSplitJob = new FileSplitJob(
+        var expectedSplitJob = new HistoricDataFileSplitJob(
             JobId: job.JobId,
             Key: job.TargetKey,
             TargetFolder: "example-file",
@@ -157,7 +157,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
 
         _splitMessageProducer.Verify(
             x => x.SendAsync(
-                It.IsAny<FileSplitJob>(),
+                It.IsAny<HistoricDataFileSplitJob>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -199,7 +199,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
 
         _splitMessageProducer.Verify(
             x => x.SendAsync(
-                It.IsAny<FileSplitJob>(),
+                It.IsAny<HistoricDataFileSplitJob>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -216,7 +216,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
 
         _splitMessageProducer
             .Setup(x => x.SendAsync(
-                It.IsAny<FileSplitJob>(),
+                It.IsAny<HistoricDataFileSplitJob>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
@@ -285,7 +285,7 @@ public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
             splitType: SplitType.BySize,
             splitValue: 25);
 
-        var expectedSplitJob = new FileSplitJob(
+        var expectedSplitJob = new HistoricDataFileSplitJob(
             JobId: job.JobId,
             Key: job.TargetKey,
             TargetFolder: "example-file",

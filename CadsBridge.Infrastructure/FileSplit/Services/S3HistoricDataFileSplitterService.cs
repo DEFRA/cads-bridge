@@ -11,15 +11,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.FileSplit.Services;
 
-public class S3FileSplitterService(
+public class S3HistoricDataFileSplitterService(
     IS3ClientFactory s3ClientFactory,
-    ILogger<S3FileSplitterService> logger)
-    : IS3FileSplitterService
+    ILogger<S3HistoricDataFileSplitterService> logger)
+    : IS3HistoricDataFileSplitterService
 {
     private readonly int _maxRetries = 3;
     private readonly int _delayBaseMs = 500;
 
-    public async Task<bool> ExecuteAsync(FileSplitJob job, CancellationToken cancellationToken)
+    public async Task<bool> ExecuteAsync(HistoricDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (!job.SplitValue.HasValue)
         {
@@ -80,7 +80,7 @@ public class S3FileSplitterService(
     }
 
     private async Task SplitFileAsync(
-        FileSplitJob request,
+        HistoricDataFileSplitJob request,
         S3ClientFactory.ClientInfo internalS3Info,
         CancellationToken cancellationToken)
     {
