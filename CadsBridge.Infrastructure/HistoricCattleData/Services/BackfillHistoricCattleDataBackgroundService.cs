@@ -1,23 +1,23 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using CadsBridge.Application.FileImport.Services;
+using CadsBridge.Application.HistoricCattleData.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistence;
 using CadsBridge.Infrastructure.FileSplit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Infrastructure.FileImport.Services;
+namespace CadsBridge.Infrastructure.HistoricCattleData.Services;
 
-public class FileImportBackgroundService(
-    Channel<FileImportJob> channel,
-    ILogger<FileImportBackgroundService> logger,
+public class BackfillHistoricCattleDataBackgroundService(
+    Channel<ImportHistoricCattleFileJob> channel,
+    ILogger<BackfillHistoricCattleDataBackgroundService> logger,
     IImportJobProgressStore progressStore,
     ISplitMessageProducer splitMessageProducer,
     IS3ExternalToInternalCopyService s3ExternalToInternalCopyService) : BackgroundService
 {
-    private readonly Channel<FileImportJob> _channel = channel;
-    private readonly ILogger<FileImportBackgroundService> _logger = logger;
+    private readonly Channel<ImportHistoricCattleFileJob> _channel = channel;
+    private readonly ILogger<BackfillHistoricCattleDataBackgroundService> _logger = logger;
     private readonly IImportJobProgressStore _progressStore = progressStore;
     private readonly ISplitMessageProducer _splitMessageProducer = splitMessageProducer;
     private readonly IS3ExternalToInternalCopyService _s3ExternalToInternalCopyService = s3ExternalToInternalCopyService;

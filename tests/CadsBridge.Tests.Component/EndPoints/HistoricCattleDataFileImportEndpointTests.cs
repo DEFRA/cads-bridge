@@ -13,7 +13,7 @@ using Moq;
 
 namespace CadsBridge.Tests.Component.EndPoints;
 
-public class FileImportEndpointTests
+public class HistoricCattleDataFileImportEndpointTests
 {
     private string _testPassword = "test-password";
     private string _testSalt = "test-salt";

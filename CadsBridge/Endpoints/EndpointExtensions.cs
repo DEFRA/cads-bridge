@@ -53,7 +53,7 @@ public static class EndpointsExtensions
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
-    private static async Task<IResult> Import([FromBody] ImportRequest request, Channel<FileImportJob> channel, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Import([FromBody] ImportRequest request, Channel<ImportHistoricCattleFileJob> channel, IImportJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -61,7 +61,7 @@ public static class EndpointsExtensions
 
         foreach (var importFile in request.Files)
         {
-            await channel.Writer.WriteAsync(new FileImportJob(
+            await channel.Writer.WriteAsync(new ImportHistoricCattleFileJob(
                 JobId: jobId,
                 SourceKey: importFile.sourceKey,
                 TargetKey: importFile.targetKey,

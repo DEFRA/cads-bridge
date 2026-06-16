@@ -8,14 +8,14 @@ using CadsBridge.Core.Crypto;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;
-using CadsBridge.Infrastructure.FileImport.Services;
+using CadsBridge.Infrastructure.HistoricCattleData.Services;
 using CadsBridge.Infrastructure.Storage;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Infrastructure.Tests.Unit.FileImport.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.HistoricCattleData.Services;
 
 public class S3ExternalToInternalCopyServiceTests
 {
@@ -293,9 +293,9 @@ public class S3ExternalToInternalCopyServiceTests
         return aesCryptoTransform;
     }
 
-    private static FileImportJob CreateJob()
+    private static ImportHistoricCattleFileJob CreateJob()
     {
-        return new FileImportJob(
+        return new ImportHistoricCattleFileJob(
             JobId: "job-1",
             SourceKey: SourceKey,
             TargetKey: TargetKey,

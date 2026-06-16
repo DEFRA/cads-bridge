@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using Amazon.S3;
 using Amazon.S3.Model;
-using CadsBridge.Application.FileImport.Services;
+using CadsBridge.Application.HistoricCattleData.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Core.Crypto;
 using CadsBridge.Core.Exceptions;
@@ -11,7 +11,7 @@ using CadsBridge.Core.Storage.Factories;
 using CadsBridge.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
-namespace CadsBridge.Infrastructure.FileImport.Services;
+namespace CadsBridge.Infrastructure.HistoricCattleData.Services;
 
 public class S3ExternalToInternalCopyService(
     IS3ClientFactory s3ClientFactory,
@@ -26,7 +26,7 @@ public class S3ExternalToInternalCopyService(
     public const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
     private const long MaxSingleFileSize = 100L * 1024 * 1024;
 
-    public async Task<bool> ExecAsync(FileImportJob job, CancellationToken cancellationToken = default)
+    public async Task<bool> ExecAsync(ImportHistoricCattleFileJob job, CancellationToken cancellationToken = default)
     {
         var attempt = 0;
         var delayBaseMs = 500;
@@ -93,7 +93,7 @@ public class S3ExternalToInternalCopyService(
     }
 
     private async Task DecryptAndCopyAsync(
-        FileImportJob request,
+        ImportHistoricCattleFileJob request,
         S3ClientFactory.ClientInfo externalS3Info,
         S3ClientFactory.ClientInfo internalS3Info,
         IAmazonS3 externalS3,

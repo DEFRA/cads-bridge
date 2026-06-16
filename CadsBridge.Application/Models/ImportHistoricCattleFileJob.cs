@@ -1,6 +1,6 @@
 namespace CadsBridge.Application.Models;
 
-public record FileImportJob(
+public record ImportHistoricCattleFileJob(
     string JobId,
     string SourceKey,
     string TargetKey,

@@ -13,7 +13,7 @@ using FluentAssertions;
 namespace CadsBridge.Tests.Integration.EndPoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
-public class FileImportEndpointTests
+public class HistoricCattleDataFileImportEndpointTests
 {
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()

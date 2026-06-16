@@ -1,37 +1,37 @@
 using System.Threading.Channels;
-using CadsBridge.Application.FileImport.Services;
+using CadsBridge.Application.HistoricCattleData.Services;
 using CadsBridge.Application.Models;
 using CadsBridge.Application.Persistence;
-using CadsBridge.Infrastructure.FileImport.Services;
 using CadsBridge.Infrastructure.FileSplit;
+using CadsBridge.Infrastructure.HistoricCattleData.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace CadsBridge.Infrastructure.Tests.Unit.FileImport.Services;
+namespace CadsBridge.Infrastructure.Tests.Unit.HistoricCattleData.Services;
 
-public class FileImportBackgroundServiceTests : IAsyncDisposable
+public class BackfillHistoricCattleDataBackgroundServiceTests : IAsyncDisposable
 {
-    private readonly Channel<FileImportJob> _channel;
-    private readonly Mock<ILogger<FileImportBackgroundService>> _logger;
+    private readonly Channel<ImportHistoricCattleFileJob> _channel;
+    private readonly Mock<ILogger<BackfillHistoricCattleDataBackgroundService>> _logger;
     private readonly Mock<IImportJobProgressStore> _progressStore;
     private readonly Mock<ISplitMessageProducer> _splitMessageProducer;
     private readonly Mock<IS3ExternalToInternalCopyService> _fileImportCopyService;
-    private readonly FileImportBackgroundService _sut;
+    private readonly BackfillHistoricCattleDataBackgroundService _sut;
 
-    private readonly FileImportJob _job = CreateJob();
+    private readonly ImportHistoricCattleFileJob _job = CreateJob();
 
-    public FileImportBackgroundServiceTests()
+    public BackfillHistoricCattleDataBackgroundServiceTests()
     {
-        _channel = Channel.CreateUnbounded<FileImportJob>();
-        _logger = new Mock<ILogger<FileImportBackgroundService>>();
+        _channel = Channel.CreateUnbounded<ImportHistoricCattleFileJob>();
+        _logger = new Mock<ILogger<BackfillHistoricCattleDataBackgroundService>>();
         _progressStore = new Mock<IImportJobProgressStore>();
         _splitMessageProducer = new Mock<ISplitMessageProducer>();
         _fileImportCopyService = new Mock<IS3ExternalToInternalCopyService>();
 
         _fileImportCopyService
             .Setup(x => x.ExecAsync(
-                It.IsAny<FileImportJob>(),
+                It.IsAny<ImportHistoricCattleFileJob>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
@@ -41,7 +41,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
                 It.IsAny<CancellationToken>()))
             .Returns(ValueTask.CompletedTask);
 
-        _sut = new FileImportBackgroundService(
+        _sut = new BackfillHistoricCattleDataBackgroundService(
             _channel,
             _logger.Object,
             _progressStore.Object,
@@ -262,7 +262,7 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
         // Assert
         await _fileImportCopyService.AsyncVerify(
             x => x.ExecAsync(
-                It.IsAny<FileImportJob>(),
+                It.IsAny<ImportHistoricCattleFileJob>(),
                 It.IsAny<CancellationToken>()),
             Times.Exactly(2));
 
@@ -303,14 +303,14 @@ public class FileImportBackgroundServiceTests : IAsyncDisposable
             Times.Once);
     }
 
-    private static FileImportJob CreateJob(
+    private static ImportHistoricCattleFileJob CreateJob(
         int jobNo = 1,
         string? sourceKey = null,
         string? targetKey = null,
         SplitType splitType = SplitType.None,
         int? splitValue = null)
     {
-        return new FileImportJob(
+        return new ImportHistoricCattleFileJob(
             JobId: $"job-{jobNo}",
             SourceKey: sourceKey ?? $"incoming/file-{jobNo}.csv",
             TargetKey: targetKey ?? $"imported/file-{jobNo}.csv",
