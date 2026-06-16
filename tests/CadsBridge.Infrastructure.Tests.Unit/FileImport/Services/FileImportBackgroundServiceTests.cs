@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using CadsBridge.Application.FileImport.Services;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using CadsBridge.Infrastructure.FileImport.Services;
 using CadsBridge.Infrastructure.FileSplit;
 using CadsBridge.Testing.Support.Utilities.Assertions;

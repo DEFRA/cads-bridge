@@ -1,5 +1,5 @@
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using CadsBridge.Core.Crypto;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

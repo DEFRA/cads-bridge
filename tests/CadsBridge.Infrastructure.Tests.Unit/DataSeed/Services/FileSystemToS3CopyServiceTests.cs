@@ -2,7 +2,7 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using CadsBridge.Core.Storage.Abstractions;
 using CadsBridge.Core.Storage.Clients;
 using CadsBridge.Core.Storage.Factories;

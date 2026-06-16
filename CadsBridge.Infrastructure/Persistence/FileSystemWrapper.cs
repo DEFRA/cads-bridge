@@ -1,6 +1,6 @@
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 
-namespace CadsBridge.Infrastructure.Persistance;
+namespace CadsBridge.Infrastructure.Persistence;
 
 public class FileSystemWrapper : IFileSystemWrapper
 {

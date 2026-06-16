@@ -1,4 +1,4 @@
-namespace CadsBridge.Application.Persistance;
+namespace CadsBridge.Application.Persistence;
 
 public interface IFileSystemWrapper
 {

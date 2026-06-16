@@ -1,8 +1,8 @@
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using CadsBridge.Infrastructure.DataSeed.Setup;
 using CadsBridge.Infrastructure.FileImport.Setup;
 using CadsBridge.Infrastructure.FileSplit.Setup;
-using CadsBridge.Infrastructure.Persistance;
+using CadsBridge.Infrastructure.Persistence;
 using CadsBridge.Infrastructure.Storage.Setup;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

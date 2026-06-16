@@ -1,7 +1,7 @@
 using CadsBridge.Application.Models;
 using System.Collections.Concurrent;
 
-namespace CadsBridge.Application.Persistance;
+namespace CadsBridge.Application.Persistence;
 
 public record JobItemProgress(
     string Key,

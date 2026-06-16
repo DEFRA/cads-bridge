@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Amazon.S3.Model;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using CadsBridge.Testing.Support.Utilities.Assertions;

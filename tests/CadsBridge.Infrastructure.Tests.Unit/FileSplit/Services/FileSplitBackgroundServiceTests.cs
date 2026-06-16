@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using CadsBridge.Application.FileSplit.Services;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using CadsBridge.Infrastructure.FileSplit.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;

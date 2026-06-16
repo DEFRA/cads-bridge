@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Threading.Channels;
 using CadsBridge.Application.FileSplit.Services;
 using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
