@@ -1,10 +1,10 @@
-using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
-using CadsBridge.Core.Storage.Abstractions;
-using CadsBridge.Core.Storage.Clients;
-using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Factories;
 using Moq;
+using System.Text;
 
 namespace CadsBridge.Testing.Support.Utilities.Aws;
 

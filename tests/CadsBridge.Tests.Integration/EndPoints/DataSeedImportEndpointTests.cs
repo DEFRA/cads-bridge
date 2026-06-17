@@ -1,6 +1,6 @@
-using System.Net;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using FluentAssertions;
+using System.Net;
 
 namespace CadsBridge.Tests.Integration.EndPoints;
 

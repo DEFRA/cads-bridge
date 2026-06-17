@@ -1,9 +1,8 @@
-using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
-using CadsBridge.Core.Storage.Abstractions;
-using CadsBridge.Core.Storage.Clients;
-using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Factories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -12,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 

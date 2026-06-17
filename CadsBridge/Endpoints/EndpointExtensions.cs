@@ -1,9 +1,9 @@
-using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistence;
+using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.DataLoad.Persistence;
+using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Endpoints.Requests;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
-using CadsBridge.Core.DataSeed.Abstractions;
 
 namespace CadsBridge.Endpoints;
 
@@ -26,7 +26,7 @@ public static class EndpointsExtensions
         app.MapGet("data-seed/import", GetDataSeed);
     }
 
-    private static async Task<IResult> GetDataSeed(Channel<DataSeedImportJob> channel, IConfiguration configuration, IDataSeedFileLoader dataSeedFileLoader)
+    private static async Task<IResult> GetDataSeed(Channel<DataSeedFileLoadJob> channel, IConfiguration configuration, IDataSeedFileLoadService dataSeedFileLoader)
     {
         var dataSeedingImportEnabled = configuration.GetValue<bool>("DataSeedingImportEnabled");
         if (!dataSeedingImportEnabled)
@@ -43,7 +43,7 @@ public static class EndpointsExtensions
         foreach (var file in files)
         {
             var jobId = Guid.NewGuid().ToString("N");
-            await channel.Writer.WriteAsync(new DataSeedImportJob(
+            await channel.Writer.WriteAsync(new DataSeedFileLoadJob(
                 JobId: jobId,
                 FileName: file.FilePath,
                 TargetKey: $"data-seed/{file.FileName}"
@@ -53,15 +53,15 @@ public static class EndpointsExtensions
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
-    private static async Task<IResult> Import([FromBody] ImportHistoricCattleDataRequest historicCattleDataRequest, Channel<ImportHistoricCattleFileJob> channel, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Import([FromBody] CsvDataFileImportRequest request, Channel<CsvDataFileImportJob> channel, IImportJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
-        progressStore.InitJob(jobId, historicCattleDataRequest.Files.Count);
+        progressStore.InitJob(jobId, request.Files.Count);
 
-        foreach (var importFile in historicCattleDataRequest.Files)
+        foreach (var importFile in request.Files)
         {
-            await channel.Writer.WriteAsync(new ImportHistoricCattleFileJob(
+            await channel.Writer.WriteAsync(new CsvDataFileImportJob(
                 JobId: jobId,
                 SourceKey: importFile.sourceKey,
                 TargetKey: importFile.targetKey,
@@ -88,7 +88,7 @@ public static class EndpointsExtensions
         return Results.Ok(progressStore.GetJobs());
     }
 
-    private static async Task<IResult> Split([FromBody] HistoricDataFileSplitRequest request, Channel<HistoricDataFileSplitJob> channel, ISplitJobProgressStore progressStore)
+    private static async Task<IResult> Split([FromBody] CsvDataFileSplitRequest request, Channel<CsvDataFileSplitJob> channel, ISplitJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -96,7 +96,7 @@ public static class EndpointsExtensions
 
         foreach (var file in request.Files)
         {
-            await channel.Writer.WriteAsync(new HistoricDataFileSplitJob(
+            await channel.Writer.WriteAsync(new CsvDataFileSplitJob(
                 JobId: jobId,
                 Key: file.Key,
                 TargetFolder: file.TargetFolder,

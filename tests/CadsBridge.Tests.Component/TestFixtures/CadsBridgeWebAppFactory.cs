@@ -1,8 +1,8 @@
 using Amazon.S3;
-using CadsBridge.Core.DataSeed.Abstractions;
-using CadsBridge.Core.Storage.Abstractions;
-using CadsBridge.Core.Storage.Clients;
-using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Factories;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Components;
 using Microsoft.AspNetCore.Hosting;
@@ -18,7 +18,7 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
 {
     public CadsBridgeWebAppFactory() : this(null) { }
 
-    public Mock<IDataSeedFileLoader> DataSeedFileLoaderMock { get; } = new();
+    public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -26,7 +26,7 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
 
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll<IDataSeedFileLoader>();
+            services.RemoveAll<IDataSeedFileLoadService>();
             services.AddSingleton(DataSeedFileLoaderMock.Object);
 
             OverrideAmazonS3(services);

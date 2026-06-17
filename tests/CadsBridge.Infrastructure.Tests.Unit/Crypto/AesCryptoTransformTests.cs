@@ -1,7 +1,6 @@
+using CadsBridge.Core.Crypto;
 using FluentAssertions;
 using System.Text;
-using Xunit;
-using CadsBridge.Core.Crypto;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Crypto;
 

@@ -1,12 +1,12 @@
-using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
-using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Health;
 using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Storage.Health;
 
