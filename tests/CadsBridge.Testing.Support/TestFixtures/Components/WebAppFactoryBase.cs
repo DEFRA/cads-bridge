@@ -47,14 +47,15 @@ public abstract class WebAppFactoryBase<TStart>(
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(AmazonS3Mock.Object);
+
             if (disableHostedServices)
                 services.RemoveAll<IHostedService>();
+
             foreach (var serviceOverride in ServiceOverrides)
             {
                 serviceOverride(services);
             }
         });
-
     }
 
     public void OverrideSingleton<T>(T service) where T : class

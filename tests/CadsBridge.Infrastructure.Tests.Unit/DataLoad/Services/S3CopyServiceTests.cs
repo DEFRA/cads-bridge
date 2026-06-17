@@ -1,10 +1,10 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Services;
-using CadsBridge.Infrastructure.Storage;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
@@ -20,7 +20,8 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
 public class S3CopyServiceTests
 {
-    private static readonly Mock<IAmazonTransferServiceWrapper> s_mockTransferWrapper = new();
+    private static readonly Mock<IS3TransferUtilityWrapper> s_mockTransferWrapper = new();
+
     private const string ExternalBucketName = "external-bucket";
     private const string InternalBucketName = "internal-bucket";
     private const string SourceKey = "incoming/source-file.csv";

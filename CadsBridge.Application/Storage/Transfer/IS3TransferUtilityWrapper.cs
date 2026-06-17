@@ -1,8 +1,8 @@
 using Amazon.S3;
 
-namespace CadsBridge.Infrastructure.Storage;
+namespace CadsBridge.Application.Storage.Transfer;
 
-public interface IAmazonTransferServiceWrapper
+public interface IS3TransferUtilityWrapper
 {
     Task TransferAsync(
         IAmazonS3 s3,

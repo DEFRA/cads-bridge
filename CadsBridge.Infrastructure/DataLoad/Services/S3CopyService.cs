@@ -2,10 +2,10 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Core.Crypto;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Crypto;
-using CadsBridge.Infrastructure.Storage;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
@@ -17,7 +17,7 @@ namespace CadsBridge.Infrastructure.DataLoad.Services;
 public class S3CopyService(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
-    IAmazonTransferServiceWrapper transferWrapper,
+    IS3TransferUtilityWrapper transferWrapper,
     ILogger<S3CopyService> logger) : IS3CopyService
 {
     private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
