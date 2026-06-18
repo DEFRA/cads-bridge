@@ -1,4 +1,4 @@
-using CadsBridge.Core.Crypto;
+using CadsBridge.Infrastructure.Crypto;
 using System.Text;
 
 namespace CadsBridge.Testing.Support.Utilities.Aws;
