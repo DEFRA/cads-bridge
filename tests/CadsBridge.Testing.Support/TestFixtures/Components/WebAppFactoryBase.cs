@@ -1,9 +1,8 @@
-using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
-using CadsBridge.Core.Storage.Abstractions;
-using CadsBridge.Core.Storage.Clients;
-using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Factories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -12,14 +11,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 
 public abstract class WebAppFactoryBase<TStart>(
-    IDictionary<string, string?>? configOverrides = null) : WebApplicationFactory<TStart>
+    IDictionary<string, string?>? configOverrides = null,
+    bool disableHostedServices = true) : WebApplicationFactory<TStart>
     where TStart : class
 {
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
+    public List<Action<IServiceCollection>> ServiceOverrides { get; private set; } = new();
+
     private readonly IDictionary<string, string?> _configOverrides = configOverrides ?? new Dictionary<string, string?>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -44,7 +47,23 @@ public abstract class WebAppFactoryBase<TStart>(
         builder.ConfigureServices(services =>
         {
             services.AddSingleton(AmazonS3Mock.Object);
-            services.RemoveAll<IHostedService>();
+
+            if (disableHostedServices)
+                services.RemoveAll<IHostedService>();
+
+            foreach (var serviceOverride in ServiceOverrides)
+            {
+                serviceOverride(services);
+            }
+        });
+    }
+
+    public void OverrideSingleton<T>(T service) where T : class
+    {
+        ServiceOverrides.Add(x =>
+        {
+            x.RemoveAll<T>();
+            x.AddSingleton<T>(service);
         });
     }
 

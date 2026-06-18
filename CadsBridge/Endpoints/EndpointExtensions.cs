@@ -1,13 +1,12 @@
-using CadsBridge.Application.Models;
-using CadsBridge.Application.Persistance;
+using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.DataLoad.Persistence;
+using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Endpoints.Requests;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
-using CadsBridge.Core.DataSeed.Abstractions;
 
 namespace CadsBridge.Endpoints;
 
-[ExcludeFromCodeCoverage]
 public static class EndpointsExtensions
 {
     public static void CreateEndpoints(this IEndpointRouteBuilder app)
@@ -27,13 +26,14 @@ public static class EndpointsExtensions
         app.MapGet("data-seed/import", GetDataSeed);
     }
 
-    private static async Task<IResult> GetDataSeed(Channel<DataSeedImportJob> channel, IConfiguration configuration, IDataSeedFileLoader dataSeedFileLoader)
+    private static async Task<IResult> GetDataSeed(Channel<DataSeedFileLoadJob> channel, IConfiguration configuration, IDataSeedFileLoadService dataSeedFileLoader)
     {
         var dataSeedingImportEnabled = configuration.GetValue<bool>("DataSeedingImportEnabled");
         if (!dataSeedingImportEnabled)
         {
             return Results.Ok("Data seeding import is disabled.");
         }
+
         var files = dataSeedFileLoader.GetFiles();
         if (files.Count == 0)
         {
@@ -43,16 +43,17 @@ public static class EndpointsExtensions
         foreach (var file in files)
         {
             var jobId = Guid.NewGuid().ToString("N");
-            await channel.Writer.WriteAsync(new DataSeedImportJob(
+            await channel.Writer.WriteAsync(new DataSeedFileLoadJob(
                 JobId: jobId,
                 FileName: file.FilePath,
                 TargetKey: $"data-seed/{file.FileName}"
             ));
         }
+
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
-    private static async Task<IResult> Import([FromBody] ImportRequest request, Channel<FileImportJob> channel, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Import([FromBody] CsvDataFileImportRequest request, Channel<CsvDataFileImportJob> channel, IImportJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -60,7 +61,7 @@ public static class EndpointsExtensions
 
         foreach (var importFile in request.Files)
         {
-            await channel.Writer.WriteAsync(new FileImportJob(
+            await channel.Writer.WriteAsync(new CsvDataFileImportJob(
                 JobId: jobId,
                 SourceKey: importFile.sourceKey,
                 TargetKey: importFile.targetKey,
@@ -76,7 +77,7 @@ public static class EndpointsExtensions
 
     private static async Task<IResult> GetImportProgress(string jobId, IImportJobProgressStore progressStore)
     {
-        if (string.IsNullOrEmpty(jobId))
+        if (!string.IsNullOrEmpty(jobId))
         {
             var job = progressStore.GetJob(jobId);
             if (job is null) return Results.NotFound();
@@ -87,7 +88,7 @@ public static class EndpointsExtensions
         return Results.Ok(progressStore.GetJobs());
     }
 
-    private static async Task<IResult> Split([FromBody] SplitRequest request, Channel<FileSplitJob> channel, ISplitJobProgressStore progressStore)
+    private static async Task<IResult> Split([FromBody] CsvDataFileSplitRequest request, Channel<CsvDataFileSplitJob> channel, ISplitJobProgressStore progressStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -95,7 +96,7 @@ public static class EndpointsExtensions
 
         foreach (var file in request.Files)
         {
-            await channel.Writer.WriteAsync(new FileSplitJob(
+            await channel.Writer.WriteAsync(new CsvDataFileSplitJob(
                 JobId: jobId,
                 Key: file.Key,
                 TargetFolder: file.TargetFolder,
@@ -109,7 +110,6 @@ public static class EndpointsExtensions
 
     private static async Task<IResult> GetSplitProgress(string jobId, ISplitJobProgressStore progressStore)
     {
-
         if (string.IsNullOrEmpty(jobId))
         {
             var job = progressStore.GetJob(jobId);
@@ -117,7 +117,6 @@ public static class EndpointsExtensions
 
             return Results.Ok(job);
         }
-
 
         return Results.Ok(progressStore.GetJobs());
     }

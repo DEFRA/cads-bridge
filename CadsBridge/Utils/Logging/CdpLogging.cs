@@ -1,6 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using Elastic.CommonSchema.Serilog;
 using Serilog;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Utils.Logging;
 

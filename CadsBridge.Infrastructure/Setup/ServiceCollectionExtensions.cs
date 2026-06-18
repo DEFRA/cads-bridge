@@ -1,4 +1,7 @@
-using CadsBridge.Infrastructure.DataSeed.Setup;
+using CadsBridge.Core.FileSystem;
+using CadsBridge.Infrastructure.Crypto;
+using CadsBridge.Infrastructure.DataLoad.Setup;
+using CadsBridge.Infrastructure.FileSystem;
 using CadsBridge.Infrastructure.Storage.Setup;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,10 +12,26 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructureLayer(this IServiceCollection services, IConfiguration config)
     {
-        services.AddDataSeed();
         services.AddStorage(config);
+
         services.AddAmazonS3Core(config);
 
+        services.AddDataLoad();
+
+        services.RegistryCrypto();
+
+        services.RegistryFileSystem();
+
         return services;
+    }
+
+    public static void RegistryCrypto(this IServiceCollection services)
+    {
+        services.AddTransient<IAesCryptoTransform, AesCryptoTransform>();
+    }
+
+    public static void RegistryFileSystem(this IServiceCollection services)
+    {
+        services.AddTransient<IFileSystemWrapper, FileSystemWrapper>();
     }
 }

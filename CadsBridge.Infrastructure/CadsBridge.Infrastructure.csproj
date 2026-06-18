@@ -21,8 +21,4 @@
       <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Storage\Factories\" />
-    </ItemGroup>
-
 </Project>

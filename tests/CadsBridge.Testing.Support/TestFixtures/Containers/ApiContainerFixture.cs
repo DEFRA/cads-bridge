@@ -1,6 +1,5 @@
 using CadsBridge.Testing.Support.Constants;
 using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 using Xunit;
@@ -9,8 +8,8 @@ namespace CadsBridge.Testing.Support.TestFixtures.Containers;
 
 public class ApiContainerFixture(IDictionary<string, string>? extraEnvironment = null) : IAsyncLifetime
 {
-    public IContainer ApiContainer { get; private set; } = null!;
-    public HttpClient HttpClient { get; private set; } = null!;
+    public IContainer? ApiContainer { get; private set; } = null;
+    public HttpClient? HttpClient { get; private set; } = null;
     public LocalStackFixture LocalStackFixture { get; } = new();
 
     public async ValueTask InitializeAsync()
@@ -69,7 +68,7 @@ public class ApiContainerFixture(IDictionary<string, string>? extraEnvironment =
 
         await Safe(() => LocalStackFixture.DisposeAsync());
         try { HttpClient?.Dispose(); } catch (Exception ex) { error ??= ex; }
-        await Safe(() => ApiContainer.DisposeAsync());
+        await Safe(() => ApiContainer?.DisposeAsync() ?? default);
 
         GC.SuppressFinalize(this);
         if (error is not null) throw error;

@@ -1,8 +1,8 @@
-using System.Net;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using FluentAssertions;
+using System.Net;
 
-namespace CadsBridge.Tests.Infrastructure.Endpoints;
+namespace CadsBridge.Tests.Integration.EndPoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class DataSeedImportEndpointTests
@@ -16,7 +16,7 @@ public class DataSeedImportEndpointTests
         });
         await fixture.InitializeAsync();
 
-        var response = await fixture.HttpClient.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+        var response = await fixture.HttpClient!.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -32,7 +32,7 @@ public class DataSeedImportEndpointTests
         });
         await fixture.InitializeAsync();
 
-        var response = await fixture.HttpClient.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+        var response = await fixture.HttpClient!.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);

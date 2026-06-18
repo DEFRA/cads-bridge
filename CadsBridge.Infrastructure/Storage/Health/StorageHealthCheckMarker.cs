@@ -1,4 +1,4 @@
-using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Abstractions;
 
 namespace CadsBridge.Infrastructure.Storage.Health;
 

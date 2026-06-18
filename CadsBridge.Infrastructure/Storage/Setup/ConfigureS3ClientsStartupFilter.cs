@@ -1,4 +1,4 @@
-using CadsBridge.Core.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 

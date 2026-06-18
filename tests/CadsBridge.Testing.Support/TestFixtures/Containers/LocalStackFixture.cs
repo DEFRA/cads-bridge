@@ -76,7 +76,7 @@ public class LocalStackFixture : IAsyncLifetime
         catch (Exception ex) { error ??= ex; }
 
         // Async disposal using the same Safe pattern
-        await Safe(() => LocalStackContainer!.DisposeAsync());
+        await Safe(() => LocalStackContainer?.DisposeAsync() ?? default);
 
         GC.SuppressFinalize(this);
 

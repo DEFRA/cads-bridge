@@ -1,11 +1,11 @@
+using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Core.DataLoad.Seeds;
+using CadsBridge.Tests.Component.TestFixtures;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Channels;
-using CadsBridge.Application.Models;
-using CadsBridge.Core.DataSeed.Abstractions;
-using CadsBridge.Tests.Component.Fixtures;
-using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Tests.Component.Endpoints;
 
@@ -87,7 +87,7 @@ public class DataSeedImportEndpointTests
 
         using var scope = factory.Services.CreateScope();
         var channel = scope.ServiceProvider
-            .GetRequiredService<Channel<DataSeedImportJob>>();
+            .GetRequiredService<Channel<DataSeedFileLoadJob>>();
 
         channel.Reader.TryRead(out var job).Should().BeTrue();
         job!.FileName.Should().Be("sql/v1/001_seed.sql");

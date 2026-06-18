@@ -1,9 +1,11 @@
 using Amazon;
 using Amazon.S3;
-using CadsBridge.Core.Storage.Abstractions;
-using CadsBridge.Core.Storage.Factories;
+using CadsBridge.Application.Storage.Transfer;
+using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Configuration;
+using CadsBridge.Infrastructure.Storage.Factories;
 using CadsBridge.Infrastructure.Storage.Health;
+using CadsBridge.Infrastructure.Storage.Transfer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(configSection);
 
         services.AddSingleton<IConfigureS3Clients, StorageS3Configurator>();
+        services.AddTransient<ITransferUtilityAdapter, TransferUtilityAdapter>();
 
         if (configSection.Internal.HealthcheckEnabled || configSection.External.HealthcheckEnabled)
         {
@@ -30,7 +33,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
 
     public static IServiceCollection AddAmazonS3Core(this IServiceCollection services, IConfiguration configuration)
     {
