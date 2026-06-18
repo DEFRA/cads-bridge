@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(configSection);
 
         services.AddSingleton<IConfigureS3Clients, StorageS3Configurator>();
-        services.AddTransient<IS3TransferUtilityWrapper, S3TransferUtilityWrapper>();
+        services.AddTransient<ITransferUtilityAdapter, TransferUtilityAdapter>();
 
         if (configSection.Internal.HealthcheckEnabled || configSection.External.HealthcheckEnabled)
         {

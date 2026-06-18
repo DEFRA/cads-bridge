@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Application.Storage.Transfer;
@@ -8,7 +9,9 @@ using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Logging;
+using System.Net.Mime;
 using System.Security.Cryptography;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
@@ -16,7 +19,7 @@ namespace CadsBridge.Infrastructure.DataLoad.Services;
 public class S3CopyService(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
-    IS3TransferUtilityWrapper transferWrapper,
+    ITransferUtilityAdapter transferUtilityAdapter,
     ILogger<S3CopyService> logger) : IS3CopyService
 {
     private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
@@ -123,12 +126,22 @@ public class S3CopyService(
 
             var partitionSize = CalculateOptimalPartSize(fileSize);
 
-            await transferWrapper.TransferAsync(internalS3, cryptoStream, internalS3Info.BucketName, request.TargetKey, partitionSize, cancellationToken: cancellationToken);
+            var transferUtilityUploadRequest = new TransferUtilityUploadRequest
+            {
+                InputStream = cryptoStream,
+                BucketName = internalS3Info.BucketName,
+                Key = request.TargetKey,
+                StorageClass = S3StorageClass.Standard,
+                PartSize = partitionSize, // 5 MB minimum for multipart
+                AutoCloseStream = true,
+                ContentType = "text/plain"
+            };
+
+            await transferUtilityAdapter.UploadAsync(transferUtilityUploadRequest, cancellationToken);
         }
 
         if (logger.IsEnabled(LogLevel.Information))
             logger.LogInformation("Successfully decrypted and uploaded {Key}", request.TargetKey);
-        // Stream encrypted file from S3
     }
 
     private static long CalculateOptimalPartSize(long fileSizeBytes)

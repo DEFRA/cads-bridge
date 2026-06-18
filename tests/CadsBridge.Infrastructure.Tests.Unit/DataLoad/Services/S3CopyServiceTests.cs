@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Core.DataLoad.Jobs;
@@ -8,6 +9,7 @@ using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
+using CadsBridge.Infrastructure.Storage.Transfer;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -20,7 +22,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
 public class S3CopyServiceTests
 {
-    private static readonly Mock<IS3TransferUtilityWrapper> s_mockTransferWrapper = new();
+    private static readonly Mock<ITransferUtilityAdapter> s_transferUtilityAdapterMock = new();
 
     private const string ExternalBucketName = "external-bucket";
     private const string InternalBucketName = "internal-bucket";
@@ -89,8 +91,7 @@ public class S3CopyServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        s_mockTransferWrapper.Verify(x => x.TransferAsync(
-            It.IsAny<IAmazonS3>(), It.IsAny<CryptoStream>(), InternalBucketName, TargetKey, It.IsAny<long>(), "text/plain", It.IsAny<CancellationToken>()));
+        s_transferUtilityAdapterMock.Verify(x => x.UploadAsync(It.IsAny<TransferUtilityUploadRequest>(), It.IsAny<CancellationToken>()));
 
         s3.Verify(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -246,7 +247,7 @@ public class S3CopyServiceTests
         return new S3CopyService(
             s3ClientFactory.Object,
             aesCryptoTransform.Object,
-            s_mockTransferWrapper.Object,
+            s_transferUtilityAdapterMock.Object,
             logger.Object);
     }
 
