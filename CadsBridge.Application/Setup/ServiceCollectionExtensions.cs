@@ -15,8 +15,8 @@ public static class ServiceCollectionExtensions
 
     public static void RegisterChannels(this IServiceCollection services)
     {
-        services.AddSingleton<Channel<CsvDataFileImportJob>>(Channel.CreateUnbounded<CsvDataFileImportJob>(new UnboundedChannelOptions() { SingleReader = false }));
-        services.AddSingleton<Channel<CsvDataFileSplitJob>>(Channel.CreateUnbounded<CsvDataFileSplitJob>(new UnboundedChannelOptions() { SingleReader = false }));
-        services.AddSingleton<Channel<DataSeedFileLoadJob>>(Channel.CreateUnbounded<DataSeedFileLoadJob>(new UnboundedChannelOptions() { SingleReader = false }));
+        services.AddSingleton(Channel.CreateUnbounded<CsvDataFileImportJob>(new UnboundedChannelOptions { SingleReader = false }));
+        services.AddSingleton(Channel.CreateUnbounded<CsvDataFileSplitJob>(new UnboundedChannelOptions { SingleReader = false }));
+        services.AddSingleton(Channel.CreateUnbounded<DataSeedFileLoadJob>(new UnboundedChannelOptions { SingleReader = false }));
     }
 }

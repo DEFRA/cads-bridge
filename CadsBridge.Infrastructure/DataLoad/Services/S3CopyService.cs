@@ -56,7 +56,6 @@ public class S3CopyService(
                     throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {job.SourceKey}");
                 }
 
-
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
@@ -101,7 +100,6 @@ public class S3CopyService(
         IAmazonS3 internalS3,
         CancellationToken cancellationToken)
     {
-
         using var getResponse = await externalS3.GetObjectAsync(externalS3Info.BucketName, request.SourceKey, cancellationToken);
         using var encryptedStream = getResponse.ResponseStream;
 

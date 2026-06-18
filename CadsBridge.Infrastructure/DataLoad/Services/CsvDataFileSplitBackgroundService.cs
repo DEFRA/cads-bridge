@@ -49,7 +49,7 @@ public class CsvDataFileSplitBackgroundService(
                         }
                         else
                         {
-                            _progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during split");
+                            throw new Exception("Unknown error during split");
                         }
                     }
                     catch (Exception ex)

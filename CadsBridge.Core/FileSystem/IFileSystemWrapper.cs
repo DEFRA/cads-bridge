@@ -2,5 +2,5 @@ namespace CadsBridge.Core.FileSystem;
 
 public interface IFileSystemWrapper
 {
-    public Stream OpenRead(string path);
+    Stream OpenRead(string path);
 }
