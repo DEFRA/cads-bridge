@@ -30,6 +30,6 @@ public static class ServiceCollectionExtensions
 
     private static void ConfigureHealthChecks(this IServiceCollection services)
     {
-        var builder = services.AddHealthChecks();
+        services.AddHealthChecks();
     }
 }

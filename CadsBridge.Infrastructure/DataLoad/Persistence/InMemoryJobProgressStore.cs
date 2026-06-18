@@ -5,7 +5,7 @@ namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
 public abstract class InMemoryJobProgressStore
 {
-    private class MutableJob
+    private sealed class MutableJob
     {
         public int TotalFiles { get; set; }
         public ConcurrentDictionary<string, JobItemProgress> Files { get; } = new();

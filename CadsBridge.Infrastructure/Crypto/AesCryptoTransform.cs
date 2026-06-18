@@ -40,7 +40,7 @@ public class AesCryptoTransform : IAesCryptoTransform
 
         await ProcessStreamAsync(inputStream, cryptoStream, totalBytes, progressCallback, "Encrypting", cancellationToken);
 
-        cryptoStream.FlushFinalBlock();
+        await cryptoStream.FlushFinalBlockAsync(cancellationToken);
     }
 
     public async Task DecryptStreamAsync(Stream inputStream, Stream outputStream, string password, string salt, long? totalBytes = null,
