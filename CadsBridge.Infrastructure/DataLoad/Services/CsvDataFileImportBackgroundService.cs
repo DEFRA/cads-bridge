@@ -66,7 +66,7 @@ public class CsvDataFileImportBackgroundService(
                         }
                         else
                         {
-                            throw new Exception("Unknown error during copy");
+                            _progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
                         }
                     }
                     catch (Exception ex)
