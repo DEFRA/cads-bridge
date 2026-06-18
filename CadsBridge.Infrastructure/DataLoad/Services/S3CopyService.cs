@@ -9,9 +9,7 @@ using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Logging;
-using System.Net.Mime;
 using System.Security.Cryptography;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
@@ -137,7 +135,7 @@ public class S3CopyService(
                 ContentType = "text/plain"
             };
 
-            await transferUtilityAdapter.UploadAsync(transferUtilityUploadRequest, cancellationToken);
+            await transferUtilityAdapter.UploadAsync(internalS3, transferUtilityUploadRequest, cancellationToken);
         }
 
         if (logger.IsEnabled(LogLevel.Information))

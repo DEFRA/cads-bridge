@@ -4,13 +4,11 @@ using CadsBridge.Application.Storage.Transfer;
 
 namespace CadsBridge.Infrastructure.Storage.Transfer;
 
-public class TransferUtilityAdapter(IAmazonS3 s3) : ITransferUtilityAdapter
+public class TransferUtilityAdapter : ITransferUtilityAdapter
 {
-    private readonly IAmazonS3 _amazonS3 = s3;
-
-    public Task UploadAsync(TransferUtilityUploadRequest request, CancellationToken cancellationToken)
+    public Task UploadAsync(IAmazonS3 s3Client, TransferUtilityUploadRequest request, CancellationToken cancellationToken)
     {
-        var util = new TransferUtility(_amazonS3);
+        var util = new TransferUtility(s3Client);
         return util.UploadAsync(request, cancellationToken);
     }
 }

@@ -9,13 +9,11 @@ using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
-using CadsBridge.Infrastructure.Storage.Transfer;
 using CadsBridge.Testing.Support.Utilities.Aws;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
@@ -91,7 +89,10 @@ public class S3CopyServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        s_transferUtilityAdapterMock.Verify(x => x.UploadAsync(It.IsAny<TransferUtilityUploadRequest>(), It.IsAny<CancellationToken>()));
+        s_transferUtilityAdapterMock.Verify(x => x.UploadAsync(
+            It.IsAny<IAmazonS3>(),
+            It.IsAny<TransferUtilityUploadRequest>(),
+            It.IsAny<CancellationToken>()));
 
         s3.Verify(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
