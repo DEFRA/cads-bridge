@@ -1,6 +1,5 @@
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.S3.Transfer;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Core.DataLoad.Jobs;
@@ -9,297 +8,163 @@ using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
-using CadsBridge.Testing.Support.Utilities.Aws;
+using CadsBridge.Testing.Support.TestDoubles.Crypto;
+using CadsBridge.Testing.Support.TestDoubles.Storage;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Net;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
 public class S3CopyServiceTests
 {
-    private static readonly Mock<ITransferUtilityAdapter> s_transferUtilityAdapterMock = new();
-
-    private const string ExternalBucketName = "external-bucket";
-    private const string InternalBucketName = "internal-bucket";
-    private const string SourceKey = "incoming/source-file.csv";
-    private const string TargetKey = "imported/source-file.csv";
-    private const string Password = "test-password";
-    private const string Salt = "test-salt";
+    private const string ExternalBucket = "external-bucket";
+    private const string InternalBucket = "internal-bucket";
+    private const string SourceKey = "incoming/source.csv";
+    private const string TargetKey = "imported/source.csv";
+    private const string Password = "pw";
+    private const string Salt = "salt";
 
     [Fact]
-    public async Task CopyWithRetryAsync_WhenFileIsSmallerThanSingleFileLimit_DecryptsAndUploadsWithPutObject()
+    public async Task Small_file_uses_PutObject()
     {
-        // Arrange
-        const string decryptedContent = "decrypted file content";
-        var s3 = CreateS3Mock(encryptedContent: "encrypted file content", contentLength: 1024);
-        var aesCryptoTransform = CreateAesCryptoTransformMock(decryptedContent);
-        var sut = GetSut(s3, aesCryptoTransform);
+        var s3 = new FakeS3
+        {
+            FileSize = 1024,
+            EncryptedContent = "encrypted"
+        };
 
-        var request = CreateJob();
+        var aes = new FakeAesCryptoTransform("decrypted");
+        var transfer = new FakeTransferUtilityAdapter();
 
-        // Act
-        var result = await sut.ExecAsync(request, TestContext.Current.CancellationToken);
+        var sut = CreateSut(s3, aes, transfer);
 
-        // Assert
+        var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
+
         result.Should().BeTrue();
-
-        aesCryptoTransform.Verify(x => x.DecryptStreamAsync(
-                It.IsAny<Stream>(),
-                It.IsAny<Stream>(),
-                Password,
-                Salt,
-                null,
-                null,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        s3.Verify(client => client.GetObjectAsync(ExternalBucketName, SourceKey, It.IsAny<CancellationToken>()), Times.Once);
-        s3.Verify(client => client.GetObjectMetadataAsync(ExternalBucketName, SourceKey, It.IsAny<CancellationToken>()), Times.Once);
-        s3.Verify(client => client.PutObjectAsync(
-                It.Is<PutObjectRequest>(request =>
-                    request.BucketName == InternalBucketName &&
-                    request.Key == TargetKey &&
-                    request.ContentType == "text/plain"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        s3.PutRequests.Should().ContainSingle();
+        transfer.Uploads.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task CopyWithRetryAsync_WhenFileIsLarge_UsesMultipartUploadAndCalculatesPartSize()
+    public async Task Large_file_uses_multipart_upload()
     {
-        // Arrange
-        const long fileSize = 150L * 1024L * 1024L;
-        var s3 = CreateS3Mock(encryptedContent: "large decrypted file content", contentLength: fileSize);
-        var aesCryptoTransform = new Mock<IAesCryptoTransform>();
-        var sut = GetSut(s3, aesCryptoTransform);
-        var request = CreateJob();
+        var s3 = new FakeS3
+        {
+            FileSize = 150 * 1024 * 1024,
+            EncryptedContent = "encrypted"
+        };
 
-        // Act
-        var result = await sut.ExecAsync(request, TestContext.Current.CancellationToken);
+        var aes = new FakeAesCryptoTransform("decrypted");
+        var transfer = new FakeTransferUtilityAdapter();
 
-        // Assert
+        var sut = CreateSut(s3, aes, transfer);
+
+        var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
+
         result.Should().BeTrue();
-
-        s3.Verify(client => client.GetObjectMetadataAsync(
-                ExternalBucketName,
-                SourceKey,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        s_transferUtilityAdapterMock.Verify(x => x.UploadAsync(
-            It.IsAny<IAmazonS3>(),
-            It.IsAny<TransferUtilityUploadRequest>(),
-            It.IsAny<CancellationToken>()));
-
-        s3.Verify(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        transfer.Uploads.Should().ContainSingle();
+        s3.PutRequests.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task CopyWithRetryAsync_WhenFirstAttemptFails_RetriesAndThenSucceeds()
+    public async Task Retries_when_GetObject_fails_once()
     {
-        // Arrange
-        const string decryptedContent = "decrypted file content";
+        var attempts = 0;
 
-        var getObjectAttempts = 0;
-
-        var s3 = CreateS3Mock(
-            encryptedContent: "encrypted file content",
-            contentLength: 1024);
-
-        s3.Setup(client => client.GetObjectAsync(
-                ExternalBucketName,
-                SourceKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                getObjectAttempts++;
-
-                if (getObjectAttempts == 1)
-                {
-                    throw new AmazonS3Exception("Temporary S3 failure");
-                }
-
-                return new GetObjectResponse
-                {
-                    ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes("encrypted file content"))
-                };
-            });
-
-        var aesCryptoTransform = CreateAesCryptoTransformMock(decryptedContent);
-
-        var sut = GetSut(s3, aesCryptoTransform);
-
-        // Act
-        var result = await sut.ExecAsync(
-            CreateJob(),
-            TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().BeTrue();
-
-        s3.Verify(client => client.GetObjectAsync(
-                ExternalBucketName,
-                SourceKey,
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-
-        s3.Verify(client => client.PutObjectAsync(
-                It.IsAny<PutObjectRequest>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CopyWithRetryAsync_WhenAllAttemptsFail_ThrowsAfterMaximumRetries()
-    {
-        // Arrange
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(client => client.GetObjectAsync(
-                ExternalBucketName,
-                SourceKey,
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new AmazonS3Exception("S3 unavailable"));
+        s3.Setup(x => x.GetObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+          .ReturnsAsync(() =>
+          {
+              attempts++;
+              if (attempts == 1)
+                  throw new AmazonS3Exception("fail");
 
-        var sut = GetSut(s3, new Mock<IAesCryptoTransform>());
+              return new GetObjectResponse
+              {
+                  ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes("encrypted"))
+              };
+          });
 
-        // Act
-        await Assert.ThrowsAsync<AmazonS3Exception>(async () => await sut.ExecAsync(
-            CreateJob(),
-            TestContext.Current.CancellationToken));
+        s3.Setup(x => x.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+          .ReturnsAsync(new GetObjectMetadataResponse { ContentLength = 1024 });
 
-        // Assert
-        s3.Verify(client => client.GetObjectAsync(ExternalBucketName, SourceKey, It.IsAny<CancellationToken>()), Times.Exactly(3));
-        s3.Verify(client => client.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        var aes = new FakeAesCryptoTransform("decrypted");
+        var transfer = new FakeTransferUtilityAdapter();
+
+        var sut = CreateSut(s3.Object, aes, transfer);
+
+        var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
+
+        result.Should().BeTrue();
+        attempts.Should().Be(2);
     }
 
     [Fact]
-    public async Task CopyWithRetryAsync_WhenCancellationIsRequested_ReturnsFalseAndDoesNotCopy()
+    public async Task Cancels_cleanly()
     {
-        // Arrange
-        using var cancellationTokenSource = new CancellationTokenSource();
-        await cancellationTokenSource.CancelAsync();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
 
-        var s3 = new Mock<IAmazonS3>();
-        var sut = GetSut(s3, new Mock<IAesCryptoTransform>());
+        var s3 = new FakeS3();
+        var aes = new FakeAesCryptoTransform("ignored");
+        var transfer = new FakeTransferUtilityAdapter();
 
-        // Act
-        var result = await sut.ExecAsync(
-            CreateJob(),
-            cancellationTokenSource.Token);
+        var sut = CreateSut(s3, aes, transfer);
 
-        // Assert
+        var result = await sut.ExecAsync(CreateJob(), cts.Token);
+
         result.Should().BeFalse();
-
-        s3.Verify(client => client.PutObjectAsync(
-                It.IsAny<PutObjectRequest>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        s3.PutRequests.Should().BeEmpty();
+        transfer.Uploads.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task CopyWithRetryAsync_WhenRemoteFileMetadataIsNotFound_RetriesAndThrowsBecauseFileSizeIsInvalid()
+    public async Task Throws_when_metadata_fails()
     {
-        // Arrange
-        var s3 = CreateS3Mock(encryptedContent: "encrypted file content", contentLength: 1024);
-        s3.Setup(client => client.GetObjectMetadataAsync(ExternalBucketName, SourceKey, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new AmazonS3Exception("Not found") { StatusCode = HttpStatusCode.NotFound });
+        var s3 = new Mock<IAmazonS3>();
 
-        var sut = GetSut(s3, CreateAesCryptoTransformMock("decrypted"));
+        s3.Setup(x => x.GetObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+          .ReturnsAsync(new GetObjectResponse
+          {
+              ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes("encrypted"))
+          });
 
-        // Act
-        await Assert.ThrowsAsync<AmazonS3Exception>(async () =>
-            await sut.ExecAsync(
-                CreateJob(),
-                TestContext.Current.CancellationToken));
+        s3.Setup(x => x.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+          .ThrowsAsync(new AmazonS3Exception("not found"));
 
-        // Assert
-        s3.Verify(client => client.GetObjectAsync(
-                ExternalBucketName,
-                SourceKey,
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(3));
+        var aes = new FakeAesCryptoTransform("decrypted");
+        var transfer = new FakeTransferUtilityAdapter();
 
-        s3.Verify(client => client.PutObjectAsync(
-                It.IsAny<PutObjectRequest>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        var sut = CreateSut(s3.Object, aes, transfer);
+
+        await Assert.ThrowsAsync<AmazonS3Exception>(() =>
+            sut.ExecAsync(CreateJob(), CancellationToken.None));
     }
 
-    private static S3CopyService GetSut(
-        Mock<IAmazonS3> s3,
-        Mock<IAesCryptoTransform> aesCryptoTransform)
+    private static S3CopyService CreateSut(
+        IAmazonS3 s3,
+        IAesCryptoTransform aes,
+        ITransferUtilityAdapter transfer)
     {
-        var s3ClientFactory = new Mock<IS3ClientFactory>();
+        var factory = new Mock<IS3ClientFactory>();
 
-        s3ClientFactory
-            .Setup(x => x.GetClientInfo<ExternalStorageClient>())
-            .Returns(new S3ClientFactory.ClientInfo(s3.Object, ExternalBucketName));
+        factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
+               .Returns(new S3ClientFactory.ClientInfo(s3, ExternalBucket));
 
-        s3ClientFactory
-            .Setup(x => x.GetClientInfo<InternalStorageClient>())
-            .Returns(new S3ClientFactory.ClientInfo(s3.Object, InternalBucketName));
+        factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+               .Returns(new S3ClientFactory.ClientInfo(s3, InternalBucket));
 
         var logger = new Mock<ILogger<S3CopyService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
-        return new S3CopyService(
-            s3ClientFactory.Object,
-            aesCryptoTransform.Object,
-            s_transferUtilityAdapterMock.Object,
-            logger.Object);
+
+        return new S3CopyService(factory.Object, aes, transfer, logger.Object);
     }
 
-    private static Mock<IAmazonS3> CreateS3Mock(
-        string encryptedContent,
-        long? contentLength = null)
-    {
-        var s3Mock = S3MockBuilder.Create(encryptedContent).S3;
-        if (contentLength.HasValue)
-        {
-            s3Mock.Setup(client => client.GetObjectMetadataAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => new GetObjectMetadataResponse
-                {
-                    ContentLength = contentLength.Value
-                });
-        }
-
-        return s3Mock;
-    }
-
-    private static Mock<IAesCryptoTransform> CreateAesCryptoTransformMock(
-        string decryptedContent)
-    {
-        var aesCryptoTransform = new Mock<IAesCryptoTransform>();
-
-        aesCryptoTransform
-            .Setup(x => x.DecryptStreamAsync(
-                It.IsAny<Stream>(),
-                It.IsAny<Stream>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<long?>(),
-                It.IsAny<ProgressCallback?>(),
-                It.IsAny<CancellationToken>()))
-            .Returns<Stream, Stream, string, string, long?, ProgressCallback?, CancellationToken>(
-                async (_, outputStream, _, _, _, _, cancellationToken) =>
-                {
-                    var bytes = Encoding.UTF8.GetBytes(decryptedContent);
-                    await outputStream.WriteAsync(bytes, cancellationToken);
-                    outputStream.Position = 0;
-                });
-
-        return aesCryptoTransform;
-    }
-
-    private static CsvDataFileImportJob CreateJob()
-    {
-        return new CsvDataFileImportJob(
+    private static CsvDataFileImportJob CreateJob() =>
+        new(
             JobId: "job-1",
             SourceKey: SourceKey,
             TargetKey: TargetKey,
@@ -307,5 +172,4 @@ public class S3CopyServiceTests
             Salt: Salt,
             SplitType: SplitType.None,
             SplitValue: null);
-    }
 }

@@ -16,20 +16,32 @@ public class SplitMessageProducerTests
     public SplitMessageProducerTests()
     {
         _channel = Channel.CreateUnbounded<CsvDataFileSplitJob>();
-        var loggerMock = new Mock<ILogger<SplitMessageProducer>>();
-        loggerMock.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
-        _sut = new SplitMessageProducer(_channel, loggerMock.Object);
+
+        var logger = new Mock<ILogger<SplitMessageProducer>>();
+        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        _sut = new SplitMessageProducer(_channel, logger.Object);
     }
 
     [Fact]
-    public async Task SendAsync_ShouldAddJobToChannel()
+    public async Task SendAsync_writes_message_to_channel()
     {
-        var fileSplitJob = new CsvDataFileSplitJob("job-1", "key", "target-folder", SplitType.ByLines, 100);
+        var job = new CsvDataFileSplitJob(
+            JobId: "job-1",
+            Key: "key",
+            TargetFolder: "target-folder",
+            SplitType: SplitType.ByLines,
+            SplitValue: 100);
 
-        await _sut.SendAsync(fileSplitJob, TestContext.Current.CancellationToken);
+        await _sut.SendAsync(job, CancellationToken.None);
+
         _channel.Writer.Complete();
 
-        var results = await _channel.Reader.ReadAllAsync(TestContext.Current.CancellationToken).ToListAsync(TestContext.Current.CancellationToken);
-        results.Should().BeEquivalentTo([fileSplitJob]);
+        var messages = await _channel.Reader
+            .ReadAllAsync(TestContext.Current.CancellationToken)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        messages.Should().ContainSingle()
+                .Which.Should().BeEquivalentTo(job);
     }
 }

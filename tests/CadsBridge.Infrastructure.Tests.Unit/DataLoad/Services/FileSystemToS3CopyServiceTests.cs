@@ -6,7 +6,8 @@ using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
-using CadsBridge.Testing.Support.Utilities.Aws;
+using CadsBridge.Testing.Support.TestDoubles.FileSystem;
+using CadsBridge.Testing.Support.TestDoubles.Storage;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,95 +19,64 @@ public class FileSystemToS3CopyServiceTests
 {
     private const string BucketName = "test-bucket";
 
-    private readonly Mock<IFileSystemWrapper> _mockFileSystemWrapper = new();
-
-    public FileSystemToS3CopyServiceTests()
-    {
-        _mockFileSystemWrapper.Setup(x => x.OpenRead(It.IsAny<string>())).Throws<FileNotFoundException>();
-    }
+    private readonly FakeFileSystem _fileSystem = new();
 
     [Fact]
-    public async Task ExecuteAsync_WhenSourceFileExists_UploadsFileToConfiguredTargetKey()
+    public async Task Uploads_file_when_source_exists()
     {
-        // Arrange
         const string targetKey = "data-seed/001_seed.sql";
         const string fileContent = "FILE CONTENT;";
-        var sourceFilePath = "abc/001_seed.sql";
+        const string sourcePath = "abc/001_seed.sql";
 
-        MockLocalFile(fileContent, sourceFilePath);
-        var (s3, uploadedObjects) = S3MockBuilder.CreateCapturingUploads();
+        _fileSystem.AddFile(sourcePath, fileContent);
 
-        var sut = GetSut(s3);
+        var s3 = new FakeS3();
+        var sut = CreateSut(s3);
 
         var request = new DataSeedFileLoadJob(
             JobId: "job-1",
-            FileName: sourceFilePath,
+            FileName: sourcePath,
             TargetKey: targetKey);
 
-        // Act
-        var result = await sut.ExecuteAsync(
-            request,
-            TestContext.Current.CancellationToken);
+        var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        // Assert
         result.Should().BeTrue();
 
-        uploadedObjects.Should().BeEquivalentTo(new Dictionary<string, string>
-        {
-            [targetKey] = fileContent
-        });
+        s3.PutRequests.Should().ContainSingle(r =>
+            r.Key == targetKey &&
+            r.BucketName == BucketName &&
+            r.ContentType == "text/plain");
 
-        s3.Verify(client => client.PutObjectAsync(
-                It.Is<PutObjectRequest>(putRequest =>
-                    putRequest.BucketName == BucketName &&
-                    putRequest.Key == targetKey &&
-                    putRequest.ContentType == "text/plain"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        s3.UploadedContent[targetKey].Should().Be(fileContent);
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenSourceFileDoesNotExist_ReturnsFalseAndDoesNotUploadObject()
+    public async Task Returns_false_when_source_file_missing()
     {
-        // Arrange
-        var missingFilePath = "abc/missing.sql";
-        var (s3, uploadedObjects) = S3MockBuilder.CreateCapturingUploads();
-        var sut = GetSut(s3);
+        var s3 = new FakeS3();
+        var sut = CreateSut(s3);
 
         var request = new DataSeedFileLoadJob(
             JobId: "job-1",
-            FileName: missingFilePath,
+            FileName: "abc/missing.sql",
             TargetKey: "data-seed/missing.sql");
 
-        // Act
-        var result = await sut.ExecuteAsync(request, TestContext.Current.CancellationToken);
+        var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        // Assert
         result.Should().BeFalse();
-        uploadedObjects.Should().BeEmpty();
-        s3.Verify(client => client.PutObjectAsync(
-                It.IsAny<PutObjectRequest>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        s3.PutRequests.Should().BeEmpty();
     }
 
-    private FileSystemToS3CopyService GetSut(Mock<IAmazonS3> s3)
+    private FileSystemToS3CopyService CreateSut(IAmazonS3 s3)
     {
-        var s3ClientFactory = new Mock<IS3ClientFactory>();
-        s3ClientFactory
-            .Setup(x => x.GetClientInfo<InternalStorageClient>())
-            .Returns(new S3ClientFactory.ClientInfo(s3.Object, BucketName));
+        var factory = new Mock<IS3ClientFactory>();
+
+        factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+               .Returns(new S3ClientFactory.ClientInfo(s3, BucketName));
 
         return new FileSystemToS3CopyService(
-            s3ClientFactory.Object,
-            _mockFileSystemWrapper.Object,
+            factory.Object,
+            _fileSystem,
             Mock.Of<ILogger<FileSystemToS3CopyService>>());
-    }
-
-    private void MockLocalFile(string content, string path)
-    {
-        _mockFileSystemWrapper
-            .Setup(x => x.OpenRead(path))
-            .Returns(() => new MemoryStream(Encoding.UTF8.GetBytes(content)));
     }
 }

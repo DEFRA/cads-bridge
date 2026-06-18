@@ -24,7 +24,7 @@ public class DataSeedFileLoadService : IDataSeedFileLoadService
         if (latestSubDirectory is null)
             return [];
 
-        return Directory
+        return [.. Directory
             .GetFiles(Path.Combine(sqlRoot, latestSubDirectory), "*.sql")
             .Select(filePath =>
             {
@@ -32,7 +32,6 @@ public class DataSeedFileLoadService : IDataSeedFileLoadService
                 var relativePath = $"{SqlRootDirectory}/{latestSubDirectory}/{fileName}";
                 return new DataSeedFileDetail(fileName, relativePath);
             })
-            .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)];
     }
 }

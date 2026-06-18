@@ -157,8 +157,8 @@ public class CsvDataFileSplitterService(
             // If adding this line exceeds chunk size, upload current chunk and start a new one
             if (bytesInChunk + lineBytes.Length > chunkSizeBytes)
             {
-                int chunkNumber1 = chunkNumber++;
-                string fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber1:D4}.csv";
+                var chunkNumber1 = chunkNumber++;
+                var fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber1:D4}.csv";
                 await UploadChunkAsync(
                     s3,
                     bucketName,
@@ -180,7 +180,7 @@ public class CsvDataFileSplitterService(
         // Upload the last chunk if it has data
         if (bytesInChunk > 0)
         {
-            string fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
+            var fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
             await UploadChunkAsync(
                 s3,
                 bucketName,
@@ -326,7 +326,7 @@ public class CsvDataFileSplitterService(
 
     private static string FormatKeyFromFilename(string destinationPrefix, string sourceKey, int chunkNumber)
     {
-        string fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
+        var fileName = $"{Path.GetFileNameWithoutExtension(sourceKey)}.part-{chunkNumber:D4}.csv";
         return string.IsNullOrEmpty(destinationPrefix) ? fileName : $"{destinationPrefix.TrimEnd('/')}/{fileName}";
     }
 }
