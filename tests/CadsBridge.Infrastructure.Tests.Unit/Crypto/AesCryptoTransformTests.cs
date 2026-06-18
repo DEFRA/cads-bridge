@@ -1,4 +1,4 @@
-using CadsBridge.Core.Crypto;
+using CadsBridge.Infrastructure.Crypto;
 using FluentAssertions;
 using System.Text;
 
@@ -10,7 +10,6 @@ public class AesCryptoTransformTests
     private const string TestSalt = "Jr8Lm2PXzd7qNbVyWutRfGBxhkHTpE";
 
     private readonly AesCryptoTransform _cryptoTransform;
-    private readonly List<string> _tempFiles = new();
     private readonly string _tempDir;
 
     public AesCryptoTransformTests()
@@ -157,6 +156,6 @@ public class AesCryptoTransformTests
         progressReports.Should().NotBeEmpty();
         progressReports.Should().Contain(r => r.percentage == 0 && r.status.Contains("Encrypting started"));
         progressReports.Should().Contain(r => r.percentage == 100 && r.status.Contains("Encrypting completed"));
-        progressReports.Should().Contain(r => r.percentage == 0 && r.status.Contains("processed") && !r.status.Contains("%"));
+        progressReports.Should().Contain(r => r.percentage == 0 && r.status.Contains("processed") && !r.status.Contains('%'));
     }
 }

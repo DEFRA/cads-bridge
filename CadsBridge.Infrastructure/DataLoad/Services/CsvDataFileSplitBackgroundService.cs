@@ -19,20 +19,20 @@ public class CsvDataFileSplitBackgroundService(
     private readonly ISplitJobProgressStore _progressStore = progressStore;
     private readonly int _maxParallelDownloads = 4;
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var semaphore = new SemaphoreSlim(_maxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in _channel.Reader.ReadAllAsync(cancellationToken))
+        await foreach (var request in _channel.Reader.ReadAllAsync(stoppingToken))
         {
-            if (cancellationToken.IsCancellationRequested)
+            if (stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Cancellation requested, aborting split");
                 return;
             }
 
-            await semaphore.WaitAsync(cancellationToken);
+            await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
                 async () =>
@@ -41,7 +41,7 @@ public class CsvDataFileSplitBackgroundService(
                     {
                         _progressStore.MarkInProgress(request.JobId, request.Key);
 
-                        var result = await csvDataFileSplitterService.ExecuteAsync(request, cancellationToken);
+                        var result = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
                         if (result)
                         {
@@ -62,7 +62,7 @@ public class CsvDataFileSplitBackgroundService(
                         semaphore.Release();
                     }
                 },
-                cancellationToken);
+                stoppingToken);
 
             runningTasks.Add(task);
         }

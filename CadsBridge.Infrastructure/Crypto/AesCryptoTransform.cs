@@ -1,8 +1,7 @@
-using CadsBridge.Infrastructure.Crypto;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CadsBridge.Core.Crypto;
+namespace CadsBridge.Infrastructure.Crypto;
 
 public class AesCryptoTransform : IAesCryptoTransform
 {
@@ -13,7 +12,7 @@ public class AesCryptoTransform : IAesCryptoTransform
 
     public static ICryptoTransform CreateDecryptor(string password, string salt)
     {
-        var saltBytes = string.IsNullOrEmpty(salt) ? new byte[0] : Encoding.UTF8.GetBytes(salt);
+        var saltBytes = string.IsNullOrEmpty(salt) ? [] : Encoding.UTF8.GetBytes(salt);
         var key = DeriveKey(password, saltBytes);
 
         using var aes = Aes.Create();
@@ -28,7 +27,7 @@ public class AesCryptoTransform : IAesCryptoTransform
     public async Task EncryptStreamAsync(Stream inputStream, Stream outputStream, string password, string salt, long? totalBytes = null,
         ProgressCallback? progressCallback = null, CancellationToken cancellationToken = default)
     {
-        var saltBytes = string.IsNullOrEmpty(salt) ? new byte[0] : Encoding.UTF8.GetBytes(salt);
+        var saltBytes = string.IsNullOrEmpty(salt) ? [] : Encoding.UTF8.GetBytes(salt);
         var key = DeriveKey(password, saltBytes);
 
         using var aes = Aes.Create();
@@ -47,7 +46,7 @@ public class AesCryptoTransform : IAesCryptoTransform
     public async Task DecryptStreamAsync(Stream inputStream, Stream outputStream, string password, string salt, long? totalBytes = null,
         ProgressCallback? progressCallback = null, CancellationToken cancellationToken = default)
     {
-        var saltBytes = string.IsNullOrEmpty(salt) ? new byte[0] : Encoding.UTF8.GetBytes(salt);
+        var saltBytes = string.IsNullOrEmpty(salt) ? [] : Encoding.UTF8.GetBytes(salt);
         var key = DeriveKey(password, saltBytes);
 
         using var aes = Aes.Create();
@@ -106,9 +105,9 @@ public class AesCryptoTransform : IAesCryptoTransform
                     lastReportedProgress = progressPercentage;
                 }
             }
-            else if (progressCallback != null)
+            else
             {
-                progressCallback.Invoke(0, $"{operation} - {FormatBytes(totalBytesProcessed)} processed");
+                progressCallback?.Invoke(0, $"{operation} - {FormatBytes(totalBytesProcessed)} processed");
             }
         }
 
