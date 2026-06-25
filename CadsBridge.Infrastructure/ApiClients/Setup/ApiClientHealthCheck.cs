@@ -39,9 +39,13 @@ public class ApiClientHealthCheck(
                 displayName, httpClientName);
         }
 
-        var status = response?.IsSuccessStatusCode == true
-            ? HealthStatus.Healthy
-            : response != null ? HealthStatus.Degraded : HealthStatus.Unhealthy;
+        HealthStatus status;
+        if (response?.IsSuccessStatusCode == true)
+            status = HealthStatus.Healthy;
+        else if (response != null)
+            status = HealthStatus.Degraded;
+        else
+            status = HealthStatus.Unhealthy;
 
         var data = new Dictionary<string, object>
         {
