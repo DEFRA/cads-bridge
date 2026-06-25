@@ -147,4 +147,3 @@ public class ServiceCollectionExtensionsTests
         return sp.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
     }
 }
-

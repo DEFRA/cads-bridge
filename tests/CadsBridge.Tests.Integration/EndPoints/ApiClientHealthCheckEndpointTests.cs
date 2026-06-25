@@ -53,4 +53,3 @@ public class ApiClientHealthCheckEndpointTests
         doc.RootElement.GetProperty("results").TryGetProperty(EntryKey, out _).Should().BeFalse();
     }
 }
-
