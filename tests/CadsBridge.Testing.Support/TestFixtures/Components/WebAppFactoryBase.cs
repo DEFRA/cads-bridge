@@ -33,6 +33,15 @@ public abstract class WebAppFactoryBase<TStart>(
 
         SetTestEnvironmentVariables();
 
+        // Apply config overrides via UseSetting so they are visible to the application's
+        // service-registration code (e.g. AddApiClients reads IConfiguration during ConfigureServices).
+        // ConfigureAppConfiguration alone is layered too late for minimal-hosting apps that read
+        // configuration while registering services.
+        foreach (var (key, value) in _configOverrides)
+        {
+            builder.UseSetting(key, value);
+        }
+
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             if (_configOverrides.Count > 0)

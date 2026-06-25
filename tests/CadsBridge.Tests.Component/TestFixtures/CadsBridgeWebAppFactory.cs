@@ -20,6 +20,8 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
 
     public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
 
+    private readonly List<Action<IServiceCollection>> _testServiceOverrides = [];
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
@@ -30,7 +32,48 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
             services.AddSingleton(DataSeedFileLoaderMock.Object);
 
             OverrideAmazonS3(services);
+
+            foreach (var overrideAction in _testServiceOverrides)
+            {
+                overrideAction(services);
+            }
         });
+    }
+
+    private readonly Dictionary<string, HttpMessageHandler> _httpClientHandlers = [];
+
+    public void OverrideHttpClientHandler(string clientName, HttpMessageHandler handler)
+    {
+        _httpClientHandlers[clientName] = handler;
+
+        _testServiceOverrides.Add(services =>
+        {
+            services.Replace(
+                ServiceDescriptor.Singleton<IHttpClientFactory>(
+                    new StubHttpClientFactory(_httpClientHandlers)));
+        });
+    }
+
+    public void OverrideApiClientHealthHandler(string apiClientName, HttpMessageHandler handler)
+    {
+        var clientName = CadsBridge.Infrastructure.ApiClients.Setup.ServiceCollectionExtensions.HealthClientName(apiClientName);
+        OverrideHttpClientHandler(clientName, handler);
+    }
+
+    internal sealed class StubHttpClientFactory(
+        IReadOnlyDictionary<string, HttpMessageHandler> handlers) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            if (!handlers.TryGetValue(name, out var handler))
+                throw new InvalidOperationException($"Unexpected client name '{name}'");
+
+            return new HttpClient(handler, disposeHandler: false)
+            {
+                // ApiClientHealthCheck issues a relative GET ("/health"), so a BaseAddress is required.
+                BaseAddress = new Uri("http://stub-api")
+            };
+        }
     }
 
     private void OverrideAmazonS3(IServiceCollection services)

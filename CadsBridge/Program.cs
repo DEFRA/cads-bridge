@@ -5,6 +5,8 @@ using CadsBridge.Utils.Logging;
 using FluentValidation;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();
@@ -60,7 +62,28 @@ static WebApplication SetupApplication(WebApplication app)
 {
     app.UseHeaderPropagation();
     app.UseRouting();
-    app.MapHealthChecks("/health");
+
+    var configuration = app.Services.GetRequiredService<IConfiguration>();
+    var healthcheckMaskingEnabled = configuration.GetValue<bool>("HealthcheckMaskingEnabled");
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        Predicate = _ => true,
+        ResponseWriter = (context, healthReport) =>
+        {
+            context.Response.ContentType = "application/json; charset=utf-8";
+            return context.Response.WriteAsync(HealthCheckWriter.WriteHealthStatusAsJson(
+                healthReport,
+                healthcheckMaskingEnabled: healthcheckMaskingEnabled,
+                excludeHealthy: false,
+                indented: true));
+        },
+        ResultStatusCodes =
+        {
+            [HealthStatus.Healthy] = StatusCodes.Status200OK,
+            [HealthStatus.Degraded] = StatusCodes.Status200OK,
+            [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+        }
+    });
 
     app.CreateEndpoints();
 
