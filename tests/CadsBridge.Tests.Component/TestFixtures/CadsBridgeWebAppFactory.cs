@@ -40,18 +40,11 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
         });
     }
 
-    private readonly Dictionary<string, HttpMessageHandler> _httpClientHandlers = [];
-
     public void OverrideHttpClientHandler(string clientName, HttpMessageHandler handler)
     {
-        _httpClientHandlers[clientName] = handler;
-
         _testServiceOverrides.Add(services =>
-        {
-            services.Replace(
-                ServiceDescriptor.Singleton<IHttpClientFactory>(
-                    new StubHttpClientFactory(_httpClientHandlers)));
-        });
+            services.AddHttpClient(clientName)
+                .ConfigurePrimaryHttpMessageHandler(() => handler));
     }
 
     public void OverrideApiClientHealthHandler(string apiClientName, HttpMessageHandler handler)
@@ -60,21 +53,6 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
         OverrideHttpClientHandler(clientName, handler);
     }
 
-    internal sealed class StubHttpClientFactory(
-        IReadOnlyDictionary<string, HttpMessageHandler> handlers) : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name)
-        {
-            if (!handlers.TryGetValue(name, out var handler))
-                throw new InvalidOperationException($"Unexpected client name '{name}'");
-
-            return new HttpClient(handler, disposeHandler: false)
-            {
-                // ApiClientHealthCheck issues a relative GET ("/health"), so a BaseAddress is required.
-                BaseAddress = new Uri("http://stub-api")
-            };
-        }
-    }
 
     private void OverrideAmazonS3(IServiceCollection services)
     {
