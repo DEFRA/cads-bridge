@@ -20,6 +20,8 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
 
     public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
 
+    private readonly List<Action<IServiceCollection>> _testServiceOverrides = [];
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
@@ -30,8 +32,27 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
             services.AddSingleton(DataSeedFileLoaderMock.Object);
 
             OverrideAmazonS3(services);
+
+            foreach (var overrideAction in _testServiceOverrides)
+            {
+                overrideAction(services);
+            }
         });
     }
+
+    public void OverrideHttpClientHandler(string clientName, HttpMessageHandler handler)
+    {
+        _testServiceOverrides.Add(services =>
+            services.AddHttpClient(clientName)
+                .ConfigurePrimaryHttpMessageHandler(() => handler));
+    }
+
+    public void OverrideApiClientHealthHandler(string apiClientName, HttpMessageHandler handler)
+    {
+        var clientName = CadsBridge.Infrastructure.ApiClients.Setup.ServiceCollectionExtensions.HealthClientName(apiClientName);
+        OverrideHttpClientHandler(clientName, handler);
+    }
+
 
     private void OverrideAmazonS3(IServiceCollection services)
     {

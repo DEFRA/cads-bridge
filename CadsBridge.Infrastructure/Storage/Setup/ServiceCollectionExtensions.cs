@@ -15,50 +15,43 @@ namespace CadsBridge.Infrastructure.Storage.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddStorage(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddStorage(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         var configSection = configuration.GetSection(StorageConfigurationSection.StorageSectionName)
             .Get<StorageConfiguration>()
             ?? throw new InvalidOperationException("Missing 'Storag' config");
 
         services.AddSingleton(configSection);
-
         services.AddSingleton<IConfigureS3Clients, StorageS3Configurator>();
         services.AddTransient<ITransferUtilityAdapter, TransferUtilityAdapter>();
-
-        if (configSection.Internal.HealthcheckEnabled || configSection.External.HealthcheckEnabled)
-        {
-            services.AddSingleton<IEnableS3HealthCheck, StorageHealthCheckMarker>();
-        }
 
         return services;
     }
 
-    public static IServiceCollection AddAmazonS3Core(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAmazonS3Core(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHealthChecksBuilder healthChecksBuilder)
     {
         var amazonConfig = GetDefaultAmazonS3Config(configuration);
         services.AddSingleton(amazonConfig);
-
         services.AddSingleton<IS3ClientFactory, S3ClientFactory>();
         services.AddSingleton<IStartupFilter, ConfigureS3ClientsStartupFilter>();
-
-        services.PostConfigure<HealthCheckServiceOptions>(options =>
-        {
-            var sp = services.BuildServiceProvider();
-            var markers = sp.GetServices<IEnableS3HealthCheck>();
-
-            if (markers.Any())
-            {
-                options.Registrations.Add(new HealthCheckRegistration(
-                    "aws_s3",
-                    sp => sp.GetRequiredService<AwsS3HealthCheck>(),
-                    HealthStatus.Unhealthy,
-                    ["aws", "s3"]
-                ));
-            }
-        });
         services.AddTransient<AwsS3HealthCheck>();
 
+        var storageConfig = configuration.GetSection(StorageConfigurationSection.StorageSectionName)
+            .Get<StorageConfiguration>();
+        if (storageConfig?.Internal.HealthcheckEnabled == true || storageConfig?.External.HealthcheckEnabled == true)
+        {
+            healthChecksBuilder.Add(new HealthCheckRegistration(
+                "aws_s3",
+                sp => sp.GetRequiredService<AwsS3HealthCheck>(),
+                HealthStatus.Unhealthy,
+                ["aws", "s3"]
+            ));
+        }
         return services;
     }
 

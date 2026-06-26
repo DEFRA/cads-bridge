@@ -1,4 +1,5 @@
 using CadsBridge.Core.FileSystem;
+using CadsBridge.Infrastructure.ApiClients.Setup;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Setup;
 using CadsBridge.Infrastructure.FileSystem;
@@ -10,11 +11,13 @@ namespace CadsBridge.Infrastructure.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructureLayer(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddInfrastructureLayer(this IServiceCollection services, IConfiguration config, IHealthChecksBuilder healthChecksBuilder)
     {
         services.AddStorage(config);
 
-        services.AddAmazonS3Core(config);
+        services.AddAmazonS3Core(config, healthChecksBuilder);
+
+        services.AddApiClients(config, healthChecksBuilder);
 
         services.AddDataLoad();
 

@@ -22,14 +22,10 @@ public static class ServiceCollectionExtensions
 
         services.AddDefaultAWSOptions(configuration.GetAWSOptions());
         services.Configure<AwsConfig>(configuration.GetSection(AwsConfig.SectionName));
-        services.AddInfrastructureLayer(configuration);
+
+        var healthChecksBuilder = services.AddHealthChecks();
+        services.AddInfrastructureLayer(configuration, healthChecksBuilder);
+
         services.AddApplicationLayer();
-
-        services.ConfigureHealthChecks();
-    }
-
-    private static void ConfigureHealthChecks(this IServiceCollection services)
-    {
-        services.AddHealthChecks();
     }
 }
