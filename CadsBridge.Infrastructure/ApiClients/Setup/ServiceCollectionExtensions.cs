@@ -65,6 +65,10 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient(clientName, client =>
         {
             client.BaseAddress = new Uri(clientConfig.BaseUrl.TrimEnd('/'));
+            if (!string.IsNullOrWhiteSpace(clientConfig.XApiKey))
+            {
+                client.DefaultRequestHeaders.Add("x-api-key", clientConfig.XApiKey);
+            }
         })
         .AddResilienceHandler(clientName, (builder, context) =>
         {
