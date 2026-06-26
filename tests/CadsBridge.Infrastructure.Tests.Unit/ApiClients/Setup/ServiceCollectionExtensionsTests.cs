@@ -86,6 +86,25 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("Set in cdp-app-config (or for local development using docker-compose.override.yml)")]
+    [InlineData("not-a-uri")]
+    public void AddApiClients_WhenBaseUrlIsNotAValidAbsoluteUri_SkipsClientAndHealthCheck(string baseUrl)
+    {
+        var (services, healthChecks) = CreateServices();
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            [$"ApiClients:{ClientName}:BaseUrl"] = baseUrl,
+            [$"ApiClients:{ClientName}:HealthcheckEnabled"] = "true"
+        });
+
+        services.AddApiClients(config, healthChecks);
+
+        var sp = services.BuildServiceProvider();
+        GetRegistrations(sp).Should().BeEmpty("a placeholder/invalid BaseUrl should be skipped, not fail the health endpoint");
+    }
+
+    [Theory]
     [InlineData(HttpStatusCode.ServiceUnavailable)]
     [InlineData(HttpStatusCode.InternalServerError)]
     [InlineData(HttpStatusCode.RequestTimeout)]

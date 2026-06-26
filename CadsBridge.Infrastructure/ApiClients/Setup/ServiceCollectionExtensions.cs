@@ -26,6 +26,12 @@ public static class ServiceCollectionExtensions
 
         foreach (var (clientName, clientConfig) in apiClientsConfigs)
         {
+            // Skip if the BaseUrl is not a valid absolute URI
+            if (!Uri.TryCreate(clientConfig.BaseUrl, UriKind.Absolute, out _))
+            {
+                continue;
+            }
+
             services.RegisterNamedHttpClient(clientName, clientConfig);
 
             if (clientConfig.HealthcheckEnabled)
@@ -35,7 +41,7 @@ public static class ServiceCollectionExtensions
                 var healthClientName = HealthClientName(clientName);
                 services.AddHttpClient(healthClientName, client =>
                 {
-                    client.BaseAddress = new Uri(clientConfig.BaseUrl!.TrimEnd('/'));
+                    client.BaseAddress = new Uri(clientConfig.BaseUrl.TrimEnd('/'));
                 });
 
                 healthChecksBuilder.Add(new HealthCheckRegistration(
@@ -58,7 +64,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddHttpClient(clientName, client =>
         {
-            client.BaseAddress = new Uri(clientConfig.BaseUrl!.TrimEnd('/'));
+            client.BaseAddress = new Uri(clientConfig.BaseUrl.TrimEnd('/'));
         })
         .AddResilienceHandler(clientName, (builder, context) =>
         {
