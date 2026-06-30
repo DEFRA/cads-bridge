@@ -77,8 +77,6 @@ public class S3FileMetaDataServiceTests
             => new MemoryStream(Encoding.UTF8.GetBytes(text));
     }
 
-    // ── Instance method: ParseTrailerLine ─────────────────────────────────────
-
     public class ParseTrailerLineTests
     {
         private const string Bucket = "internal-bucket";
@@ -185,8 +183,6 @@ public class S3FileMetaDataServiceTests
                 logger?.Object ?? Mock.Of<ILogger<S3FileMetaDataService>>());
         }
     }
-
-    // ── GetRecordCountAsync (S3 fully mocked) ─────────────────────────────────
 
     public class GetRecordCountAsyncTests
     {
@@ -299,8 +295,6 @@ public class S3FileMetaDataServiceTests
 
             await act.Should().ThrowAsync<NotFoundException>();
         }
-
-        // ── helpers ──────────────────────────────────────────────────────────
 
         private static S3FileMetaDataService CreateSut(long fileSize, string tailContent)
         {
