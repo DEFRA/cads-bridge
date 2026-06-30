@@ -9,22 +9,29 @@ using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
-public class S3FileMetaDataService(
-    IS3ClientFactory s3ClientFactory,
-    ILogger<S3FileMetaDataService> logger) : IS3FileMetaDataService
+public class S3FileMetaDataService : IS3FileMetaDataService
 {
     // 1 KB buffer for reading the trailer line
     private const int TailReadBytes = 1024;
-    private IAmazonS3? _s3;
-    private string _bucket = string.Empty;
+    private readonly IAmazonS3? _s3;
+    private readonly string _bucket;
+    private readonly ILogger<S3FileMetaDataService> _logger;
+
+    public S3FileMetaDataService(
+        IS3ClientFactory s3ClientFactory,
+        ILogger<S3FileMetaDataService> logger)
+    {
+        _logger = logger;
+        var clientInfo = s3ClientFactory.GetClientInfo<InternalStorageClient>();
+        _s3 = clientInfo.Client;
+        _bucket = clientInfo.BucketName;
+    }
 
     public async Task<long> GetRecordCountAsync(string s3Key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(s3Key);
 
-        var clientInfo = s3ClientFactory.GetClientInfo<InternalStorageClient>();
-        _s3 = clientInfo.Client;
-        _bucket = clientInfo.BucketName;
+
 
         // HEAD the object to get its size
         var fileSize = await GetFileSize(s3Key, cancellationToken);
@@ -42,9 +49,9 @@ public class S3FileMetaDataService(
             throw new DomainException($"Could not locate a trailer line in '{s3Key}'.");
         }
 
-        if (logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Trailer line read from '{Key}': {Line}", s3Key, trailerLine);
+            _logger.LogDebug("Trailer line read from '{Key}': {Line}", s3Key, trailerLine);
         }
 
         // Parse and validate

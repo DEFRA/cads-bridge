@@ -71,7 +71,7 @@ public class S3FileMetaDataServiceTests
                 .Should().BeEmpty();
         }
 
-        private static Stream ToStream(string text)
+        private static MemoryStream ToStream(string text)
             => new MemoryStream(Encoding.UTF8.GetBytes(text));
     }
 
