@@ -83,8 +83,8 @@ public class S3FileMetaDataService(
         var getRequest = new GetObjectRequest
         {
             BucketName = _bucket,
-            Key        = s3Key,
-            ByteRange  = new ByteRange(rangeStart, fileSize - 1)
+            Key = s3Key,
+            ByteRange = new ByteRange(rangeStart, fileSize - 1)
         };
         try
         {
@@ -154,4 +154,3 @@ public class S3FileMetaDataService(
         return recordCount;
     }
 }
-

@@ -190,8 +190,8 @@ public class S3FileMetaDataServiceTests
 
     public class GetRecordCountAsyncTests
     {
-        private const string Bucket   = "internal-bucket";
-        private const string S3Key    = "imports/data/myfile.csv";
+        private const string Bucket = "internal-bucket";
+        private const string S3Key = "imports/data/myfile.csv";
         private const string FileName = "myfile.csv";
 
         [Fact]
