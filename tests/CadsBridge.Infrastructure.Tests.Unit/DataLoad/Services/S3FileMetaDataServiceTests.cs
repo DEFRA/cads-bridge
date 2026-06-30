@@ -81,31 +81,20 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseLine_ReturnsRecord_WhenLineIsValid()
         {
-            var line = "1,2,3";
+            var line = "1|2|3";
             var expected = new[] { "1", "2", "3" };
             var actual = new CsvParser().ParseCsvLine(line);
             actual.Should().BeEquivalentTo(expected);
         }
 
         [Theory]
-        [InlineData("1,2,3")] // 3 fields
-        [InlineData("1,2,3,4,5")] // 5 fields
+        [InlineData("1|2|3")] // 3 fields
+        [InlineData("1|2|3|4|5")] // 5 fields
         public void ParseLine_Throws_WhenLineCountIsInvalid(string line)
         {
             var act = () => new CsvParser().ParseCsvLine(line, expectedCount: 2);
             act.Should().Throw<DomainException>().WithMessage("*field(s); expected*");
         }
-
-        [Theory]
-        [InlineData("T", "file.csv", "13092020 17:59:11")] // 3 fields
-        [InlineData("T", "file.csv", "13092020 17:59:11", "100", "extra")] // 5 fields
-        public void ParseTrailerLine_Throws_WhenFieldCountIsWrong(params string[] line)
-        {
-            var act = () => S3FileMetaDataService.ParseTrailerLine(line, "imports/file.csv");
-
-            act.Should().Throw<DomainException>().WithMessage("*field(s)*");
-        }
-
     }
 
     public class ParseTrailerLineTests
