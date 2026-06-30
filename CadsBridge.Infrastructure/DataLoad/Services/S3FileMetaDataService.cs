@@ -15,12 +15,15 @@ public class S3FileMetaDataService : IS3FileMetaDataService
     private const int TailReadBytes = 1024;
     private readonly IAmazonS3? _s3;
     private readonly string _bucket;
+    private readonly ICsvParser _csvParser;
     private readonly ILogger<S3FileMetaDataService> _logger;
 
     public S3FileMetaDataService(
         IS3ClientFactory s3ClientFactory,
+        ICsvParser csvParser,
         ILogger<S3FileMetaDataService> logger)
     {
+        _csvParser = csvParser;
         _logger = logger;
         var clientInfo = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         _s3 = clientInfo.Client;
@@ -55,7 +58,8 @@ public class S3FileMetaDataService : IS3FileMetaDataService
         }
 
         // Parse and validate
-        return ParseTrailerLine(trailerLine, s3Key);
+        var parts = _csvParser.ParseCsvLine(trailerLine, expectedCount: 4);
+        return ParseTrailerLine(parts.ToArray(), s3Key);
     }
 
     private async Task<long> GetFileSize(string s3Key, CancellationToken cancellationToken)
@@ -103,19 +107,13 @@ public class S3FileMetaDataService : IS3FileMetaDataService
         return lines.Length == 0 ? string.Empty : lines[^1];
     }
 
-    public static long ParseTrailerLine(string line, string s3Key)
+    public static long ParseTrailerLine(string[] parts, string s3Key)
     {
         var expectedFileName = Path.GetFileName(s3Key);
 
-        var parts = line.Split('|');
-
-        if (parts.Length != 4)
-        {
-            throw new DomainException($"Trailer line in '{s3Key}' has {parts.Length} field(s); expected 4. Line: '{line}'");
-        }
         if (!string.Equals(parts[0].Trim(), "T", StringComparison.Ordinal))
         {
-            throw new DomainException($"Trailer line in '{s3Key}' does not begin with 'T'. Line: '{line}'");
+            throw new DomainException($"Trailer line in '{s3Key}' does not begin with 'T'.");
         }
         var fileNameField = parts[1].Trim();
         if (!string.Equals(fileNameField, expectedFileName, StringComparison.OrdinalIgnoreCase))

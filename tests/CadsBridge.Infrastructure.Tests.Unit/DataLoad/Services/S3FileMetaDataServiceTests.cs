@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
 using System.Text;
+using CadsBridge.Application.DataLoad.Services;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -75,6 +76,38 @@ public class S3FileMetaDataServiceTests
             => new MemoryStream(Encoding.UTF8.GetBytes(text));
     }
 
+    public class CsvParserTests
+    {
+        [Fact]
+        public void ParseLine_ReturnsRecord_WhenLineIsValid()
+        {
+            var line = "1,2,3";
+            var expected = new[] { "1", "2", "3" };
+            var actual = new CsvParser().ParseCsvLine(line);
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Theory]
+        [InlineData("1,2,3")] // 3 fields
+        [InlineData("1,2,3,4,5")] // 5 fields
+        public void ParseLine_Throws_WhenLineCountIsInvalid(string line)
+        {
+            var act = () => new CsvParser().ParseCsvLine(line, expectedCount: 2);
+            act.Should().Throw<DomainException>().WithMessage("*field(s); expected*");
+        }
+
+        [Theory]
+        [InlineData("T", "file.csv", "13092020 17:59:11")] // 3 fields
+        [InlineData("T", "file.csv", "13092020 17:59:11", "100", "extra")] // 5 fields
+        public void ParseTrailerLine_Throws_WhenFieldCountIsWrong(params string[] line)
+        {
+            var act = () => S3FileMetaDataService.ParseTrailerLine(line, "imports/file.csv");
+
+            act.Should().Throw<DomainException>().WithMessage("*field(s)*");
+        }
+
+    }
+
     public class ParseTrailerLineTests
     {
         private const string Bucket = "internal-bucket";
@@ -82,31 +115,24 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_ReturnsRecordCount_WhenLineIsValid()
         {
-            S3FileMetaDataService.ParseTrailerLine("T|file.csv|13092020 17:59:11|1234567", "imports/file.csv")
+            var parts = new[] { "T", "file.csv", "13092020 17:59:11", "1234567" };
+            S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(1234567L);
         }
 
         [Fact]
         public void ParseTrailerLine_ReturnsZero_WhenRecordCountIsZero()
         {
-            S3FileMetaDataService.ParseTrailerLine("T|file.csv|13092020 17:59:11|0", "imports/file.csv")
+            var parts = new[] { "T", "file.csv", "13092020 17:59:11", "0" };
+            S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(0L);
-        }
-
-        [Theory]
-        [InlineData("T|file.csv|13092020 17:59:11")]           // 3 fields
-        [InlineData("T|file.csv|13092020 17:59:11|100|extra")] // 5 fields
-        public void ParseTrailerLine_Throws_WhenFieldCountIsWrong(string line)
-        {
-            var act = () => S3FileMetaDataService.ParseTrailerLine(line, "imports/file.csv");
-
-            act.Should().Throw<DomainException>().WithMessage("*field(s)*");
         }
 
         [Fact]
         public void ParseTrailerLine_Throws_WhenFirstFieldIsNotT()
         {
-            var act = () => S3FileMetaDataService.ParseTrailerLine("H|file.csv|13092020 17:59:11|100", "imports/file.csv");
+            var parts = new[] { "H", "file.csv", "13092020 17:59:11", "1234567" };
+            var act = () => S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*does not begin with 'T'*");
         }
@@ -114,18 +140,19 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_Throws_WhenFileNameDoesNotMatch()
         {
-            var act = () => S3FileMetaDataService.ParseTrailerLine("T|other.csv|13092020 17:59:11|100", "imports/file.csv");
+            var parts = new[] { "T", "other.csv", "13092020 17:59:11", "1234567" };
+            var act = () => S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*does not match expected*");
         }
 
         [Theory]
-        [InlineData("T|file.csv|13092020 17:59:11|abc")]
-        [InlineData("T|file.csv|13092020 17:59:11|-1")]
-        [InlineData("T|file.csv|13092020 17:59:11|")]
-        public void ParseTrailerLine_Throws_WhenRecordCountIsInvalid(string line)
+        [InlineData("T", "file.csv", "13092020 17:59:11", "abc")]
+        [InlineData("T", "file.csv", "13092020 17:59:11", "-1")]
+        [InlineData("T", "file.csv", "13092020 17:59:11", "")]
+        public void ParseTrailerLine_Throws_WhenRecordCountIsInvalid(params string[] parts)
         {
-            var act = () => S3FileMetaDataService.ParseTrailerLine(line, "imports/file.csv");
+            var act = () => S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*not a valid non-negative integer*");
         }
@@ -133,7 +160,8 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_IsCaseInsensitive_ForFileName()
         {
-            S3FileMetaDataService.ParseTrailerLine("T|FILE.CSV|13092020 17:59:11|50", "imports/file.csv")
+            var parts = new[] { "T", "FILE.CSV", "13092020 17:59:11", "50" };
+            S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(50L);
         }
     }
@@ -274,6 +302,7 @@ public class S3FileMetaDataServiceTests
 
             return new S3FileMetaDataService(
                 factory.Object,
+                new CsvParser(),
                 Mock.Of<ILogger<S3FileMetaDataService>>());
         }
     }
