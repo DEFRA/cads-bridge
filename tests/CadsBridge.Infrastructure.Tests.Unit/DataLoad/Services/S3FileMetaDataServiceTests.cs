@@ -15,8 +15,6 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
 public class S3FileMetaDataServiceTests
 {
-    // ── Pure static helper: ExtractLastLine ───────────────────────────────────
-
     public class ExtractLastLineTests
     {
         [Fact]
@@ -84,16 +82,14 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_ReturnsRecordCount_WhenLineIsValid()
         {
-            CreateSut()
-                .ParseTrailerLine("T|file.csv|13092020 17:59:11|1234567", "imports/file.csv")
+            S3FileMetaDataService.ParseTrailerLine("T|file.csv|13092020 17:59:11|1234567", "imports/file.csv")
                 .Should().Be(1234567L);
         }
 
         [Fact]
         public void ParseTrailerLine_ReturnsZero_WhenRecordCountIsZero()
         {
-            CreateSut()
-                .ParseTrailerLine("T|file.csv|13092020 17:59:11|0", "imports/file.csv")
+            S3FileMetaDataService.ParseTrailerLine("T|file.csv|13092020 17:59:11|0", "imports/file.csv")
                 .Should().Be(0L);
         }
 
@@ -102,9 +98,7 @@ public class S3FileMetaDataServiceTests
         [InlineData("T|file.csv|13092020 17:59:11|100|extra")] // 5 fields
         public void ParseTrailerLine_Throws_WhenFieldCountIsWrong(string line)
         {
-            var sut = CreateSut();
-
-            var act = () => sut.ParseTrailerLine(line, "imports/file.csv");
+            var act = () => S3FileMetaDataService.ParseTrailerLine(line, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*field(s)*");
         }
@@ -112,9 +106,7 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_Throws_WhenFirstFieldIsNotT()
         {
-            var sut = CreateSut();
-
-            var act = () => sut.ParseTrailerLine("H|file.csv|13092020 17:59:11|100", "imports/file.csv");
+            var act = () => S3FileMetaDataService.ParseTrailerLine("H|file.csv|13092020 17:59:11|100", "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*does not begin with 'T'*");
         }
@@ -122,9 +114,7 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_Throws_WhenFileNameDoesNotMatch()
         {
-            var sut = CreateSut();
-
-            var act = () => sut.ParseTrailerLine("T|other.csv|13092020 17:59:11|100", "imports/file.csv");
+            var act = () => S3FileMetaDataService.ParseTrailerLine("T|other.csv|13092020 17:59:11|100", "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*does not match expected*");
         }
@@ -135,9 +125,7 @@ public class S3FileMetaDataServiceTests
         [InlineData("T|file.csv|13092020 17:59:11|")]
         public void ParseTrailerLine_Throws_WhenRecordCountIsInvalid(string line)
         {
-            var sut = CreateSut();
-
-            var act = () => sut.ParseTrailerLine(line, "imports/file.csv");
+            var act = () => S3FileMetaDataService.ParseTrailerLine(line, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*not a valid non-negative integer*");
         }
@@ -145,42 +133,8 @@ public class S3FileMetaDataServiceTests
         [Fact]
         public void ParseTrailerLine_IsCaseInsensitive_ForFileName()
         {
-            CreateSut()
-                .ParseTrailerLine("T|FILE.CSV|13092020 17:59:11|50", "imports/file.csv")
+            S3FileMetaDataService.ParseTrailerLine("T|FILE.CSV|13092020 17:59:11|50", "imports/file.csv")
                 .Should().Be(50L);
-        }
-
-        [Fact]
-        public void ParseTrailerLine_LogsError_WhenLineIsInvalid()
-        {
-            var logger = new Mock<ILogger<S3FileMetaDataService>>();
-            logger.Setup(x => x.IsEnabled(LogLevel.Error)).Returns(true);
-
-            var sut = CreateSut(logger);
-
-            var act = () => sut.ParseTrailerLine("H|file.csv|13092020 17:59:11|100", "imports/file.csv");
-
-            act.Should().Throw<DomainException>();
-
-            logger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.IsAny<It.IsAnyType>(),
-                    It.IsAny<Exception?>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Once);
-        }
-
-        private static S3FileMetaDataService CreateSut(Mock<ILogger<S3FileMetaDataService>>? logger = null)
-        {
-            var factory = new Mock<IS3ClientFactory>();
-            factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
-                   .Returns(new S3ClientFactory.ClientInfo(Mock.Of<IAmazonS3>(), Bucket));
-
-            return new S3FileMetaDataService(
-                factory.Object,
-                logger?.Object ?? Mock.Of<ILogger<S3FileMetaDataService>>());
         }
     }
 

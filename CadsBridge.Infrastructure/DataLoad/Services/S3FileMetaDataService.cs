@@ -31,10 +31,6 @@ public class S3FileMetaDataService(
 
         if (fileSize == 0)
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError("S3 object '{S3Key}' is empty; no trailer line present.", s3Key);
-            }
             throw new DomainException($"S3 object '{s3Key}' is empty; no trailer line present.");
         }
 
@@ -43,10 +39,6 @@ public class S3FileMetaDataService(
 
         if (string.IsNullOrWhiteSpace(trailerLine))
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError("Could not locate a trailer line in '{S3Key}'.", s3Key);
-            }
             throw new DomainException($"Could not locate a trailer line in '{s3Key}'.");
         }
 
@@ -68,10 +60,6 @@ public class S3FileMetaDataService(
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError(ex, "S3 object '{S3Key}' was not found in bucket '{Bucket}'.", s3Key, _bucket);
-            }
             throw new NotFoundException($"S3 object '{s3Key}' was not found in bucket '{_bucket}'.", ex);
         }
     }
@@ -93,10 +81,6 @@ public class S3FileMetaDataService(
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError(ex, "S3 object '{S3Key}' was not found in bucket '{Bucket}'.", s3Key, _bucket);
-            }
             throw new NotFoundException($"S3 object '{s3Key}' was not found in bucket '{_bucket}'.", ex);
         }
     }
@@ -112,7 +96,7 @@ public class S3FileMetaDataService(
         return lines.Length == 0 ? string.Empty : lines[^1];
     }
 
-    public long ParseTrailerLine(string line, string s3Key)
+    public static long ParseTrailerLine(string line, string s3Key)
     {
         var expectedFileName = Path.GetFileName(s3Key);
 
@@ -120,35 +104,19 @@ public class S3FileMetaDataService(
 
         if (parts.Length != 4)
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError("Trailer line in '{S3Key}' has {Parts} field(s); expected 4. Line: '{Line}'", s3Key, parts.Length, line);
-            }
             throw new DomainException($"Trailer line in '{s3Key}' has {parts.Length} field(s); expected 4. Line: '{line}'");
         }
         if (!string.Equals(parts[0].Trim(), "T", StringComparison.Ordinal))
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError("Trailer line in '{S3Key}' does not begin with 'T'. Line: '{Line}'", s3Key, line);
-            }
             throw new DomainException($"Trailer line in '{s3Key}' does not begin with 'T'. Line: '{line}'");
         }
         var fileNameField = parts[1].Trim();
         if (!string.Equals(fileNameField, expectedFileName, StringComparison.OrdinalIgnoreCase))
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError("Trailer file name '{FileName}' does not match expected '{ExpectedFileName}' in '{S3Key}'.", fileNameField, expectedFileName, s3Key);
-            }
             throw new DomainException($"Trailer file name '{fileNameField}' does not match expected '{expectedFileName}' in '{s3Key}'.");
         }
         if (!long.TryParse(parts[3].Trim(), out var recordCount) || recordCount < 0)
         {
-            if (logger.IsEnabled(LogLevel.Error))
-            {
-                logger.LogError("Trailer record count '{RecordCount}' in '{S3Key}' is not a valid non-negative integer.", recordCount, s3Key);
-            }
             throw new DomainException($"Trailer record count '{parts[3].Trim()}' in '{s3Key}' is not a valid non-negative integer.");
         }
         return recordCount;
