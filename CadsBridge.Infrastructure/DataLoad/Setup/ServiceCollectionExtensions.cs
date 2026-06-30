@@ -25,6 +25,8 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<IS3CopyService, S3CopyService>();
         services.AddTransient<ICsvDataFileSplitterService, CsvDataFileSplitterService>();
+        services.AddTransient<ICsvParser, CsvParser>();
+        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService>();
 
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 
