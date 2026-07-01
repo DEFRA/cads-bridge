@@ -32,6 +32,12 @@ public static class ServiceCollectionExtensions
                 continue;
             }
 
+            // Skip if the client name is not a valid ApiClientNames enum value
+            if(!Enum.TryParse<ApiClientNames>(clientName, out _))
+            {
+                continue;
+            }
+
             services.RegisterNamedHttpClient(clientName, clientConfig);
 
             if (clientConfig.HealthcheckEnabled)
