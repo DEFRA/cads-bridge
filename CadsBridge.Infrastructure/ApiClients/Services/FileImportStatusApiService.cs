@@ -4,38 +4,19 @@ using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
-using Microsoft.AspNetCore.Mvc;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
 
-public class FileImportStatusApiService : IFileImportStatusApiService
+public class FileImportStatusApiService(IHttpClientFactory httpClientFactory) : IFileImportStatusApiService
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
     private const string baseApiUrl = "api/v1/systemadmin/fileimports";
     private const string getByFileNameEndpoint = "/by-file-name";
-
-    public FileImportStatusApiService(IHttpClientFactory httpClientFactory)
-    {
-        _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
-    }
 
     public async Task<FileImportStatusDto?> GetByFileName(string fileName, CancellationToken cancellationToken)
     {
         var response = await _httpClient.GetAsync($"{baseApiUrl}{getByFileNameEndpoint}?fileName={fileName}", cancellationToken);
-
-        response.EnsureSuccessStatusCode();
-
-        var result = await response.Content.ReadFromJsonAsync<FileImportStatusDto>(cancellationToken);
-        return result;
-    }
-
-    public async Task<FileImportStatusDto?> GetById(Guid id, CancellationToken cancellationToken)
-    {
-        // TODO: we don't have this endpoint in the CDS API yet
-        var response = await _httpClient.GetAsync(
-            $"/api/get-endpoint?id={id}",
-            cancellationToken);
 
         response.EnsureSuccessStatusCode();
 

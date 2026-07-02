@@ -1,6 +1,7 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Endpoints.Requests;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Utilities.Assertions;
@@ -91,6 +92,96 @@ public class CsvDataFileImportEndpointTests
         status!.JobId.Should().Be(jobId);
         status.TotalFiles.Should().Be(1);
         status.Files.First().Status.Should().Be(JobStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task ImportFile_WithOneFile_CallsS3MetaDataServiceAndFileImportStatusStore_WithExpectedArguments()
+    {
+        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        var fileSplitterMock = new Mock<ISplitMessageProducer>();
+        factory.OverrideSingleton(fileSplitterMock.Object);
+        factory.S3FileMetaDataServiceMock
+            .Setup(x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(555L);
+        factory.FileImportStatusStoreMock
+            .Setup(x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(9L);
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testPassword, _testSalt, TestContext.Current.CancellationToken);
+        var client = factory.CreateClient();
+
+        await TriggerImportJob(client, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(
+                JobId: string.Empty,
+                sourceKey: _incomingKey,
+                targetKey: _importedKey,
+                Password: _testPassword,
+                Salt: _testSalt,
+                SplitType: SplitType.None,
+                SplitValue: null)
+        ]));
+
+        factory.S3FileMetaDataServiceMock.Verify(
+            x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()), Times.Once);
+        factory.FileImportStatusStoreMock.Verify(
+            x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportFile_WhenS3MetaDataServiceThrowsNotFoundException_MarksFileAsFailedButReturnsOk()
+    {
+        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        var notFoundMessage = $"S3 object '{_incomingKey}' was not found.";
+        factory.S3FileMetaDataServiceMock
+            .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException(notFoundMessage));
+        var client = factory.CreateClient();
+
+        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(
+                JobId: string.Empty,
+                sourceKey: _incomingKey,
+                targetKey: _importedKey,
+                Password: _testPassword,
+                Salt: _testSalt,
+                SplitType: SplitType.None,
+                SplitValue: null)
+        ]));
+
+        var status = await GetImportJobStatus(jobId, client);
+        status!.JobId.Should().Be(jobId);
+        status.TotalFiles.Should().Be(1);
+        status.CompletedFiles.Should().Be(1);
+        status.Files.First().Status.Should().Be(JobStatus.Failed);
+        status.Files.First().ErrorMessage.Should().Be(notFoundMessage);
+    }
+
+    [Fact]
+    public async Task ImportFile_WhenFileImportStatusStoreInitiateThrows_MarksFileAsFailedButReturnsOk()
+    {
+        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        const string errorMessage = "downstream unavailable";
+        factory.FileImportStatusStoreMock
+            .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(errorMessage));
+        var client = factory.CreateClient();
+
+        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(
+                JobId: string.Empty,
+                sourceKey: _incomingKey,
+                targetKey: _importedKey,
+                Password: _testPassword,
+                Salt: _testSalt,
+                SplitType: SplitType.None,
+                SplitValue: null)
+        ]));
+
+        var status = await GetImportJobStatus(jobId, client);
+        status!.JobId.Should().Be(jobId);
+        status.TotalFiles.Should().Be(1);
+        status.CompletedFiles.Should().Be(1);
+        status.Files.First().Status.Should().Be(JobStatus.Failed);
+        status.Files.First().ErrorMessage.Should().Be(errorMessage);
     }
 
     private sealed record ImportJobResponse(string JobId);
