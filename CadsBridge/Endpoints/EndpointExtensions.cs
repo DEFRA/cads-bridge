@@ -67,8 +67,9 @@ public static class EndpointsExtensions
         foreach (var importFile in request.Files)
         {
             // TODO: Handle errors
-            var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(importFile.sourceKey);
-            var id = await fileImportStatusStore.Initiate(importFile.sourceKey, totalRowsToProcess);
+            var totalRowsToProcess = 0;
+            // var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(importFile.sourceKey);
+            // var id = await fileImportStatusStore.Initiate(importFile.sourceKey, totalRowsToProcess);
             await channel.Writer.WriteAsync(new CsvDataFileImportJob(
                 JobId: jobId,
                 SourceKey: importFile.sourceKey,

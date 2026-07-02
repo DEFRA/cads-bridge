@@ -9,7 +9,7 @@ namespace CadsBridge.Tests.Component.EndPoints;
 [Collection("ComponentHealthChecks")]
 public class ApiClientHealthCheckEndpointTests
 {
-    private const string ClientName = "downstream-api";
+    private const string ClientName = "CdsApi";
     private static string EntryKey => $"http-client-{ClientName}";
 
     private static Dictionary<string, string?> EnableApiClient(bool healthcheckEnabled) => new()

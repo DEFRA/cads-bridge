@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
-        services.AddSingleton<IFileImportStatusApiService, FileImportStatusApiService>();
+        services.AddSingleton<IFileImportStatusStore, FileImportStatusStore>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)
