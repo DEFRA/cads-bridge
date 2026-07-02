@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
@@ -9,7 +10,7 @@ namespace CadsBridge.Tests.Component.EndPoints;
 [Collection("ComponentHealthChecks")]
 public class ApiClientHealthCheckEndpointTests
 {
-    private const string ClientName = "CdsApi";
+    private const string ClientName = nameof(ApiClientNames.CdsApi);
     private static string EntryKey => $"http-client-{ClientName}";
 
     private static Dictionary<string, string?> EnableApiClient(bool healthcheckEnabled) => new()
