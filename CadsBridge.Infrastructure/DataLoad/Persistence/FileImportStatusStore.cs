@@ -20,7 +20,7 @@ public class FileImportStatusStore : IFileImportStatusStore
     {
         try
         {
-            var result = await _fileImportStatusApiService.Create(fileName,totalRowsToProcess, cancellationToken);
+            var result = await _fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
             return result;
         }
         catch (HttpRequestException ex)

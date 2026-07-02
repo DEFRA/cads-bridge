@@ -15,7 +15,7 @@ public static class ServiceCollectionExtensions
 {
     public static void AddApiServices(this IServiceCollection services)
     {
-            services.AddTransient<IFileImportStatusApiService, FileImportStatusApiService>();
+        services.AddTransient<IFileImportStatusApiService, FileImportStatusApiService>();
     }
 
     public static void AddApiClients(
@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
             }
 
             // Skip if the client name is not a valid ApiClientNames enum value
-            if(!Enum.TryParse<ApiClientNames>(clientName, out _))
+            if (!Enum.TryParse<ApiClientNames>(clientName, out _))
             {
                 continue;
             }
