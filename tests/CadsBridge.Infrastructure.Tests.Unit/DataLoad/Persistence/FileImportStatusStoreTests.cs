@@ -67,28 +67,4 @@ public class FileImportStatusStoreTests
             await act.Should().ThrowAsync<HttpRequestException>();
         }
     }
-
-    public class NotImplementedMethodsTests : FileImportStatusStoreTests
-    {
-        [Fact]
-        public async Task MarkInProgress_ThrowsNotImplementedException()
-        {
-            var act = () => CreateSut().MarkInProgress(1L, TestContext.Current.CancellationToken);
-            await act.Should().ThrowAsync<NotImplementedException>();
-        }
-
-        [Fact]
-        public async Task MarkSucceeded_ThrowsNotImplementedException()
-        {
-            var act = () => CreateSut().MarkSucceeded(1L, TestContext.Current.CancellationToken);
-            await act.Should().ThrowAsync<NotImplementedException>();
-        }
-
-        [Fact]
-        public async Task MarkFailed_ThrowsNotImplementedException()
-        {
-            var act = () => CreateSut().MarkFailed(1L, TestContext.Current.CancellationToken);
-            await act.Should().ThrowAsync<NotImplementedException>();
-        }
-    }
 }

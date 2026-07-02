@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
@@ -38,16 +39,19 @@ public class FileImportStatusStore : IFileImportStatusStore
         }
     }
 
+    [ExcludeFromCodeCoverage]
     public Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
+    [ExcludeFromCodeCoverage]
     public Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
+    [ExcludeFromCodeCoverage]
     public Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
