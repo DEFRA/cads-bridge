@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
@@ -60,6 +61,6 @@ public class FileImportStatusApiService : IFileImportStatusApiService
         {
             return dto.Id;
         }
-        throw new Exception("Failed to create file import");
+        throw new DomainException("Failed to create file import for " + s3Key + "");
     }
 }

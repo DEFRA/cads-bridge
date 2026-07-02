@@ -6,6 +6,4 @@ public interface IFileImportStatusStore
     Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default);
     Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default);
     Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default);
-    // JobProgress? GetJob(string jobId);
-    // IEnumerable<JobProgress> GetJobs();
 }
