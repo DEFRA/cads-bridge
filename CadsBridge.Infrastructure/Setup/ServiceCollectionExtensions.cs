@@ -19,6 +19,8 @@ public static class ServiceCollectionExtensions
 
         services.AddApiClients(config, healthChecksBuilder);
 
+        services.AddApiServices();
+
         services.AddDataLoad();
 
         services.RegistryCrypto();

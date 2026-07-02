@@ -1,5 +1,7 @@
 using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
+using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -11,6 +13,11 @@ namespace CadsBridge.Infrastructure.ApiClients.Setup;
 
 public static class ServiceCollectionExtensions
 {
+    public static void AddApiServices(this IServiceCollection services)
+    {
+            services.AddTransient<IFileImportStatusApiService, FileImportStatusApiService>();
+    }
+
     public static void AddApiClients(
         this IServiceCollection services,
         IConfiguration configuration,
