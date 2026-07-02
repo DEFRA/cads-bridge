@@ -2,10 +2,10 @@ namespace CadsBridge.Infrastructure.ApiClients.DTOs;
 
 public record FileImportStatusDto
 {
-    public Guid Id { get; set; }
-    public string S3Key { get; set; } = string.Empty;
-    public int TotalRowsToProcess { get; set; }
-    public int RowsProcessed { get; set; }
-    public ImportStatus ImportStatus { get; set; }
-    public DateTime? LastUpdated { get; set; }
+    public long Id { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public long TotalRowsToProcess { get; set; }
+    public long RowsFound { get; set; }
+    public FileImportStatus ImportStatus { get; set; }
+    public FileProcessingStatus ProcessingStatus { get; set; }
 }
