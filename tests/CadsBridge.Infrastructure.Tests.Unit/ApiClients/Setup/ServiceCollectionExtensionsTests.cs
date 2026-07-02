@@ -12,7 +12,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Setup;
 
 public class ServiceCollectionExtensionsTests
 {
-    private const string ClientName = "test-api";
+    private const string ClientName = "CdsApi";
 
     private static IConfiguration BuildConfig(Dictionary<string, string?> values) =>
         new ConfigurationBuilder().AddInMemoryCollection(values).Build();
