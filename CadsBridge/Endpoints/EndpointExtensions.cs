@@ -53,7 +53,12 @@ public static class EndpointsExtensions
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
-    private static async Task<IResult> Import([FromBody] CsvDataFileImportRequest request, Channel<CsvDataFileImportJob> channel, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Import(
+        [FromBody] CsvDataFileImportRequest request,
+        Channel<CsvDataFileImportJob> channel,
+        IImportJobProgressStore progressStore,
+        IS3FileMetaDataService s3FileMetaDataService,
+        IFileImportStatusStore fileImportStatusStore)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -61,6 +66,8 @@ public static class EndpointsExtensions
 
         foreach (var importFile in request.Files)
         {
+            var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(importFile.sourceKey);
+            var id = await fileImportStatusStore.Initiate(importFile.sourceKey, totalRowsToProcess); // Assuming 0 as totalRowsToProcess for now, adjust as needed
             await channel.Writer.WriteAsync(new CsvDataFileImportJob(
                 JobId: jobId,
                 SourceKey: importFile.sourceKey,
