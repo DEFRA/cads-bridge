@@ -53,7 +53,14 @@ public static class EndpointsExtensions
         return Results.Ok(new { fileCount = files.Count, files = files.Select(f => f.FileName) });
     }
 
-    private static async Task<IResult> Import([FromBody] CsvDataFileImportRequest request, Channel<CsvDataFileImportJob> channel, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Import(
+        [FromBody] CsvDataFileImportRequest request,
+        Channel<CsvDataFileImportJob> channel,
+        IImportJobProgressStore progressStore,
+        IS3FileMetaDataService s3FileMetaDataService,
+        IFileImportStatusStore fileImportStatusStore,
+        ILogger<Program> logger,
+        CancellationToken cancellationToken)
     {
         var jobId = Guid.NewGuid().ToString("N");
 
@@ -61,15 +68,30 @@ public static class EndpointsExtensions
 
         foreach (var importFile in request.Files)
         {
-            await channel.Writer.WriteAsync(new CsvDataFileImportJob(
-                JobId: jobId,
-                SourceKey: importFile.sourceKey,
-                TargetKey: importFile.targetKey,
-                Password: importFile.Password,
-                Salt: importFile.Salt,
-                SplitType: importFile.SplitType,
-                SplitValue: importFile.SplitValue
-            ));
+            try
+            {
+                var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(
+                    importFile.sourceKey, cancellationToken);
+
+                var fileImportStatusId = await fileImportStatusStore.Initiate(
+                    importFile.sourceKey, totalRowsToProcess, cancellationToken);
+
+                await channel.Writer.WriteAsync(new CsvDataFileImportJob(
+                    JobId: jobId,
+                    SourceKey: importFile.sourceKey,
+                    TargetKey: importFile.targetKey,
+                    Password: importFile.Password,
+                    Salt: importFile.Salt,
+                    SplitType: importFile.SplitType,
+                    SplitValue: importFile.SplitValue
+                ), cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to initiate import for {SourceKey} (job {JobId})",
+                    importFile.sourceKey, jobId);
+                progressStore.MarkFailed(jobId, importFile.sourceKey, ex.Message);
+            }
         }
 
         return Results.Ok(new { jobId });

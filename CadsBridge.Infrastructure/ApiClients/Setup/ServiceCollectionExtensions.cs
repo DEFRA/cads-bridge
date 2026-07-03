@@ -1,5 +1,7 @@
 using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
+using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -11,6 +13,11 @@ namespace CadsBridge.Infrastructure.ApiClients.Setup;
 
 public static class ServiceCollectionExtensions
 {
+    public static void AddApiServices(this IServiceCollection services)
+    {
+        services.AddTransient<IFileImportStatusApiService, FileImportStatusApiService>();
+    }
+
     public static void AddApiClients(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -28,6 +35,12 @@ public static class ServiceCollectionExtensions
         {
             // Skip if the BaseUrl is not a valid absolute URI
             if (!Uri.TryCreate(clientConfig.BaseUrl, UriKind.Absolute, out _))
+            {
+                continue;
+            }
+
+            // Skip if the client name is not a valid ApiClientNames enum value
+            if (!Enum.TryParse<ApiClientNames>(clientName, out _))
             {
                 continue;
             }

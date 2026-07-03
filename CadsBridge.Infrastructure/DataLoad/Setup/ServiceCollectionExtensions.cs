@@ -1,6 +1,8 @@
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.Services;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
 using CadsBridge.Infrastructure.DataLoad.Services;
@@ -32,6 +34,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
         services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
+
+        services.AddTransient<IFileImportStatusStore, FileImportStatusStore>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

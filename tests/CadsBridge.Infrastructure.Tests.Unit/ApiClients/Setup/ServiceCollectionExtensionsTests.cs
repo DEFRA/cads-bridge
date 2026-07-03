@@ -1,4 +1,5 @@
 using System.Net;
+using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Setup;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
@@ -12,7 +13,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Setup;
 
 public class ServiceCollectionExtensionsTests
 {
-    private const string ClientName = "test-api";
+    private const string ClientName = nameof(ApiClientNames.CdsApi);
 
     private static IConfiguration BuildConfig(Dictionary<string, string?> values) =>
         new ConfigurationBuilder().AddInMemoryCollection(values).Build();
@@ -25,8 +26,8 @@ public class ServiceCollectionExtensionsTests
         return (services, healthChecks);
     }
 
-    private static IReadOnlyList<HealthCheckRegistration> GetRegistrations(IServiceProvider sp) =>
-        sp.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations.ToList();
+    private static List<HealthCheckRegistration> GetRegistrations(IServiceProvider sp) =>
+        [.. sp.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations];
 
     [Fact]
     public void HealthClientName_AppendsHealthSuffix()

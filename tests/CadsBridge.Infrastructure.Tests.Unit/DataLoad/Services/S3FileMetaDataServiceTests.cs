@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
 using System.Text;
-using CadsBridge.Application.DataLoad.Services;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
