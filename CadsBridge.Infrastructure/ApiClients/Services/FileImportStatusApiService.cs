@@ -7,7 +7,6 @@ using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
-
 public class FileImportStatusApiService(IHttpClientFactory httpClientFactory) : IFileImportStatusApiService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
@@ -42,6 +41,6 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory) : 
         {
             return dto.Id;
         }
-        throw new DomainException("Failed to create file import for " + s3Key + "");
+        throw new DomainException($"Failed to create file import for '{s3Key}'");
     }
 }

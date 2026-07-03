@@ -1,7 +1,5 @@
 using Amazon.S3;
-using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
-using CadsBridge.Core.FileSystem;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -11,7 +9,6 @@ using CadsBridge.Testing.Support.TestDoubles.Storage;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Text;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 

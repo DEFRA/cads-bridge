@@ -2,7 +2,6 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;

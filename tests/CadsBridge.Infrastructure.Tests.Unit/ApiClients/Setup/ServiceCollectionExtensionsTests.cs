@@ -26,8 +26,8 @@ public class ServiceCollectionExtensionsTests
         return (services, healthChecks);
     }
 
-    private static IReadOnlyList<HealthCheckRegistration> GetRegistrations(IServiceProvider sp) =>
-        sp.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations.ToList();
+    private static List<HealthCheckRegistration> GetRegistrations(IServiceProvider sp) =>
+        [.. sp.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations];
 
     [Fact]
     public void HealthClientName_AppendsHealthSuffix()
