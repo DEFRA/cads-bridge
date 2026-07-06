@@ -1,7 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.DTOs;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Persistence;
@@ -39,21 +39,18 @@ public class FileImportStatusStore : IFileImportStatusStore
         }
     }
 
-    [ExcludeFromCodeCoverage]
-    public Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Importing, cancellationToken);
     }
 
-    [ExcludeFromCodeCoverage]
-    public Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Completed, cancellationToken);
     }
 
-    [ExcludeFromCodeCoverage]
-    public Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Failed, cancellationToken);
     }
 }

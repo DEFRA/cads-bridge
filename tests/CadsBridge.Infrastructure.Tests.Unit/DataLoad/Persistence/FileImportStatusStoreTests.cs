@@ -1,5 +1,6 @@
 using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -65,6 +66,36 @@ public class FileImportStatusStoreTests
             var act = async () => await CreateSut().Initiate("file.csv", 100L, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<HttpRequestException>();
+        }
+    }
+
+    public class MarkStatusTests : FileImportStatusStoreTests
+    {
+        [Fact]
+        public async Task MarkInProgress_CallsApiService_WithImportingStatus()
+        {
+            await CreateSut().MarkInProgress(5L, TestContext.Current.CancellationToken);
+
+            _apiService.Verify(x =>
+                x.MarkStatus(5L, FileImportStatus.Importing, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task MarkSucceeded_CallsApiService_WithCompletedStatus()
+        {
+            await CreateSut().MarkSucceeded(5L, TestContext.Current.CancellationToken);
+
+            _apiService.Verify(x =>
+                x.MarkStatus(5L, FileImportStatus.Completed, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task MarkFailed_CallsApiService_WithFailedStatus()
+        {
+            await CreateSut().MarkFailed(5L, TestContext.Current.CancellationToken);
+
+            _apiService.Verify(x =>
+                x.MarkStatus(5L, FileImportStatus.Failed, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }
