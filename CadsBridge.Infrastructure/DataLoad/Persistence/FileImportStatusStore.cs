@@ -1,7 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using CadsBridge.Application.DataLoad.Persistence;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.DTOs;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Persistence;
@@ -21,39 +21,43 @@ public class FileImportStatusStore : IFileImportStatusStore
     {
         try
         {
-            var result = await _fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
-            return result;
+            return await _fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
         }
-        catch (HttpRequestException ex)
+        catch (ConflictException ex)
         {
-            if (ex.StatusCode != HttpStatusCode.Conflict)
+            if (_logger.IsEnabled(LogLevel.Warning))
             {
-                throw;
+                _logger.LogWarning(ex, "File import already exists, resetting existing record: {FileName}", fileName);
             }
-            if (_logger.IsEnabled(LogLevel.Error))
-            {
-                _logger.LogError(ex, "Failed to create file import status as filename already exists: {FileName}", fileName);
-            }
-            // TODO: Handle conflict
-            return 0;
+            return await MarkFileReset(fileName, cancellationToken);
         }
     }
 
-    [ExcludeFromCodeCoverage]
-    public Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
+    private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var fileImportStatus = await _fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
+        if (fileImportStatus is null)
+        {
+            throw new NotFoundException(
+                $"File import status for '{fileName}' was not found when attempting to reset it after a conflict.");
+        }
+
+        await _fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
+        return fileImportStatus.Id;
     }
 
-    [ExcludeFromCodeCoverage]
-    public Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Importing, cancellationToken);
     }
 
-    [ExcludeFromCodeCoverage]
-    public Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Completed, cancellationToken);
+    }
+
+    public async Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
+    {
+        await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Failed, cancellationToken);
     }
 }
