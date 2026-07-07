@@ -17,7 +17,7 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
     private const string getByFileNameEndpoint = "search";
     private const string markReset = "reset";
 
-    private static readonly IReadOnlyDictionary<FileImportStatus, string> FileImportStatusUrlMap =
+    private static readonly Dictionary<FileImportStatus, string> FileImportStatusUrlMap =
         new Dictionary<FileImportStatus, string>
         {
             { FileImportStatus.Importing, "importing" },
@@ -162,6 +162,13 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
         {
             throw new RetryableException(
                 $"Transient failure when calling {context}. " +
+                $"Status: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {content}");
+        }
+
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            throw new ConflictException(
+                $"Conflict when calling {context}. " +
                 $"Status: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {content}");
         }
 

@@ -18,6 +18,8 @@ public class FileImportStatusApiServiceTests
 
     private FileImportStatusApiService CreateSut(HttpMessageHandler handler)
     {
+        // Enable all log levels so the IsEnabled-guarded logging branches are exercised.
+        _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://test-api") };
         _httpClientFactory.Setup(x => x.CreateClient(nameof(ApiClientNames.CdsApi))).Returns(client);
         return new FileImportStatusApiService(_httpClientFactory.Object, _logger.Object);
@@ -130,7 +132,7 @@ public class FileImportStatusApiServiceTests
 
         [Theory]
         [InlineData(HttpStatusCode.BadRequest)]
-        [InlineData(HttpStatusCode.Conflict)]
+        [InlineData(HttpStatusCode.Forbidden)]
         public async Task Create_ThrowsNonRetryable_OnPermanentFailure(HttpStatusCode statusCode)
         {
             var handler = new StubHttpMessageHandler(statusCode);
@@ -139,6 +141,17 @@ public class FileImportStatusApiServiceTests
                 .Create("file.csv", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>();
+        }
+
+        [Fact]
+        public async Task Create_ThrowsConflictException_OnConflictResponse()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.Conflict);
+
+            var act = async () => await CreateSut(handler)
+                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<ConflictException>();
         }
 
         [Fact]
@@ -153,6 +166,58 @@ public class FileImportStatusApiServiceTests
                 .Create("file.csv", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>().WithMessage("*file.csv*");
+        }
+
+        [Fact]
+        public async Task Create_ThrowsNonRetryable_WhenResponseBodyIsMalformedJson()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{ not-valid-json", System.Text.Encoding.UTF8, "application/json")
+            });
+
+            var act = async () => await CreateSut(handler)
+                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>().WithMessage("*file.csv*");
+        }
+    }
+
+    // Covers the shared SendAsync fault-mapping (transport exceptions) via a representative endpoint.
+    public class TransportFailureTests : FileImportStatusApiServiceTests
+    {
+        [Fact]
+        public async Task Request_ThrowsRetryable_WhenHttpRequestExceptionIsThrown()
+        {
+            var handler = new StubHttpMessageHandler(new HttpRequestException("connection refused"));
+
+            var act = async () => await CreateSut(handler)
+                .GetByFileName("file.csv", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<RetryableException>();
+        }
+
+        [Fact]
+        public async Task Request_ThrowsRetryable_WhenRequestTimesOut()
+        {
+            // A TaskCanceledException not tied to the caller's token represents an HttpClient timeout.
+            var handler = new StubHttpMessageHandler(new TaskCanceledException("timeout"));
+
+            var act = async () => await CreateSut(handler)
+                .GetByFileName("file.csv", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<RetryableException>();
+        }
+
+        [Fact]
+        public async Task Request_ThrowsConflictException_OnConflictResponse()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.Conflict);
+
+            var act = async () => await CreateSut(handler)
+                .GetByFileName("file.csv", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<ConflictException>();
         }
     }
 

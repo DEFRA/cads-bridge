@@ -1,5 +1,5 @@
-using System.Net;
 using CadsBridge.Application.DataLoad.Persistence;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using Microsoft.Extensions.Logging;
@@ -21,22 +21,29 @@ public class FileImportStatusStore : IFileImportStatusStore
     {
         try
         {
-            var result = await _fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
-            return result;
+            return await _fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
         }
-        catch (HttpRequestException ex)
+        catch (ConflictException ex)
         {
-            if (ex.StatusCode != HttpStatusCode.Conflict)
+            if (_logger.IsEnabled(LogLevel.Warning))
             {
-                throw;
+                _logger.LogWarning(ex, "File import already exists, resetting existing record: {FileName}", fileName);
             }
-            if (_logger.IsEnabled(LogLevel.Error))
-            {
-                _logger.LogError(ex, "Failed to create file import status as filename already exists: {FileName}", fileName);
-            }
-            // TODO: Handle conflict
-            return 0;
+            return await MarkFileReset(fileName, cancellationToken);
         }
+    }
+
+    private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
+    {
+        var fileImportStatus = await _fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
+        if (fileImportStatus is null)
+        {
+            throw new NotFoundException(
+                $"File import status for '{fileName}' was not found when attempting to reset it after a conflict.");
+        }
+
+        await _fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
+        return fileImportStatus.Id;
     }
 
     public async Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
