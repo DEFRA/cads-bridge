@@ -7,4 +7,3 @@ public sealed class ConflictException : DomainException
     public ConflictException(string message, Exception innerException)
         : base(message, innerException) { }
 }
-
