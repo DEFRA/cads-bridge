@@ -3,6 +3,7 @@ using CadsBridge.Infrastructure.ApiClients.Setup;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Setup;
 using CadsBridge.Infrastructure.FileSystem;
+using CadsBridge.Infrastructure.Messaging.Setup;
 using CadsBridge.Infrastructure.Storage.Setup;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,8 @@ public static class ServiceCollectionExtensions
         services.RegistryCrypto();
 
         services.RegistryFileSystem();
+
+        services.AddMessagingDependencies(config);
 
         return services;
     }

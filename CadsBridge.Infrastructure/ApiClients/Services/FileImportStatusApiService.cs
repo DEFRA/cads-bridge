@@ -1,9 +1,9 @@
-using System.Net.Http.Json;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
+using System.Net.Http.Json;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 

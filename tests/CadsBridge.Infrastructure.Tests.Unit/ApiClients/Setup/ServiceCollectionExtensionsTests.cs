@@ -1,4 +1,3 @@
-using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Setup;
 using CadsBridge.Testing.Support.Utilities.Http;
@@ -7,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using System.Net;
 using ApiClientSetup = CadsBridge.Infrastructure.ApiClients.Setup.ServiceCollectionExtensions;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Setup;

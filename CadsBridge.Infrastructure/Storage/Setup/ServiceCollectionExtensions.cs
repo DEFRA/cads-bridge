@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Infrastructure.Storage.Setup;
 
@@ -55,6 +56,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    [ExcludeFromCodeCoverage]
     private static AmazonS3Config GetDefaultAmazonS3Config(IConfiguration configuration)
     {
         if (configuration["LOCALSTACK_ENDPOINT"] != null)

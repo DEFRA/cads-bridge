@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Http.Json;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
@@ -7,6 +5,8 @@ using CadsBridge.Infrastructure.ApiClients.Services;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using Moq;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Services;
 

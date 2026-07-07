@@ -1,8 +1,6 @@
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
-using CadsBridge.Infrastructure.ApiClients.Contracts;
-using CadsBridge.Infrastructure.ApiClients.Services;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
 using CadsBridge.Infrastructure.DataLoad.Services;

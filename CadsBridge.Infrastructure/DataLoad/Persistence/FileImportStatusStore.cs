@@ -1,8 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 

@@ -1,9 +1,9 @@
-using System.Net;
-using System.Text.Json;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
+using System.Net;
+using System.Text.Json;
 
 namespace CadsBridge.Tests.Component.EndPoints;
 

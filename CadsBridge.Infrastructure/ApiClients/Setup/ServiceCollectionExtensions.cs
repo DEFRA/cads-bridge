@@ -1,4 +1,3 @@
-using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.Services;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.ApiClients.Setup;
 

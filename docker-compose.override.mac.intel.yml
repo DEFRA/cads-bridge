@@ -18,6 +18,9 @@ services:
       - ApiClients__Cds__BaseUrl=http://cads_cds:5555
       - ApiClients__CdsApi__XApiKey=
       - ApiClients__Cds__HealthcheckEnabled=true
+      - Messaging__Queues__CadsBridgeFifo__QueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue
+      - Messaging__Queues__CadsBridgeFifo__DlqQueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue-deadletter
+      - Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled=true
       - IMB_S3_ACCESS_KEY=test
       - IMB_S3_ACCESS_SECRET=test
     ports:

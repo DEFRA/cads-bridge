@@ -14,8 +14,12 @@ using Moq;
 
 namespace CadsBridge.Tests.Component.TestFixtures;
 
-public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrides = null, bool disableHostedServices = true)
-    : WebAppFactoryBase<Program>(configOverrides, disableHostedServices)
+public class CadsBridgeWebAppFactory(
+    IDictionary<string, string?>? configOverrides = null,
+    bool disableHostedServices = true)
+    : WebAppFactoryBase<Program>(
+        configOverrides,
+        disableHostedServices)
 {
     public CadsBridgeWebAppFactory() : this(null) { }
 

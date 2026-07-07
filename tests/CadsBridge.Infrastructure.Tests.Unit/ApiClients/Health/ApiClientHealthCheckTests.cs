@@ -1,9 +1,9 @@
-using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Setup;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Health;
 
