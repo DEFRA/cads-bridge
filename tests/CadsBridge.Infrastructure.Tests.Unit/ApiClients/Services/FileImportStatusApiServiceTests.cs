@@ -183,7 +183,6 @@ public class FileImportStatusApiServiceTests
         }
     }
 
-    // Covers the shared SendAsync fault-mapping (transport exceptions) via a representative endpoint.
     public class TransportFailureTests : FileImportStatusApiServiceTests
     {
         [Fact]

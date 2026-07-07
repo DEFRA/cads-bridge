@@ -9,15 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Tests.Component.ApiClients;
 
-// Proves the real FileImportStatusApiService is wired to the CdsApi HttpClient and issues the
-// expected request when resolved from the running application's DI container. The outbound HTTP
-// boundary is replaced with a StubHttpMessageHandler on the CdsApi primary handler.
 public class FileImportStatusApiServiceComponentTests
 {
     private const string ClientName = nameof(ApiClientNames.CdsApi);
 
     // A valid absolute BaseUrl is required or AddApiClients skips registering the client entirely.
-    // BaseDelaySeconds=0/UseJitter=false keep any resilience retries instant in tests.
     private static Dictionary<string, string?> CdsApiConfig() => new()
     {
         [$"ApiClients:{ClientName}:BaseUrl"] = "http://cds-api",
