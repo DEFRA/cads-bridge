@@ -1,4 +1,5 @@
 using Amazon.SQS.Model;
+using CadsBridge.Application.Messaging.Models;
 using CadsBridge.Core.Correlation;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Messaging.Extensions;
