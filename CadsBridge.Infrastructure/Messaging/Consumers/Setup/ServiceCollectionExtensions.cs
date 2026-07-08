@@ -1,12 +1,16 @@
+using CadsBridge.Application.Messaging.Clients;
+using CadsBridge.Application.Messaging.Consumers;
 using CadsBridge.Application.Messaging.Messages;
 using CadsBridge.Application.Messaging.Observers;
 using CadsBridge.Application.Messaging.Serializers;
+using CadsBridge.Application.Messaging.Services;
 using CadsBridge.Infrastructure.Messaging.Configuration;
 using CadsBridge.Infrastructure.Messaging.Consumers.Observers;
 using CadsBridge.Infrastructure.Messaging.Extensions;
 using CadsBridge.Infrastructure.Messaging.Factories;
 using CadsBridge.Infrastructure.Messaging.Health;
 using CadsBridge.Infrastructure.Messaging.Serializers;
+using CadsBridge.Infrastructure.Messaging.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,8 +33,6 @@ public static class ServiceCollectionExtensions
         services.AdddMessageSerializers();
 
         services.AddMessageConsumers();
-
-        // Register DLQ services
     }
 
     private static void AddQueueConsumerOptions(this IServiceCollection services, QueueConsumerOptions queueOptions)
@@ -89,8 +91,10 @@ public static class ServiceCollectionExtensions
 
     private static void AddMessageConsumers(this IServiceCollection services)
     {
-        // Register pollers
-        // Register hosted services
+        services.AddHostedService<CadsBridgeFifoQueueListener>()
+            .AddSingleton<IQueuePoller<CadsBridgeFifoQueueClient>, CadsBridgeFifoQueuePoller>();
+
+        services.AddSingleton<IQueueAdminService, CadsBridgeFifoQueueAdminService>();
 
         services.AddTransient<IQueuePollerObserver<MessageType>, NullQueuePollerObserver<MessageType>>();
     }

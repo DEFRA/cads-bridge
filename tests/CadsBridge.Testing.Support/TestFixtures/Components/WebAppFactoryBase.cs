@@ -2,10 +2,16 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using CadsBridge.Application.Messaging.Clients;
+using CadsBridge.Application.Messaging.Consumers;
+using CadsBridge.Application.Messaging.Messages;
+using CadsBridge.Application.Messaging.Observers;
+using CadsBridge.Infrastructure.Messaging.Consumers;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
 using CadsBridge.Testing.Support.Constants;
+using CadsBridge.Testing.Support.TestDoubles.Observers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -62,12 +68,11 @@ public abstract class WebAppFactoryBase<TStart>(
         {
             OverrideAmazonS3(services);
             OverrideAmazonSqs(services);
+            ConfigureMessageConsumers(services);
         });
 
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton(AmazonS3Mock.Object);
-
             if (disableHostedServices)
                 services.RemoveAll<IHostedService>();
 
@@ -185,5 +190,16 @@ public abstract class WebAppFactoryBase<TStart>(
                 It.IsAny<GetQueueAttributesRequest>(),
                 It.IsAny<CancellationToken>()))
             .Throws(new NotImplementedException("Use the (string, List<string>) overload"));
+    }
+
+    private static void ConfigureMessageConsumers(IServiceCollection services)
+    {
+        services.RemoveAll<CadsBridgeFifoQueueListener>();
+        services.RemoveAll<TestQueuePollerObserver<MessageType>>();
+        services.RemoveAll<IQueuePoller<CadsBridgeFifoQueueClient>>();
+
+        services.AddScoped<IQueuePoller<CadsBridgeFifoQueueClient>, CadsBridgeFifoQueuePoller>();
+        services.AddScoped<TestQueuePollerObserver<MessageType>>();
+        services.AddScoped<IQueuePollerObserver<MessageType>>(sp => sp.GetRequiredService<TestQueuePollerObserver<MessageType>>());
     }
 }
