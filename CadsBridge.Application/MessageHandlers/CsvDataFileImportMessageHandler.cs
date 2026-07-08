@@ -28,7 +28,7 @@ public class CsvDataFileImportMessageHandler(
 
             // DO WORK
 
-            return await Task.FromResult(messagePayload!);
+            return await Task.FromResult(messagePayload);
         }
         catch (Exception)
         {
