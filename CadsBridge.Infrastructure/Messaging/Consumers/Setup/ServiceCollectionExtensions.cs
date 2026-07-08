@@ -57,7 +57,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static IServiceCollection AddMessageHandlers(this IServiceCollection services)
+    private static void AddMessageHandlers(this IServiceCollection services)
     {
         services.AddSingleton(sp =>
         {
@@ -67,8 +67,6 @@ public static class ServiceCollectionExtensions
 
             return registry;
         });
-
-        return services;
     }
 
     private static void AdddMessageSerializers(this IServiceCollection services)

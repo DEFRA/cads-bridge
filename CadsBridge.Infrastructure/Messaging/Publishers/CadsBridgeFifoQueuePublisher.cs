@@ -23,26 +23,6 @@ public class CadsBridgeFifoQueuePublisher(
 
     public string QueueUrl => _options.Get(_client.ClientName).QueueUrl;
 
-    /*
-        // TODO
-        var dedupId = FifoKeyGenerator.GenerateDeduplicationId(
-            "payload.Bucket",
-            "payload.ObjectKey",
-            "payload.Etag",
-            "payload.ImportType",
-            "payload.OracleEnvironment");
-
-        var groupId = FifoKeyGenerator.GenerateMessageGroupId(
-            "payload.ImportType",
-            "payload.OracleEnvironment");
-
-        var correlationId = CorrelationIdContext.Value ?? Guid.NewGuid().ToString();
-
-        var metadata = new FifoMessageMetadata(
-            messageGroupId: groupId,
-            messageDeduplicationId: dedupId,
-            correlationId: correlationId); 
-    */
     public async Task PublishAsync<TMessage>(TMessage? message, FifoMessageMetadata metadata, CancellationToken cancellationToken = default)
         where TMessage : class
     {

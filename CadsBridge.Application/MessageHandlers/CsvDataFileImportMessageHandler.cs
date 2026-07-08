@@ -18,21 +18,14 @@ public class CsvDataFileImportMessageHandler(
 
         ArgumentNullException.ThrowIfNull(message);
 
-        try
-        {
-            var messagePayload = _serializer.Deserialize(message)
+        var messagePayload = _serializer.Deserialize(message)
                 ?? throw new NonRetryableException($"Deserialisation failed or the message payload was null for " +
                 $"messageType: {typeof(CsvDataFileImportMessage).Name}," +
                 $"messageId: {message.MessageId}," +
                 $"correlationId: {message.CorrelationId}");
 
-            // DO WORK
+        // DO WORK
 
-            return await Task.FromResult(messagePayload);
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        return await Task.FromResult(messagePayload);
     }
 }
