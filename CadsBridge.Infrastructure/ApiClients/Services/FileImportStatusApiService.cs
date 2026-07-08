@@ -1,22 +1,24 @@
-using System.Text.Json;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
+using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
 public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, ILogger<FileImportStatusApiService> logger) : IFileImportStatusApiService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
-    private const string baseApiUrl = "api/v1/systemadmin/fileimports";
-    private const string getByFileNameEndpoint = "search";
-    private const string markReset = "reset";
+    private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
+    private const string GetByFileNameUri = "search";
+    private const string MarkResetUri = "reset";
 
-    private static readonly Dictionary<FileImportStatus, string> FileImportStatusUrlMap =
-        new Dictionary<FileImportStatus, string>
+    private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
+        new()
         {
             { FileImportStatus.Importing, "importing" },
             { FileImportStatus.Completed, "complete" },
@@ -25,7 +27,7 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
 
     public async Task<FileImportStatusDto?> GetByFileName(string fileName, CancellationToken cancellationToken)
     {
-        var endpoint = $"{baseApiUrl}/{getByFileNameEndpoint}?fileName={fileName}";
+        var endpoint = $"{BaseApiUrl}/{GetByFileNameUri}?fileName={fileName}";
         var context = $"Getting file import status for '{fileName}'";
         return await GetRequestToApiAsync<FileImportStatusDto>(endpoint, context, cancellationToken);
     }
@@ -39,7 +41,7 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
             TotalRowsToProcess = recordCount
         };
 
-        var response = await PostRequestToApiAsync(baseApiUrl, body, context, cancellationToken);
+        var response = await PostRequestToApiAsync(BaseApiUrl, body, context, cancellationToken);
 
         var dto = await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
         return dto.Id;
@@ -47,19 +49,19 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
 
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
     {
-        if (!FileImportStatusUrlMap.TryGetValue(status, out var statusSegment))
+        if (!s_fileImportStatusUrlMap.TryGetValue(status, out var statusSegment))
         {
             throw new DomainException($"No URL mapping exists for file import status '{status}'.");
         }
 
-        var endPoint = $"{baseApiUrl}/{id}/{statusSegment}";
+        var endPoint = $"{BaseApiUrl}/{id}/{statusSegment}";
         var context = $"Marking status of file import with id {id} as {status}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
     }
 
     public async Task MarkReset(long id, CancellationToken cancellationToken)
     {
-        var endPoint = $"{baseApiUrl}/{id}/{markReset}";
+        var endPoint = $"{BaseApiUrl}/{id}/{MarkResetUri}";
         var context = $"Resetting file import with id {id}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
     }

@@ -1,7 +1,7 @@
 using Amazon.SQS;
 using CadsBridge.Application.Messaging.Clients;
+using CadsBridge.Application.Messaging.Models;
 using CadsBridge.Application.Messaging.Publishers;
-using CadsBridge.Core.Correlation;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Messaging.Configuration;
 using CadsBridge.Infrastructure.Messaging.Factories;
@@ -23,14 +23,8 @@ public class CadsBridgeFifoQueuePublisher(
 
     public string QueueUrl => _options.Get(_client.ClientName).QueueUrl;
 
-    public async Task PublishAsync<TMessage>(TMessage? message, CancellationToken cancellationToken = default)
-        where TMessage : class
-    {
-        if (message == null) throw new ArgumentException("Message payload was null", nameof(message));
-
-        if (string.IsNullOrWhiteSpace(QueueUrl)) throw new PublishFailedException("QueueUrl is missing", false);
-
-        // TODO: Replace values
+    /*
+        // TODO
         var dedupId = FifoKeyGenerator.GenerateDeduplicationId(
             "payload.Bucket",
             "payload.ObjectKey",
@@ -38,7 +32,6 @@ public class CadsBridgeFifoQueuePublisher(
             "payload.ImportType",
             "payload.OracleEnvironment");
 
-        // TODO: Replace values
         var groupId = FifoKeyGenerator.GenerateMessageGroupId(
             "payload.ImportType",
             "payload.OracleEnvironment");
@@ -48,7 +41,14 @@ public class CadsBridgeFifoQueuePublisher(
         var metadata = new FifoMessageMetadata(
             messageGroupId: groupId,
             messageDeduplicationId: dedupId,
-            correlationId: correlationId);
+            correlationId: correlationId); 
+    */
+    public async Task PublishAsync<TMessage>(TMessage? message, FifoMessageMetadata metadata, CancellationToken cancellationToken = default)
+        where TMessage : class
+    {
+        if (message == null) throw new ArgumentException("Message payload was null", nameof(message));
+
+        if (string.IsNullOrWhiteSpace(QueueUrl)) throw new PublishFailedException("QueueUrl is missing", false);
 
         try
         {

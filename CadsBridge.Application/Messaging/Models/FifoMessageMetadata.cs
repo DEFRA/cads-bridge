@@ -1,4 +1,4 @@
-namespace CadsBridge.Infrastructure.Messaging.Factories;
+namespace CadsBridge.Application.Messaging.Models;
 
 public readonly struct FifoMessageMetadata(
     string messageGroupId,

@@ -3,8 +3,6 @@ using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
 
 namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 

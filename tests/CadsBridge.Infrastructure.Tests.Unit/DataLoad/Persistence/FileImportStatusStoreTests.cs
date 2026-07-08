@@ -4,7 +4,6 @@ using CadsBridge.Infrastructure.DataLoad.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Persistence;
 

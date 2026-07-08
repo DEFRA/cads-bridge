@@ -1,4 +1,5 @@
 using Amazon.SQS.Model;
+using CadsBridge.Application.Messaging.Models;
 
 namespace CadsBridge.Infrastructure.Messaging.Factories;
 
