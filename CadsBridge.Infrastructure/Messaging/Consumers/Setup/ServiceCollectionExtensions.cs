@@ -94,7 +94,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<CadsBridgeFifoQueueListener>()
             .AddSingleton<IQueuePoller<CadsBridgeFifoQueueClient>, CadsBridgeFifoQueuePoller>();
 
-        services.AddSingleton<IQueueAdminService, CadsBridgeFifoQueueAdminService>();
+        services.AddSingleton<IQueueAdminService<CadsBridgeFifoQueueClient>, CadsBridgeFifoQueueAdminService>();
 
         services.AddTransient<IQueuePollerObserver<MessageType>, NullQueuePollerObserver<MessageType>>();
     }

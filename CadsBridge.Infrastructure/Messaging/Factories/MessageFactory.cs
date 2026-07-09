@@ -22,7 +22,7 @@ public class MessageFactory : IMessageFactory
         var payload = SerializeToJson(body);
         var resolvedSubject = subject ?? messageType;
 
-        var attributes = BuildSqsAttributes(resolvedSubject, metadata.AdditionalAttributes);
+        var attributes = BuildSqsAttributes(resolvedSubject, metadata);
 
         if (attributes.TryGetValue("CorrelationId", out var existing))
         {
@@ -49,7 +49,7 @@ public class MessageFactory : IMessageFactory
 
     private static Dictionary<string, MessageAttributeValue> BuildSqsAttributes(
         string subject,
-        IReadOnlyDictionary<string, string>? additionalUserProperties)
+        FifoMessageMetadata metadata)
     {
         var attributes = new Dictionary<string, MessageAttributeValue>
         {
@@ -67,13 +67,23 @@ public class MessageFactory : IMessageFactory
             {
                 DataType = StringDataType,
                 StringValue = CorrelationIdContext.Value ?? Guid.NewGuid().ToString()
+            },
+            ["MessageGroupId"] = new MessageAttributeValue
+            {
+                DataType = "String",
+                StringValue = metadata.MessageGroupId
+            },
+            ["MessageDeduplicationId"] = new MessageAttributeValue
+            {
+                DataType = "String",
+                StringValue = metadata.MessageDeduplicationId
             }
         };
 
-        if (additionalUserProperties == null)
+        if (metadata.AdditionalAttributes == null)
             return attributes;
 
-        foreach (var (key, value) in additionalUserProperties)
+        foreach (var (key, value) in metadata.AdditionalAttributes)
         {
             attributes[key] = new MessageAttributeValue
             {
