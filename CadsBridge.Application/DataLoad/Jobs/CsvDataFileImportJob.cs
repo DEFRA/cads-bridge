@@ -9,4 +9,5 @@ public record CsvDataFileImportJob(
     string Password,
     string Salt,
     SplitType SplitType,
-    int? SplitValue);
+    int? SplitValue,
+    long FileImportStatusId);

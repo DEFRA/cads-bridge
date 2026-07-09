@@ -14,14 +14,10 @@ public class CsvDataFileImportBackgroundService(
     Channel<CsvDataFileImportJob> channel,
     ILogger<CsvDataFileImportBackgroundService> logger,
     IImportJobProgressStore progressStore,
+    IFileImportStatusStore fileImportStatusStore,
     ISplitMessageProducer splitMessageProducer,
     IS3CopyService s3ExternalToInternalCopyService) : BackgroundService
 {
-    private readonly Channel<CsvDataFileImportJob> _channel = channel;
-    private readonly ILogger<CsvDataFileImportBackgroundService> _logger = logger;
-    private readonly IImportJobProgressStore _progressStore = progressStore;
-    private readonly ISplitMessageProducer _splitMessageProducer = splitMessageProducer;
-    private readonly IS3CopyService _s3ExternalToInternalCopyService = s3ExternalToInternalCopyService;
     private readonly int _maxParallelDownloads = 4;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,11 +25,11 @@ public class CsvDataFileImportBackgroundService(
         var semaphore = new SemaphoreSlim(_maxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in _channel.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
         {
             if (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested, aborting copy");
+                logger.LogInformation("Cancellation requested, aborting copy");
                 return;
             }
 
@@ -44,35 +40,39 @@ public class CsvDataFileImportBackgroundService(
                 {
                     try
                     {
-                        _progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                        var result = await _s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
+                        progressStore.MarkInProgress(request.JobId, request.SourceKey);
+                        await fileImportStatusStore.MarkInProgress(request.FileImportStatusId, stoppingToken);
+
+                        var result = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
 
                         if (result)
                         {
-                            _progressStore.MarkSucceeded(request.JobId, request.SourceKey);
+                            progressStore.MarkSucceeded(request.JobId, request.SourceKey);
 
-                            if (request.SplitType != SplitType.None)
-                            {
-                                await _splitMessageProducer.SendAsync(
-                                    new CsvDataFileSplitJob(
-                                        JobId: request.JobId,
-                                        Key: request.TargetKey,
-                                        TargetFolder: Path.GetFileNameWithoutExtension(request.TargetKey),
-                                        SplitType: request.SplitType,
-                                        SplitValue: request.SplitValue
-                                    ),
-                                    stoppingToken);
-                            }
+                            var targetFolder = $"import/{Path.GetFileNameWithoutExtension(request.TargetKey)}";
+
+                            await splitMessageProducer.SendAsync(
+                                new CsvDataFileSplitJob(
+                                    JobId: request.JobId,
+                                    Key: request.TargetKey,
+                                    TargetFolder: targetFolder,
+                                    SplitType: request.SplitType,
+                                    SplitValue: request.SplitValue,
+                                    FileImportStatusId: request.FileImportStatusId
+                                ),
+                                stoppingToken);
                         }
                         else
                         {
-                            _progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
+                            progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
+                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                        _progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                        logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
+                        progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                        await fileImportStatusStore.MarkFailed(request.FileImportStatusId, stoppingToken);
                     }
                     finally
                     {

@@ -12,11 +12,9 @@ public class CsvDataFileSplitBackgroundService(
     Channel<CsvDataFileSplitJob> channel,
     ILogger<CsvDataFileSplitBackgroundService> logger,
     ISplitJobProgressStore progressStore,
+    IFileImportStatusStore fileImportStatusStore,
     ICsvDataFileSplitterService csvDataFileSplitterService) : BackgroundService
 {
-    private readonly Channel<CsvDataFileSplitJob> _channel = channel;
-    private readonly ILogger<CsvDataFileSplitBackgroundService> _logger = logger;
-    private readonly ISplitJobProgressStore _progressStore = progressStore;
     private readonly int _maxParallelDownloads = 4;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -24,11 +22,11 @@ public class CsvDataFileSplitBackgroundService(
         var semaphore = new SemaphoreSlim(_maxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in _channel.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
         {
             if (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested, aborting split");
+                logger.LogInformation("Cancellation requested, aborting split");
                 return;
             }
 
@@ -39,23 +37,38 @@ public class CsvDataFileSplitBackgroundService(
                 {
                     try
                     {
-                        _progressStore.MarkInProgress(request.JobId, request.Key);
+                        progressStore.MarkInProgress(request.JobId, request.Key);
 
                         var result = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
                         if (result)
                         {
-                            _progressStore.MarkSucceeded(request.JobId, request.Key);
+                            progressStore.MarkSucceeded(request.JobId, request.Key);
+
+                            if (request.FileImportStatusId.HasValue)
+                            {
+                                await fileImportStatusStore.MarkSucceeded(request.FileImportStatusId.Value, stoppingToken);
+                            }
                         }
                         else
                         {
-                            _progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during split");
+                            progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during split");
+
+                            if (request.FileImportStatusId.HasValue)
+                            {
+                                await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to split file {Key}", request.Key);
-                        _progressStore.MarkFailed(request.JobId, request.Key, ex.Message);
+                        logger.LogError(ex, "Failed to split file {Key}", request.Key);
+                        progressStore.MarkFailed(request.JobId, request.Key, ex.Message);
+
+                        if (request.FileImportStatusId.HasValue)
+                        {
+                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
+                        }
                     }
                     finally
                     {

@@ -7,5 +7,6 @@ public record CsvDataFileSplitJob(
     string Key,
     string TargetFolder,
     SplitType SplitType,
-    int? SplitValue
+    int? SplitValue,
+    long? FileImportStatusId = null
 );

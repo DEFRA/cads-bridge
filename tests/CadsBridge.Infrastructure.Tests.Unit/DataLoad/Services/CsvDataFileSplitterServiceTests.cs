@@ -2,6 +2,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -25,10 +26,20 @@ public class CsvDataFileSplitterServiceTests
         "D|1|One") + Environment.NewLine;
 
     [Fact]
-    public async Task Throws_when_split_value_is_null()
+    public async Task Throws_when_split_value_is_null_for_by_lines()
     {
         var sut = CreateSut(new FakeS3());
         var request = new CsvDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.ByLines, null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.ExecuteAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Throws_when_split_value_is_null_for_by_size()
+    {
+        var sut = CreateSut(new FakeS3());
+        var request = new CsvDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.BySize, null);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
@@ -42,6 +53,23 @@ public class CsvDataFileSplitterServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Copies_whole_file_as_single_part_when_split_type_none()
+    {
+        var s3 = new FakeS3 { EncryptedContent = SmallInputFile };
+        var sut = CreateSut(s3);
+
+        var request = new CsvDataFileSplitJob("", SourceKey, DestinationPrefix, SplitType.None, null);
+
+        var result = await sut.ExecuteAsync(request, CancellationToken.None);
+
+        result.Should().BeTrue();
+        s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["split-output/source-file-part-0001.csv"] = SmallInputFile
+        });
     }
 
     [Fact]
@@ -88,13 +116,13 @@ public class CsvDataFileSplitterServiceTests
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
-            ["split-output/source-file.part-0001.csv"] = string.Join(
+            ["split-output/source-file-part-0001.csv"] = string.Join(
                 Environment.NewLine,
                 "record_type|first_name|last_name",
                 "D|Alice|Smith",
                 "D|Bob|Jones",
                 string.Empty),
-            ["split-output/source-file.part-0002.csv"] = string.Join(
+            ["split-output/source-file-part-0002.csv"] = string.Join(
                 Environment.NewLine,
                 "record_type|first_name|last_name",
                 "D|Charlie|Brown",
@@ -141,13 +169,13 @@ public class CsvDataFileSplitterServiceTests
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
-            ["split-output/source-file.part-0001.csv"] = string.Join(
+            ["split-output/source-file-part-0001.csv"] = string.Join(
                 Environment.NewLine,
                 "record_type|column_one|column_two",
                 "D|1|One",
                 "D|2|Two",
                 string.Empty),
-            ["split-output/source-file.part-0002.csv"] = string.Join(
+            ["split-output/source-file-part-0002.csv"] = string.Join(
                 Environment.NewLine,
                 "record_type|column_one|column_two",
                 "D|3|Three",
@@ -167,7 +195,7 @@ public class CsvDataFileSplitterServiceTests
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
-            ["split-output/source-file.part-0001.csv"] = SmallInputFile
+            ["split-output/source-file-part-0001.csv"] = SmallInputFile
         });
     }
 
@@ -183,7 +211,7 @@ public class CsvDataFileSplitterServiceTests
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
-            ["source-file.part-0001.csv"] = SmallInputFile
+            ["source-file-part-0001.csv"] = SmallInputFile
         });
     }
 
@@ -204,15 +232,15 @@ public class CsvDataFileSplitterServiceTests
         await sut.ExecuteAsync(request, CancellationToken.None);
 
         s3.UploadedContent.Keys.Should().BeEquivalentTo([
-            $"{DestinationPrefix}/source-file.part-0001.csv",
-            $"{DestinationPrefix}/source-file.part-0002.csv"
+            $"{DestinationPrefix}/source-file-part-0001.csv",
+            $"{DestinationPrefix}/source-file-part-0002.csv"
         ]);
 
-        s3.UploadedContent[$"{DestinationPrefix}/source-file.part-0001.csv"]
+        s3.UploadedContent[$"{DestinationPrefix}/source-file-part-0001.csv"]
             .Should().Contain(first)
             .And.NotContain(second);
 
-        s3.UploadedContent[$"{DestinationPrefix}/source-file.part-0002.csv"]
+        s3.UploadedContent[$"{DestinationPrefix}/source-file-part-0002.csv"]
             .Should().Contain(second)
             .And.Contain(third);
     }
@@ -238,11 +266,13 @@ public class CsvDataFileSplitterServiceTests
     {
         var factory = new Mock<IS3ClientFactory>();
         factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
-               .Returns(new CadsBridge.Infrastructure.Storage.Factories.S3ClientFactory.ClientInfo(s3, BucketName));
+            .Returns(new CadsBridge.Infrastructure.Storage.Factories.S3ClientFactory.ClientInfo(s3, BucketName));
 
         var logger = new Mock<ILogger<CsvDataFileSplitterService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        return new CsvDataFileSplitterService(factory.Object, logger.Object);
+        var strategyFactory = new CsvDataFileSplitterFactory();
+
+        return new CsvDataFileSplitterService(factory.Object, strategyFactory, logger.Object);
     }
 }

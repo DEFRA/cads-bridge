@@ -20,8 +20,8 @@ public class CsvDataFileImportEndpointTests
     private readonly string _testPassword = "test-password";
     private readonly string _testSalt = "test-salt";
     private readonly string _incomingKey = "incoming/test-file.txt";
-    private readonly string _importedKey = "imported/test-file.txt";
-    private readonly string _fileNameWithoutTypeSuffix = "test-file";
+    private readonly string _importedKey = "import/test-file.txt";
+    private readonly string _fileNameWithoutTypeSuffix = "import/test-file";
 
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
@@ -48,7 +48,6 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                targetKey: _importedKey,
                 Password: _testPassword,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
@@ -79,14 +78,13 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                targetKey: _importedKey,
                 Password: _testPassword,
                 Salt: _testSalt,
                 SplitType: SplitType.ByLines,
                 SplitValue: 1)
         ]));
 
-        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, _fileNameWithoutTypeSuffix, SplitType.ByLines, 1);
+        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, _fileNameWithoutTypeSuffix, SplitType.ByLines, 1, FileImportStatusId: 1L);
         await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
         var status = await GetImportJobStatus(jobId, client);
         status!.JobId.Should().Be(jobId);
@@ -113,7 +111,6 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                targetKey: _importedKey,
                 Password: _testPassword,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
@@ -124,6 +121,8 @@ public class CsvDataFileImportEndpointTests
             x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()), Times.Once);
         factory.FileImportStatusStoreMock.Verify(
             x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()), Times.Once);
+        factory.FileImportStatusStoreMock.Verify(
+            x => x.MarkInProgress(9L, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -140,7 +139,6 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                targetKey: _importedKey,
                 Password: _testPassword,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
@@ -153,6 +151,9 @@ public class CsvDataFileImportEndpointTests
         status.CompletedFiles.Should().Be(1);
         status.Files.First().Status.Should().Be(JobStatus.Failed);
         status.Files.First().ErrorMessage.Should().Be(notFoundMessage);
+
+        factory.FileImportStatusStoreMock.Verify(
+            x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -169,7 +170,6 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                targetKey: _importedKey,
                 Password: _testPassword,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
@@ -182,6 +182,44 @@ public class CsvDataFileImportEndpointTests
         status.CompletedFiles.Should().Be(1);
         status.Files.First().Status.Should().Be(JobStatus.Failed);
         status.Files.First().ErrorMessage.Should().Be(errorMessage);
+
+        factory.FileImportStatusStoreMock.Verify(
+            x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ImportFile_WhenCopySucceeds_MarksFileImportStatusInProgress()
+    {
+        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        var fileSplitterMock = new Mock<ISplitMessageProducer>();
+        factory.OverrideSingleton(fileSplitterMock.Object);
+        factory.FileImportStatusStoreMock
+            .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42L);
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testPassword, _testSalt, TestContext.Current.CancellationToken);
+        var client = factory.CreateClient();
+
+        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(
+                JobId: string.Empty,
+                sourceKey: _incomingKey,
+                Password: _testPassword,
+                Salt: _testSalt,
+                SplitType: SplitType.None,
+                SplitValue: null)
+        ]));
+
+        await AsyncAssert.WaitForAssertion(async () =>
+        {
+            var status = await GetImportJobStatus(jobId, client);
+            status!.Files.First().Status.Should().Be(JobStatus.Succeeded);
+        });
+
+        // The split step (which marks the file import status as succeeded) only runs via the
+        // real CsvDataFileSplitBackgroundService; since ISplitMessageProducer is mocked out here,
+        // only the import stage's audit call (MarkInProgress) is expected.
+        factory.FileImportStatusStoreMock.Verify(x => x.MarkInProgress(42L, It.IsAny<CancellationToken>()), Times.Once);
+        factory.FileImportStatusStoreMock.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private sealed record ImportJobResponse(string JobId);

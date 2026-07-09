@@ -15,6 +15,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     private readonly Channel<CsvDataFileSplitJob> _channel = Channel.CreateUnbounded<CsvDataFileSplitJob>();
     private readonly Mock<ILogger<CsvDataFileSplitBackgroundService>> _logger = new();
     private readonly Mock<ISplitJobProgressStore> _progress = new();
+    private readonly Mock<IFileImportStatusStore> _fileImportStatusStore = new();
     private readonly Mock<ICsvDataFileSplitterService> _splitter = new();
     private readonly CsvDataFileSplitBackgroundService _sut;
 
@@ -25,10 +26,16 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _splitter.Setup(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(true);
 
+        _fileImportStatusStore.Setup(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                              .Returns(Task.CompletedTask);
+        _fileImportStatusStore.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                              .Returns(Task.CompletedTask);
+
         _sut = new CsvDataFileSplitBackgroundService(
             _channel,
             _logger.Object,
             _progress.Object,
+            _fileImportStatusStore.Object,
             _splitter.Object);
     }
 
@@ -43,8 +50,23 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.Key), Times.Once);
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
         await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.Key), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.MarkSucceeded(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         _progress.Verify(x => x.MarkFailed(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Does_not_call_file_import_status_store_when_no_status_id_present()
+    {
+        await _sut.StartAsync(CancellationToken.None);
+
+        var job = CreateJob(1, fileImportStatusId: null);
+        await Write(job);
+
+        await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.Key), Times.Once);
+        _fileImportStatusStore.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -60,6 +82,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 
         await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.Key), Times.Once);
         await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.Key, It.IsAny<string>()), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         _progress.Verify(x => x.MarkSucceeded(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
@@ -78,6 +101,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
         await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.Key, It.IsAny<string>()), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(
@@ -110,13 +134,14 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     private Task Write(CsvDataFileSplitJob job) =>
         _channel.Writer.WriteAsync(job).AsTask();
 
-    private static CsvDataFileSplitJob CreateJob(int n) =>
+    private static CsvDataFileSplitJob CreateJob(int n, long? fileImportStatusId = 1) =>
         new(
             JobId: $"job-{n}",
-            Key: $"imported/file-{n}.csv",
-            TargetFolder: $"split-output/file-{n}",
+            Key: $"import/file-{n}.csv",
+            TargetFolder: $"import/file-{n}",
             SplitType: SplitType.ByLines,
-            SplitValue: 100);
+            SplitValue: 100,
+            FileImportStatusId: fileImportStatusId);
 
     public async ValueTask DisposeAsync()
     {

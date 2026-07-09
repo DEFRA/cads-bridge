@@ -171,5 +171,6 @@ public class S3CopyServiceTests
             Password: Password,
             Salt: Salt,
             SplitType: SplitType.None,
-            SplitValue: null);
+            SplitValue: null,
+            FileImportStatusId: 1L);
 }
