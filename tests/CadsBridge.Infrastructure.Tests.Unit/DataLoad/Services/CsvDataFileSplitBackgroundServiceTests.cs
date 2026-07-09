@@ -40,6 +40,21 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Marks_failed_when_filestatusId_is_null()
+    {
+        await _sut.StartAsync(CancellationToken.None);
+
+        var job = CreateJob(1, fileImportStatusId: null);
+        await Write(job);
+
+        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.Key, It.IsAny<string>()), Times.Once);
+
+        _splitter.Verify(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Processes_job_successfully()
     {
         await _sut.StartAsync(CancellationToken.None);
@@ -56,18 +71,6 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact]
-    public async Task Does_not_call_file_import_status_store_when_no_status_id_present()
-    {
-        await _sut.StartAsync(CancellationToken.None);
-
-        var job = CreateJob(1, fileImportStatusId: null);
-        await Write(job);
-
-        await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.Key), Times.Once);
-        _fileImportStatusStore.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
 
     [Fact]
     public async Task Marks_failed_when_splitter_returns_false()

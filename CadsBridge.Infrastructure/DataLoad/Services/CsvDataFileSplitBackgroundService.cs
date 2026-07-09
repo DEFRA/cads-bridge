@@ -30,6 +30,13 @@ public class CsvDataFileSplitBackgroundService(
                 return;
             }
 
+            if (!request.FileImportStatusId.HasValue)
+            {
+                logger.LogError("FileImportStatusId is required for split job {Key}", request.Key);
+                progressStore.MarkFailed(request.JobId, request.Key, "FileImportStatusId is required for split job");
+                continue;
+            }
+
             await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
@@ -38,37 +45,24 @@ public class CsvDataFileSplitBackgroundService(
                     try
                     {
                         progressStore.MarkInProgress(request.JobId, request.Key);
-
                         var result = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
                         if (result)
                         {
                             progressStore.MarkSucceeded(request.JobId, request.Key);
-
-                            if (request.FileImportStatusId.HasValue)
-                            {
-                                await fileImportStatusStore.MarkSucceeded(request.FileImportStatusId.Value, stoppingToken);
-                            }
+                            await fileImportStatusStore.MarkSucceeded(request.FileImportStatusId.Value, stoppingToken);
                         }
                         else
                         {
                             progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during split");
-
-                            if (request.FileImportStatusId.HasValue)
-                            {
-                                await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
-                            }
+                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to split file {Key}", request.Key);
                         progressStore.MarkFailed(request.JobId, request.Key, ex.Message);
-
-                        if (request.FileImportStatusId.HasValue)
-                        {
-                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
-                        }
+                        await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
                     }
                     finally
                     {
