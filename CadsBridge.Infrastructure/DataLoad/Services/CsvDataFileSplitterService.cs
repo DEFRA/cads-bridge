@@ -47,7 +47,7 @@ public class CsvDataFileSplitterService(
                         attempt);
 
                 var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(job.SplitType);
-                await csvDataFileSplitterStrategy.Process(job, internalS3Info, logger, cancellationToken);
+                await csvDataFileSplitterStrategy.Process(job, internalS3Info, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(

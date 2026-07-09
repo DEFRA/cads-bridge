@@ -1,6 +1,7 @@
 using System.Text;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
 using CadsBridge.Infrastructure.Storage.Factories;
@@ -8,9 +9,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
-public class CsvDataFileSplitterStrategyByLines : ICsvDataFileSplitterStrategy
+public class CsvDataFileSplitterStrategyByLines(ILogger<CsvDataFileSplitterStrategyByLines> logger) : ICsvDataFileSplitterStrategy
 {
-    public async Task Process(CsvDataFileSplitJob job, S3ClientFactory.ClientInfo internalS3Info, ILogger logger, CancellationToken cancellationToken)
+    public SplitType SplitType => SplitType.ByLines;
+
+    public async Task Process(CsvDataFileSplitJob job, S3ClientFactory.ClientInfo internalS3Info, CancellationToken cancellationToken)
     {
         if (!job.SplitValue.HasValue)
         {

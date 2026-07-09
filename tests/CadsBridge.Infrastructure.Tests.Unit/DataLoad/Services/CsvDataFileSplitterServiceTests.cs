@@ -2,7 +2,9 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
+using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -271,8 +273,15 @@ public class CsvDataFileSplitterServiceTests
         var logger = new Mock<ILogger<CsvDataFileSplitterService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        var strategyFactory = new CsvDataFileSplitterFactory();
+        var strategyFactory = new CsvDataFileSplitterFactory(CreateStrategies());
 
         return new CsvDataFileSplitterService(factory.Object, strategyFactory, logger.Object);
     }
+
+    private static ICsvDataFileSplitterStrategy[] CreateStrategies() =>
+    [
+        new CsvDataFileSplitterStrategyNone(Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+        new CsvDataFileSplitterStrategyByLines(Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+        new CsvDataFileSplitterStrategyBySize(Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+    ];
 }

@@ -1,13 +1,16 @@
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Csv.Factories;
 
 public class CsvDataFileSplitterFactoryTests
 {
-    private readonly CsvDataFileSplitterFactory _sut = new();
+    private readonly CsvDataFileSplitterFactory _sut = new(CreateStrategies());
 
     [Fact]
     public void GetStrategy_ReturnsNoneStrategy_ForSplitTypeNone() =>
@@ -28,4 +31,11 @@ public class CsvDataFileSplitterFactoryTests
 
         act.Should().Throw<ArgumentException>();
     }
+
+    private static ICsvDataFileSplitterStrategy[] CreateStrategies() =>
+    [
+        new CsvDataFileSplitterStrategyNone(Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+        new CsvDataFileSplitterStrategyByLines(Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+        new CsvDataFileSplitterStrategyBySize(Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+    ];
 }
