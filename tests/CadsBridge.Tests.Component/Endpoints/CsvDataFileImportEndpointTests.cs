@@ -149,12 +149,15 @@ public class CsvDataFileImportEndpointTests
                 SplitValue: null)
         ]));
 
-        var status = await GetImportJobStatus(jobId, client);
-        status!.JobId.Should().Be(jobId);
-        status.TotalFiles.Should().Be(1);
-        status.CompletedFiles.Should().Be(1);
-        status.Files.First().Status.Should().Be(JobStatus.Failed);
-        status.Files.First().ErrorMessage.Should().Be(notFoundMessage);
+        await AsyncAssert.WaitForAssertion(async () =>
+        {
+            var status = await GetImportJobStatus(jobId, client);
+            status!.JobId.Should().Be(jobId);
+            status.TotalFiles.Should().Be(1);
+            status.CompletedFiles.Should().Be(1);
+            status.Files.First().Status.Should().Be(JobStatus.Failed);
+            status.Files.First().ErrorMessage.Should().Be(notFoundMessage);
+        });
 
         factory.FileImportStatusStoreMock.Verify(
             x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -180,12 +183,15 @@ public class CsvDataFileImportEndpointTests
                 SplitValue: null)
         ]));
 
-        var status = await GetImportJobStatus(jobId, client);
-        status!.JobId.Should().Be(jobId);
-        status.TotalFiles.Should().Be(1);
-        status.CompletedFiles.Should().Be(1);
-        status.Files.First().Status.Should().Be(JobStatus.Failed);
-        status.Files.First().ErrorMessage.Should().Be(errorMessage);
+        await AsyncAssert.WaitForAssertion(async () =>
+        {
+            var status = await GetImportJobStatus(jobId, client);
+            status!.JobId.Should().Be(jobId);
+            status.TotalFiles.Should().Be(1);
+            status.CompletedFiles.Should().Be(1);
+            status.Files.First().Status.Should().Be(JobStatus.Failed);
+            status.Files.First().ErrorMessage.Should().Be(errorMessage);
+        });
 
         factory.FileImportStatusStoreMock.Verify(
             x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
