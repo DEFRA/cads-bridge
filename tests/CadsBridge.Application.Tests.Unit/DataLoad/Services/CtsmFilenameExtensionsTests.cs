@@ -10,7 +10,7 @@ public class CtsmFilenameExtensionsTests
     {
         // CTSM_UKV_PROD_BULK_######_CT_REGISTERED_MOVEMENTS_2026-02-22-074603
         //2026-02-22_MOVEMENTS_REGISTERED_CT_######_BULK_PROD_UKV_CTSM
-        var ctsmFilename = new CtsmFilename("UKV", "PROD", "BULK","######", "", "CT_REGISTERED_MOVEMENTS", "2026-02-22-074603");
+        var ctsmFilename = new CtsmFilename("UKV", "PROD", "BULK", "######", "", "CT_REGISTERED_MOVEMENTS", "2026-02-22-074603");
         var expectedResult = "2026-02-22_MOVEMENTS_REGISTERED_CT_######_BULK_PROD_UKV_CTSM";
         var actualResult = ctsmFilename.DerivePassword();
 
