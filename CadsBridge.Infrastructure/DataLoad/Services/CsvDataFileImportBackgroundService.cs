@@ -2,7 +2,6 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
-using CadsBridge.Core.DataLoad.Jobs;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -16,24 +15,41 @@ public class CsvDataFileImportBackgroundService(
     IImportJobProgressStore progressStore,
     IFileImportStatusStore fileImportStatusStore,
     ISplitMessageProducer splitMessageProducer,
+    IS3FileMetaDataService s3FileMetaDataService,
     IS3CopyService s3ExternalToInternalCopyService) : BackgroundService
 {
     private readonly int _maxParallelDownloads = 4;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         var semaphore = new SemaphoreSlim(_maxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var request in channel.Reader.ReadAllAsync(cancellationToken))
         {
-            if (stoppingToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 logger.LogInformation("Cancellation requested, aborting copy");
                 return;
             }
 
-            await semaphore.WaitAsync(stoppingToken);
+            long fileImportStatusId;
+            try
+            {
+                var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(
+                    request.SourceKey, cancellationToken);
+
+                fileImportStatusId = await fileImportStatusStore.Initiate(
+                    request.SourceKey, totalRowsToProcess, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
+                progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                continue;
+            }
+
+            await semaphore.WaitAsync(cancellationToken);
 
             var task = Task.Run(
                 async () =>
@@ -41,45 +57,40 @@ public class CsvDataFileImportBackgroundService(
                     try
                     {
                         progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                        await fileImportStatusStore.MarkInProgress(request.FileImportStatusId, stoppingToken);
+                        await fileImportStatusStore.MarkInProgress(fileImportStatusId, cancellationToken);
 
-                        var result = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
+                        var result = await s3ExternalToInternalCopyService.ExecAsync(request, cancellationToken);
 
                         if (result)
                         {
                             progressStore.MarkSucceeded(request.JobId, request.SourceKey);
 
-                            var targetFolder = $"import/{Path.GetFileNameWithoutExtension(request.TargetKey)}";
-
                             await splitMessageProducer.SendAsync(
                                 new CsvDataFileSplitJob(
                                     JobId: request.JobId,
-                                    Key: request.TargetKey,
-                                    TargetFolder: targetFolder,
-                                    SplitType: request.SplitType,
-                                    SplitValue: request.SplitValue,
-                                    FileImportStatusId: request.FileImportStatusId
+                                    SourceKey: request.TargetKey,
+                                    FileImportStatusId: fileImportStatusId
                                 ),
-                                stoppingToken);
+                                cancellationToken);
                         }
                         else
                         {
                             progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
-                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId, stoppingToken);
+                            await fileImportStatusStore.MarkFailed(fileImportStatusId, cancellationToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
                         progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
-                        await fileImportStatusStore.MarkFailed(request.FileImportStatusId, stoppingToken);
+                        await fileImportStatusStore.MarkFailed(fileImportStatusId, cancellationToken);
                     }
                     finally
                     {
                         semaphore.Release();
                     }
                 },
-                stoppingToken);
+                cancellationToken);
 
             runningTasks.Add(task);
         }

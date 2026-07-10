@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -12,6 +13,7 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
 public class CsvDataFileSplitterStrategyBySize(
     IS3ClientFactory s3ClientFactory,
+    DataLoadConfiguration config,
     ILogger<CsvDataFileSplitterStrategyBySize> logger) :
     ICsvDataFileSplitterStrategy
 {
@@ -19,17 +21,17 @@ public class CsvDataFileSplitterStrategyBySize(
 
     public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
-        if (!job.SplitValue.HasValue)
+        if (!config.SplitValue.HasValue)
         {
             throw new ArgumentException("Split value must be specified for splitting.");
         }
 
         var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var s3 = internalS3Info.Client;
-        var chunkSizeBytes = job.SplitValue * 1024L * 1024L;
+        var chunkSizeBytes = config.SplitValue * 1024L * 1024L;
 
         // Get object metadata to know file size
-        var metadata = await s3.GetObjectMetadataAsync(internalS3Info.BucketName, job.Key, cancellationToken);
+        var metadata = await s3.GetObjectMetadataAsync(internalS3Info.BucketName, job.SourceKey, cancellationToken);
         var totalSize = metadata.ContentLength;
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -37,7 +39,7 @@ public class CsvDataFileSplitterStrategyBySize(
 
         // Get the object from S3
         using var response = await s3.GetObjectAsync(
-            new GetObjectRequest { BucketName = internalS3Info.BucketName, Key = job.Key },
+            new GetObjectRequest { BucketName = internalS3Info.BucketName, Key = job.SourceKey },
             cancellationToken);
 
         using var reader = new StreamReader(response.ResponseStream, Encoding.UTF8);
@@ -54,7 +56,7 @@ public class CsvDataFileSplitterStrategyBySize(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.Key);
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
                 return;
             }
 
@@ -63,12 +65,12 @@ public class CsvDataFileSplitterStrategyBySize(
             // If adding this line exceeds chunk size, upload current chunk and start a new one
             if (bytesInChunk + lineBytes.Length > chunkSizeBytes)
             {
-                var chunkNumber1 = chunkNumber++;
                 await s3.UploadChunkAsync(
                     internalS3Info.BucketName,
-                    job.Key.FormatKey(job.TargetFolder, chunkNumber1),
+                    job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                     chunkStream,
                     cancellationToken: cancellationToken);
+                chunkNumber++;
                 await chunkStream.DisposeAsync();
 
                 chunkStream = new MemoryStream();
@@ -86,7 +88,7 @@ public class CsvDataFileSplitterStrategyBySize(
         {
             await s3.UploadChunkAsync(
                 internalS3Info.BucketName,
-                job.Key.FormatKey(job.TargetFolder, chunkNumber),
+                job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                 chunkStream,
                 cancellationToken: cancellationToken);
         }

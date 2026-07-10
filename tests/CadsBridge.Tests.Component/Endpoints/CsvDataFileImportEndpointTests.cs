@@ -17,11 +17,15 @@ namespace CadsBridge.Tests.Component.EndPoints;
 
 public class CsvDataFileImportEndpointTests
 {
-    private readonly string _testPassword = "test-password";
+    // CTSM-format filename: CTSM_<app>_<env>_<type>_<batchId>_<tablename>_<timestamp>.csv
+    // Password is derived from the filename by CtsmFilenameParser as "<app>_<env>_<type>_<batchId>".
+    private const string CtsmFilename = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
+    private readonly string _testDerivedValue = "CADS_TEST_FULL_BATCH1";
     private readonly string _testSalt = "test-salt";
-    private readonly string _incomingKey = "incoming/test-file.txt";
-    private readonly string _importedKey = "import/test-file.txt";
-    private readonly string _fileNameWithoutTypeSuffix = "import/test-file";
+    private readonly string _incomingKey = $"incoming/{CtsmFilename}";
+    private readonly string _importedKey = $"import/{CtsmFilename}";
+
+    private static Dictionary<string, string?> SaltOverride(string salt) => new() { ["DataLoad:Salt"] = salt };
 
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
@@ -48,7 +52,7 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                Password: _testPassword,
+                Password: _testDerivedValue,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
                 SplitValue: null)
@@ -68,23 +72,23 @@ public class CsvDataFileImportEndpointTests
     [Fact]
     public async Task ImportFile_WithOneFile_CreatesAnImportJobWithOneFile_DecryptsAndSplitsFile()
     {
-        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
-        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testPassword, _testSalt, TestContext.Current.CancellationToken);
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
         var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                Password: _testPassword,
+                Password: _testDerivedValue,
                 Salt: _testSalt,
                 SplitType: SplitType.ByLines,
                 SplitValue: 1)
         ]));
 
-        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, _fileNameWithoutTypeSuffix, SplitType.ByLines, 1, FileImportStatusId: 1L);
+        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, FileImportStatusId: 1L);
         await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
         var status = await GetImportJobStatus(jobId, client);
         status!.JobId.Should().Be(jobId);
@@ -104,14 +108,14 @@ public class CsvDataFileImportEndpointTests
         factory.FileImportStatusStoreMock
             .Setup(x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
-        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testPassword, _testSalt, TestContext.Current.CancellationToken);
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
         await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                Password: _testPassword,
+                Password: _testDerivedValue,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
                 SplitValue: null)
@@ -139,7 +143,7 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                Password: _testPassword,
+                Password: _testDerivedValue,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
                 SplitValue: null)
@@ -170,7 +174,7 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                Password: _testPassword,
+                Password: _testDerivedValue,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
                 SplitValue: null)
@@ -190,20 +194,20 @@ public class CsvDataFileImportEndpointTests
     [Fact]
     public async Task ImportFile_WhenCopySucceeds_MarksFileImportStatusInProgress()
     {
-        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
         factory.FileImportStatusStoreMock
             .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42L);
-        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testPassword, _testSalt, TestContext.Current.CancellationToken);
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
         var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(
                 JobId: string.Empty,
                 sourceKey: _incomingKey,
-                Password: _testPassword,
+                Password: _testDerivedValue,
                 Salt: _testSalt,
                 SplitType: SplitType.None,
                 SplitValue: null)

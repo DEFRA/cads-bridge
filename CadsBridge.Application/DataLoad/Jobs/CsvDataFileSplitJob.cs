@@ -4,9 +4,6 @@ namespace CadsBridge.Application.DataLoad.Jobs;
 
 public record CsvDataFileSplitJob(
     string JobId,
-    string Key,
-    string TargetFolder,
-    SplitType SplitType,
-    int? SplitValue,
+    string SourceKey,
     long? FileImportStatusId = null
 );

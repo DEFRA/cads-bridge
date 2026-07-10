@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -12,6 +13,7 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
 public class CsvDataFileSplitterStrategyByLines(
     IS3ClientFactory s3ClientFactory,
+    DataLoadConfiguration config,
     ILogger<CsvDataFileSplitterStrategyByLines> logger) :
     ICsvDataFileSplitterStrategy
 {
@@ -19,14 +21,14 @@ public class CsvDataFileSplitterStrategyByLines(
 
     public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
-        if (!job.SplitValue.HasValue)
+        if (!config.SplitValue.HasValue)
         {
             throw new ArgumentException("Split value must be specified for splitting.");
         }
         var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var s3 = internalS3Info.Client;
         using var response = await s3.GetObjectAsync(
-            new GetObjectRequest { BucketName = internalS3Info.BucketName, Key = job.Key },
+            new GetObjectRequest { BucketName = internalS3Info.BucketName, Key = job.SourceKey },
             cancellationToken);
 
         using var reader = new StreamReader(response.ResponseStream);
@@ -63,18 +65,18 @@ public class CsvDataFileSplitterStrategyByLines(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.Key);
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
                 return;
             }
 
             chunkBuilder.AppendLine(line);
             lineCount++;
 
-            if (lineCount >= job.SplitValue)
+            if (lineCount >= config.SplitValue)
             {
                 await s3.UploadChunkAsync(
                     internalS3Info.BucketName,
-                    job.Key.FormatKey(job.TargetFolder, chunkNumber),
+                    job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                     chunkBuilder.ToString(),
                     cancellationToken: cancellationToken);
 
@@ -90,7 +92,7 @@ public class CsvDataFileSplitterStrategyByLines(
         {
             await s3.UploadChunkAsync(
                 internalS3Info.BucketName,
-                job.Key.FormatKey(job.TargetFolder, chunkNumber),
+                job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                 chunkBuilder.ToString(),
                 cancellationToken: cancellationToken);
         }

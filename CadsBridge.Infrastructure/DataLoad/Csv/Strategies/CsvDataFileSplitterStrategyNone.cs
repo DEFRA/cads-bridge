@@ -19,12 +19,12 @@ public class CsvDataFileSplitterStrategyNone(
     public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("Copying {Key} without splitting", job.Key);
+            logger.LogInformation("Copying {Key} without splitting", job.SourceKey);
 
         var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var s3 = internalS3Info.Client;
         using var response = await s3.GetObjectAsync(
-            new GetObjectRequest { BucketName = internalS3Info.BucketName, Key = job.Key },
+            new GetObjectRequest { BucketName = internalS3Info.BucketName, Key = job.SourceKey },
             cancellationToken);
 
         await using var memoryStream = new MemoryStream();
@@ -32,7 +32,7 @@ public class CsvDataFileSplitterStrategyNone(
 
         await s3.UploadChunkAsync(
             internalS3Info.BucketName,
-            job.Key.FormatKey(job.TargetFolder),
+            job.SourceKey.FormatSplitFileTargetKey(),
             memoryStream,
             cancellationToken: cancellationToken);
     }

@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using CadsBridge.Infrastructure.Storage.Abstractions;
@@ -33,10 +34,15 @@ public class CsvDataFileSplitterFactoryTests
         act.Should().Throw<ArgumentException>();
     }
 
-    private static ICsvDataFileSplitterStrategy[] CreateStrategies() =>
-    [
-        new CsvDataFileSplitterStrategyNone( Mock.Of<IS3ClientFactory>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
-        new CsvDataFileSplitterStrategyByLines(Mock.Of<IS3ClientFactory>(),Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
-        new CsvDataFileSplitterStrategyBySize(Mock.Of<IS3ClientFactory>(),Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
-    ];
+    private static ICsvDataFileSplitterStrategy[] CreateStrategies()
+    {
+        var config = new DataLoadConfiguration { SplitValue = 10000 };
+
+        return
+        [
+            new CsvDataFileSplitterStrategyNone(Mock.Of<IS3ClientFactory>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+            new CsvDataFileSplitterStrategyByLines(Mock.Of<IS3ClientFactory>(), config, Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+            new CsvDataFileSplitterStrategyBySize(Mock.Of<IS3ClientFactory>(), config, Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+        ];
+    }
 }

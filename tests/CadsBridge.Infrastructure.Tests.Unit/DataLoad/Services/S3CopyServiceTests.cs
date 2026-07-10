@@ -2,8 +2,8 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.Storage.Transfer;
-using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Infrastructure.Crypto;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -21,9 +21,7 @@ public class S3CopyServiceTests
 {
     private const string ExternalBucket = "external-bucket";
     private const string InternalBucket = "internal-bucket";
-    private const string SourceKey = "incoming/source.csv";
-    private const string TargetKey = "imported/source.csv";
-    private const string Password = "pw";
+    private const string SourceKey = "incoming/CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
     private const string Salt = "salt";
 
     [Fact]
@@ -160,17 +158,14 @@ public class S3CopyServiceTests
         var logger = new Mock<ILogger<S3CopyService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        return new S3CopyService(factory.Object, aes, transfer, logger.Object);
+        var config = new DataLoadConfiguration { Salt = Salt };
+
+        return new S3CopyService(factory.Object, aes, transfer, config, logger.Object);
     }
 
     private static CsvDataFileImportJob CreateJob() =>
         new(
             JobId: "job-1",
             SourceKey: SourceKey,
-            TargetKey: TargetKey,
-            Password: Password,
-            Salt: Salt,
-            SplitType: SplitType.None,
-            SplitValue: null,
             FileImportStatusId: 1L);
 }

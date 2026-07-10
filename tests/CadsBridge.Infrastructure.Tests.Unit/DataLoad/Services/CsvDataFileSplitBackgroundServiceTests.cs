@@ -1,7 +1,5 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Persistence;
-using CadsBridge.Application.DataLoad.Services;
-using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
@@ -48,7 +46,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob(1, fileImportStatusId: null);
         await Write(job);
 
-        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.Key, It.IsAny<string>()), Times.Once);
+        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, It.IsAny<string>()), Times.Once);
 
         _splitter.Verify(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
         _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -63,9 +61,9 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob(1);
         await Write(job);
 
-        await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.Key), Times.Once);
+        await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.SourceKey), Times.Once);
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
-        await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.Key), Times.Once);
+        await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.SourceKey), Times.Once);
         await _fileImportStatusStore.AsyncVerify(x => x.MarkSucceeded(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         _progress.Verify(x => x.MarkFailed(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -84,8 +82,8 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.Key), Times.Once);
-        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.Key, It.IsAny<string>()), Times.Once);
+        await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.SourceKey), Times.Once);
+        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, It.IsAny<string>()), Times.Once);
         await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         _progress.Verify(x => x.MarkSucceeded(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -104,14 +102,14 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         await Write(job);
 
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
-        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.Key, It.IsAny<string>()), Times.Once);
+        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, It.IsAny<string>()), Times.Once);
         await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to split file {job.Key}")),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to split file {job.SourceKey}")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -141,10 +139,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     private static CsvDataFileSplitJob CreateJob(int n, long? fileImportStatusId = 1) =>
         new(
             JobId: $"job-{n}",
-            Key: $"import/file-{n}.csv",
-            TargetFolder: $"import/file-{n}",
-            SplitType: SplitType.ByLines,
-            SplitValue: 100,
+            SourceKey: $"import/file-{n}.csv",
             FileImportStatusId: fileImportStatusId);
 
     public async ValueTask DisposeAsync()

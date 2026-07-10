@@ -2,20 +2,28 @@ using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Services;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
 using CadsBridge.Infrastructure.DataLoad.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.DataLoad.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddDataLoad(this IServiceCollection services)
+    public static IServiceCollection AddDataLoad(this IServiceCollection services, IConfiguration configuration)
     {
+        var dataLoadConfig = configuration
+            .GetSection("DataLoad")
+            .Get<DataLoadConfiguration>()
+            ?? throw new InvalidOperationException("Missing 'DataLoad' config");
+        services.AddSingleton(dataLoadConfig);
+
         services.RegisterCsvFileImporting();
         services.RegisterSqlDataSeeding();
 

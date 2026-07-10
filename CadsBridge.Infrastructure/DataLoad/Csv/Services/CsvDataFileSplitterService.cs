@@ -1,12 +1,14 @@
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.Exceptions;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Services;
 
 public class CsvDataFileSplitterService(
     ICsvDataFileSplitterStrategyFactory csvDataFileSplitterStrategyFactory,
+    DataLoadConfiguration config,
     ILogger<CsvDataFileSplitterService> logger)
     : ICsvDataFileSplitterService
 {
@@ -17,19 +19,20 @@ public class CsvDataFileSplitterService(
     {
 
         var attempt = 0;
+        var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(config.SplitType);
         while (true)
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.Key);
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
                 return false;
             }
 
             attempt++;
             if (attempt > _maxRetries)
             {
-                throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {job.Key}");
+                throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {job.SourceKey}");
             }
 
             try
@@ -37,16 +40,15 @@ public class CsvDataFileSplitterService(
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 splitting copy of {Key}, attempt {Attempt}",
-                        job.Key,
+                        job.SourceKey,
                         attempt);
 
-                var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(job.SplitType);
                 await csvDataFileSplitterStrategy.Process(job, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 file split complete: {SourceKey}",
-                        job.Key);
+                        job.SourceKey);
 
                 return true;
             }
@@ -57,7 +59,7 @@ public class CsvDataFileSplitterService(
                 logger.LogWarning(
                     ex,
                     "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
-                    job.Key,
+                    job.SourceKey,
                     attempt,
                     _maxRetries,
                     delay.TotalMilliseconds);
