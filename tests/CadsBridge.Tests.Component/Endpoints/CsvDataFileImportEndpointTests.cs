@@ -20,7 +20,7 @@ public class CsvDataFileImportEndpointTests
     // CTSM-format filename: CTSM_<app>_<env>_<type>_<batchId>_<tablename>_<timestamp>.csv
     // Password is derived from the filename by CtsmFilenameParser as "<app>_<env>_<type>_<batchId>".
     private const string CtsmFilename = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
-    private readonly string _testDerivedValue = "CADS_TEST_FULL_BATCH1";
+    private readonly string _testDerivedValue = "2026-07-10_MYTABLE_BATCH1_FULL_TEST_CADS_CTSM";
     private readonly string _testSalt = "test-salt";
     private readonly string _incomingKey = $"incoming/{CtsmFilename}";
     private readonly string _importedKey = $"import/{CtsmFilename}";

@@ -18,7 +18,9 @@ public static class CtsmFilenameExtensions
     {
         public string DerivePassword()
         {
-            return $"{ctsmFilename.App}_{ctsmFilename.Env}_{ctsmFilename.Type}_{ctsmFilename.BatchId}";
+            var timeStamp = ctsmFilename.Timestamp.Substring(0, ctsmFilename.Timestamp.LastIndexOf('-'));
+            var reversedTableName = string.Join("_", ctsmFilename.TableName.Split('_').Reverse());
+            return $"{timeStamp}_{reversedTableName}_{ctsmFilename.BatchId}_{ctsmFilename.Type}_{ctsmFilename.Env}_{ctsmFilename.App}_CTSM";
         }
     }
 }
