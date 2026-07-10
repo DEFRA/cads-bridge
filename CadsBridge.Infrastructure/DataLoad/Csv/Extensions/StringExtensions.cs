@@ -4,11 +4,6 @@ public static class StringExtensions
 {
     extension(string s)
     {
-        public string FormatKey(string destination, int partNumber = 1)
-        {
-            var fileName = $"{Path.GetFileNameWithoutExtension(s)}-part-{partNumber:D4}.csv";
-            return string.IsNullOrEmpty(destination) ? fileName : $"{destination.TrimEnd('/')}/{fileName}";
-        }
         public string FormatSplitFileTargetKey(int partNumber = 1)
         {
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(s);
