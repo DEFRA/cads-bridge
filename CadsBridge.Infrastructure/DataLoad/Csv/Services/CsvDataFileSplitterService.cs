@@ -1,15 +1,11 @@
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
-using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Core.Exceptions;
-using CadsBridge.Infrastructure.Storage.Abstractions;
-using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
-using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 
-namespace CadsBridge.Infrastructure.DataLoad.Services;
+namespace CadsBridge.Infrastructure.DataLoad.Csv.Services;
 
 public class CsvDataFileSplitterService(
-    IS3ClientFactory s3ClientFactory,
     ICsvDataFileSplitterStrategyFactory csvDataFileSplitterStrategyFactory,
     ILogger<CsvDataFileSplitterService> logger)
     : ICsvDataFileSplitterService
@@ -21,7 +17,6 @@ public class CsvDataFileSplitterService(
     {
 
         var attempt = 0;
-        var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         while (true)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -41,18 +36,16 @@ public class CsvDataFileSplitterService(
             {
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
-                        "S3 splitting copy of {Key} from {SourceBucket}, attempt {Attempt}",
+                        "S3 splitting copy of {Key}, attempt {Attempt}",
                         job.Key,
-                        internalS3Info.BucketName,
                         attempt);
 
                 var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(job.SplitType);
-                await csvDataFileSplitterStrategy.Process(job, internalS3Info, cancellationToken);
+                await csvDataFileSplitterStrategy.Process(job, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
-                        "S3 file split complete: {SourceBucket}/{SourceKey}",
-                        internalS3Info.BucketName,
+                        "S3 file split complete: {SourceKey}",
                         job.Key);
 
                 return true;

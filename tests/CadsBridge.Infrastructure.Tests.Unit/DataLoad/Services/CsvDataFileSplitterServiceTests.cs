@@ -1,9 +1,10 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
-using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
+using CadsBridge.Infrastructure.DataLoad.Csv.Services;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
@@ -273,15 +274,21 @@ public class CsvDataFileSplitterServiceTests
         var logger = new Mock<ILogger<CsvDataFileSplitterService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        var strategyFactory = new CsvDataFileSplitterFactory(CreateStrategies());
+        var strategyFactory = new CsvDataFileSplitterFactory(CreateStrategies(s3));
 
-        return new CsvDataFileSplitterService(factory.Object, strategyFactory, logger.Object);
+        return new CsvDataFileSplitterService(strategyFactory, logger.Object);
     }
 
-    private static ICsvDataFileSplitterStrategy[] CreateStrategies() =>
-    [
-        new CsvDataFileSplitterStrategyNone(Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
-        new CsvDataFileSplitterStrategyByLines(Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
-        new CsvDataFileSplitterStrategyBySize(Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
-    ];
+    private static ICsvDataFileSplitterStrategy[] CreateStrategies(IAmazonS3 s3)
+    {
+        var factory = new Mock<IS3ClientFactory>();
+        factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+            .Returns(new CadsBridge.Infrastructure.Storage.Factories.S3ClientFactory.ClientInfo(s3, BucketName));
+        return
+        [
+            new CsvDataFileSplitterStrategyNone(factory.Object, Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+            new CsvDataFileSplitterStrategyByLines(factory.Object, Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+            new CsvDataFileSplitterStrategyBySize(factory.Object, Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+        ];
+    }
 }

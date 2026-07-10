@@ -1,7 +1,8 @@
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Core.DataLoad.Jobs;
-using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
+using CadsBridge.Infrastructure.Storage.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -34,8 +35,8 @@ public class CsvDataFileSplitterFactoryTests
 
     private static ICsvDataFileSplitterStrategy[] CreateStrategies() =>
     [
-        new CsvDataFileSplitterStrategyNone(Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
-        new CsvDataFileSplitterStrategyByLines(Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
-        new CsvDataFileSplitterStrategyBySize(Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+        new CsvDataFileSplitterStrategyNone( Mock.Of<IS3ClientFactory>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+        new CsvDataFileSplitterStrategyByLines(Mock.Of<IS3ClientFactory>(),Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+        new CsvDataFileSplitterStrategyBySize(Mock.Of<IS3ClientFactory>(),Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
     ];
 }

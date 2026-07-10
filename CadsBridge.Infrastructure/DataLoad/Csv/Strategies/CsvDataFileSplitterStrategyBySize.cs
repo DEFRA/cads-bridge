@@ -1,25 +1,30 @@
 using System.Text;
 using Amazon.S3.Model;
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
-using CadsBridge.Infrastructure.DataLoad.Csv.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
-using CadsBridge.Infrastructure.Storage.Factories;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
-public class CsvDataFileSplitterStrategyBySize(ILogger<CsvDataFileSplitterStrategyBySize> logger) : ICsvDataFileSplitterStrategy
+public class CsvDataFileSplitterStrategyBySize(
+    IS3ClientFactory s3ClientFactory,
+    ILogger<CsvDataFileSplitterStrategyBySize> logger) :
+    ICsvDataFileSplitterStrategy
 {
     public SplitType SplitType => SplitType.BySize;
 
-    public async Task Process(CsvDataFileSplitJob job, S3ClientFactory.ClientInfo internalS3Info, CancellationToken cancellationToken)
+    public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (!job.SplitValue.HasValue)
         {
             throw new ArgumentException("Split value must be specified for splitting.");
         }
 
+        var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var s3 = internalS3Info.Client;
         var chunkSizeBytes = job.SplitValue * 1024L * 1024L;
 

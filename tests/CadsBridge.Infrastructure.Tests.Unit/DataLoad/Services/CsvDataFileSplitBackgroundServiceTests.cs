@@ -7,6 +7,7 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
