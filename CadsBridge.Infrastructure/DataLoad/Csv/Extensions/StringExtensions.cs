@@ -14,10 +14,11 @@ public static class StringExtensions
         {
             var columnList = s.ToLower().Split(delimiter).ToList();
             // Remove the first column which is assumed to be a redundant 'C' column
-            if(skipFirstColumn)
+            if (skipFirstColumn)
             {
                 columnList.RemoveAt(0);
             }
+
             return string.Join(delimiter, columnList);
         }
     }
