@@ -10,11 +10,14 @@ public static class StringExtensions
             return $"import/{fileNameWithoutExtension}/{fileNameWithoutExtension}-part-{partNumber:D4}.csv";
         }
 
-        public string ProcessColumnDefinitions(char delimiter)
+        public string ProcessColumnDefinitions(char delimiter, bool skipFirstColumn = true)
         {
             var columnList = s.ToLower().Split(delimiter).ToList();
             // Remove the first column which is assumed to be a redundant 'C' column
-            columnList.RemoveAt(0);
+            if(skipFirstColumn)
+            {
+                columnList.RemoveAt(0);
+            }
             return string.Join(delimiter, columnList);
         }
     }

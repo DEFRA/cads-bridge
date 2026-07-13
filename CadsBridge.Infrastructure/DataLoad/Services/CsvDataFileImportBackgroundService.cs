@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -16,13 +17,13 @@ public class CsvDataFileImportBackgroundService(
     IFileImportStatusStore fileImportStatusStore,
     ISplitMessageProducer splitMessageProducer,
     IS3FileMetaDataService s3FileMetaDataService,
-    IS3CopyService s3ExternalToInternalCopyService) : BackgroundService
+    IS3CopyService s3ExternalToInternalCopyService,
+    DataLoadConfiguration config) : BackgroundService
 {
-    private readonly int _maxParallelDownloads = 4;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var semaphore = new SemaphoreSlim(_maxParallelDownloads);
+        var semaphore = new SemaphoreSlim(config.MaxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
         await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))

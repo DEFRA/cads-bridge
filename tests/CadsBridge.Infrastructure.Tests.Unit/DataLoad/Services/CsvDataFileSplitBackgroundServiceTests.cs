@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -30,12 +31,15 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _fileImportStatusStore.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
 
+        var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
+
         _sut = new CsvDataFileSplitBackgroundService(
             _channel,
             _logger.Object,
             _progress.Object,
             _fileImportStatusStore.Object,
-            _splitter.Object);
+            _splitter.Object,
+            config);
     }
 
     [Fact]

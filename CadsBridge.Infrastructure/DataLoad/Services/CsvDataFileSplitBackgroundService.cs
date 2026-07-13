@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -14,13 +15,12 @@ public class CsvDataFileSplitBackgroundService(
     ILogger<CsvDataFileSplitBackgroundService> logger,
     ISplitJobProgressStore progressStore,
     IFileImportStatusStore fileImportStatusStore,
-    ICsvDataFileSplitterService csvDataFileSplitterService) : BackgroundService
+    ICsvDataFileSplitterService csvDataFileSplitterService,
+    DataLoadConfiguration config) : BackgroundService
 {
-    private readonly int _maxParallelDownloads = 4;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var semaphore = new SemaphoreSlim(_maxParallelDownloads);
+        var semaphore = new SemaphoreSlim(config.MaxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
         await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))

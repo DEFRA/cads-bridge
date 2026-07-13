@@ -12,9 +12,6 @@ public class CsvDataFileSplitterService(
     ILogger<CsvDataFileSplitterService> logger)
     : ICsvDataFileSplitterService
 {
-    private readonly int _maxRetries = 3;
-    private readonly int _delayBaseMs = 500;
-
     public async Task<bool> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
 
@@ -30,9 +27,9 @@ public class CsvDataFileSplitterService(
             }
 
             attempt++;
-            if (attempt > _maxRetries)
+            if (attempt > config.MaxRetryAttempts)
             {
-                throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for splitting {job.SourceKey}");
+                throw new RetriesExceededException($"Exceeded maximum retry attempts ({config.MaxRetryAttempts}) for splitting {job.SourceKey}");
             }
 
             try
@@ -52,16 +49,16 @@ public class CsvDataFileSplitterService(
 
                 return true;
             }
-            catch (Exception ex) when (attempt < _maxRetries)
+            catch (Exception ex) when (attempt < config.MaxRetryAttempts)
             {
-                var delay = TimeSpan.FromMilliseconds(_delayBaseMs * Math.Pow(2, attempt - 1));
+                var delay = TimeSpan.FromMilliseconds(config.RetryDelayBase * Math.Pow(2, attempt - 1));
 
                 logger.LogWarning(
                     ex,
                     "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
                     job.SourceKey,
                     attempt,
-                    _maxRetries,
+                    config.MaxRetryAttempts,
                     delay.TotalMilliseconds);
 
                 await Task.Delay(delay, cancellationToken);

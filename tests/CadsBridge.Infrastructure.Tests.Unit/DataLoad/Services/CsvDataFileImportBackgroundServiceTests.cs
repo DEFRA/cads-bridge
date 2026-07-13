@@ -7,6 +7,7 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -44,6 +45,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _fileImportStatusStore.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
 
+        var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
+
         _sut = new CsvDataFileImportBackgroundService(
             _channel,
             _logger.Object,
@@ -51,7 +54,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             _fileImportStatusStore.Object,
             _splitProducer.Object,
             _s3FileMetaDataService.Object,
-            _copy.Object);
+            _copy.Object,
+            config);
     }
 
     [Fact]

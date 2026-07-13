@@ -62,13 +62,7 @@ public class CsvDataFileImportEndpointTests
 
         // Act
         var jobId = await TriggerImportJob(fixture, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: incomingTestFileCsv,
-                Password: password,
-                Salt: salt,
-                SplitType: SplitType.ByLines,
-                SplitValue: 2)
+            new CsvDataFileImportRequestItem(sourceKey: incomingTestFileCsv)
         ]));
 
         // Assert
@@ -137,13 +131,7 @@ public class CsvDataFileImportEndpointTests
 
         // Act
         var jobId = await TriggerImportJob(fixture, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: incomingTestFileCsv,
-                Password: password,
-                Salt: salt,
-                SplitType: SplitType.None,
-                SplitValue: null)
+            new CsvDataFileImportRequestItem(sourceKey: incomingTestFileCsv)
         ]));
 
         // Assert

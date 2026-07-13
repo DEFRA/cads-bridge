@@ -49,13 +49,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var request = new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: _incomingKey,
-                Password: _testDerivedValue,
-                Salt: _testSalt,
-                SplitType: SplitType.None,
-                SplitValue: null)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]);
 
         var jobId = await TriggerImportJob(client, request);
@@ -79,13 +73,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: _incomingKey,
-                Password: _testDerivedValue,
-                Salt: _testSalt,
-                SplitType: SplitType.ByLines,
-                SplitValue: 1)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
         var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, FileImportStatusId: 1L);
@@ -112,13 +100,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: _incomingKey,
-                Password: _testDerivedValue,
-                Salt: _testSalt,
-                SplitType: SplitType.None,
-                SplitValue: null)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
         factory.S3FileMetaDataServiceMock.Verify(
@@ -140,13 +122,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: _incomingKey,
-                Password: _testDerivedValue,
-                Salt: _testSalt,
-                SplitType: SplitType.None,
-                SplitValue: null)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
         await AsyncAssert.WaitForAssertion(async () =>
@@ -174,13 +150,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: _incomingKey,
-                Password: _testDerivedValue,
-                Salt: _testSalt,
-                SplitType: SplitType.None,
-                SplitValue: null)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
         await AsyncAssert.WaitForAssertion(async () =>
@@ -210,13 +180,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(
-                JobId: string.Empty,
-                sourceKey: _incomingKey,
-                Password: _testDerivedValue,
-                Salt: _testSalt,
-                SplitType: SplitType.None,
-                SplitValue: null)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
         await AsyncAssert.WaitForAssertion(async () =>
