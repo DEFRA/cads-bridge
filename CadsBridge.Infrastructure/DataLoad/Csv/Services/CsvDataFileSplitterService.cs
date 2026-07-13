@@ -1,0 +1,68 @@
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
+using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Core.Exceptions;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace CadsBridge.Infrastructure.DataLoad.Csv.Services;
+
+public class CsvDataFileSplitterService(
+    ICsvDataFileSplitterStrategyFactory csvDataFileSplitterStrategyFactory,
+    DataLoadConfiguration config,
+    ILogger<CsvDataFileSplitterService> logger)
+    : ICsvDataFileSplitterService
+{
+    public async Task<bool> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
+    {
+
+        var attempt = 0;
+        var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(config.SplitType);
+        while (true)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
+                return false;
+            }
+
+            attempt++;
+            if (attempt > config.MaxRetryAttempts)
+            {
+                throw new RetriesExceededException($"Exceeded maximum retry attempts ({config.MaxRetryAttempts}) for splitting {job.SourceKey}");
+            }
+
+            try
+            {
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "S3 splitting copy of {Key}, attempt {Attempt}",
+                        job.SourceKey,
+                        attempt);
+
+                await csvDataFileSplitterStrategy.Process(job, cancellationToken);
+
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "S3 file split complete: {SourceKey}",
+                        job.SourceKey);
+
+                return true;
+            }
+            catch (Exception ex) when (attempt < config.MaxRetryAttempts)
+            {
+                var delay = TimeSpan.FromMilliseconds(config.RetryDelayBase * Math.Pow(2, attempt - 1));
+
+                logger.LogWarning(
+                    ex,
+                    "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
+                    job.SourceKey,
+                    attempt,
+                    config.MaxRetryAttempts,
+                    delay.TotalMilliseconds);
+
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
+}

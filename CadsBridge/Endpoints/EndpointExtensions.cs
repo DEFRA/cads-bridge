@@ -57,8 +57,6 @@ public static class EndpointsExtensions
         [FromBody] CsvDataFileImportRequest request,
         Channel<CsvDataFileImportJob> channel,
         IImportJobProgressStore progressStore,
-        IS3FileMetaDataService s3FileMetaDataService,
-        IFileImportStatusStore fileImportStatusStore,
         ILogger<Program> logger,
         CancellationToken cancellationToken)
     {
@@ -70,20 +68,9 @@ public static class EndpointsExtensions
         {
             try
             {
-                var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(
-                    importFile.sourceKey, cancellationToken);
-
-                var fileImportStatusId = await fileImportStatusStore.Initiate(
-                    importFile.sourceKey, totalRowsToProcess, cancellationToken);
-
                 await channel.Writer.WriteAsync(new CsvDataFileImportJob(
                     JobId: jobId,
-                    SourceKey: importFile.sourceKey,
-                    TargetKey: importFile.targetKey,
-                    Password: importFile.Password,
-                    Salt: importFile.Salt,
-                    SplitType: importFile.SplitType,
-                    SplitValue: importFile.SplitValue
+                    SourceKey: importFile.sourceKey
                 ), cancellationToken);
             }
             catch (Exception ex)
@@ -118,12 +105,11 @@ public static class EndpointsExtensions
 
         foreach (var file in request.Files)
         {
+            var targetFolder = $"import/{Path.GetFileNameWithoutExtension(file.Key)}";
+
             await channel.Writer.WriteAsync(new CsvDataFileSplitJob(
                 JobId: jobId,
-                Key: file.Key,
-                TargetFolder: file.TargetFolder,
-                SplitType: file.SplitType,
-                SplitValue: file.SplitValue
+                SourceKey: file.Key
             ));
         }
 

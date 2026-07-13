@@ -11,6 +11,9 @@ using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
+using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+using CadsBridge.Infrastructure.DataLoad.Csv.Files;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -18,13 +21,11 @@ public class S3CopyService(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
     ITransferUtilityAdapter transferUtilityAdapter,
+    DataLoadConfiguration config,
     ILogger<S3CopyService> logger) : IS3CopyService
 {
-    private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
-    private readonly IAesCryptoTransform _aesCryptoTransform = aesCryptoTransform;
-
     private readonly int _maxRetries = 3;
-    public const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
+    private const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
     private const long MaxSingleFileSize = 100L * 1024 * 1024;
 
     public async Task<bool> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default)
@@ -32,10 +33,10 @@ public class S3CopyService(
         var attempt = 0;
         var delayBaseMs = 500;
 
-        var externalS3Info = _s3ClientFactory.GetClientInfo<ExternalStorageClient>();
+        var externalS3Info = s3ClientFactory.GetClientInfo<ExternalStorageClient>();
         var externalS3 = externalS3Info.Client;
 
-        var internalS3Info = _s3ClientFactory.GetClientInfo<InternalStorageClient>();
+        var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var internalS3 = internalS3Info.Client;
 
         while (true)
@@ -43,7 +44,9 @@ public class S3CopyService(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
+                {
                     logger.LogInformation("Cancellation requested for {Key}, aborting copy", job.SourceKey);
+                }
                 return false;
             }
 
@@ -64,7 +67,7 @@ public class S3CopyService(
                         internalS3Info.BucketName,
                         attempt);
 
-                await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
+                var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
@@ -72,7 +75,7 @@ public class S3CopyService(
                         externalS3Info.BucketName,
                         job.SourceKey,
                         internalS3Info.BucketName,
-                        job.TargetKey);
+                        targetKey);
 
                 break;
             }
@@ -92,7 +95,7 @@ public class S3CopyService(
         return true;
     }
 
-    private async Task DecryptAndCopyAsync(
+    private async Task<string> DecryptAndCopyAsync(
         CsvDataFileImportJob request,
         S3ClientFactory.ClientInfo externalS3Info,
         S3ClientFactory.ClientInfo internalS3Info,
@@ -101,23 +104,26 @@ public class S3CopyService(
         CancellationToken cancellationToken)
     {
         using var getResponse = await externalS3.GetObjectAsync(externalS3Info.BucketName, request.SourceKey, cancellationToken);
-        using var encryptedStream = getResponse.ResponseStream;
+        await using var encryptedStream = getResponse.ResponseStream;
+
+        var targetKey = request.TargetKey;
 
         // Determine file size to decide whether to use multipart upload or single upload
         var fileSize = await GetRemoteFileSizeAsync(externalS3, externalS3Info.BucketName, request.SourceKey, cancellationToken);
+        var password = CtsmFilenameParser.Parse(Path.GetFileName(request.SourceKey))!.DerivePassword();
 
         // if file is small enough to avoid multipart overhead, otherwise use streaming with multipart upload
         if (fileSize < MaxSingleFileSize)
         {
             using var memoryStream = new MemoryStream();
             memoryStream.Position = 0;
-            await _aesCryptoTransform.DecryptStreamAsync(encryptedStream, memoryStream, request.Password, request.Salt, cancellationToken: cancellationToken);
-            await PutAsync(internalS3, memoryStream, internalS3Info.BucketName, request.TargetKey, cancellationToken: cancellationToken);
+            await aesCryptoTransform.DecryptStreamAsync(encryptedStream, memoryStream, password, config.Salt, cancellationToken: cancellationToken);
+            await PutAsync(internalS3, memoryStream, internalS3Info.BucketName, targetKey, cancellationToken: cancellationToken);
         }
         else
         {
             // Create decryptor
-            using var decryptor = AesCryptoTransform.CreateDecryptor(request.Password, request.Salt);
+            using var decryptor = AesCryptoTransform.CreateDecryptor(password, config.Salt);
             using var cryptoStream = new CryptoStream(encryptedStream, decryptor, CryptoStreamMode.Read);
 
             var partitionSize = CalculateOptimalPartSize(fileSize);
@@ -126,7 +132,7 @@ public class S3CopyService(
             {
                 InputStream = cryptoStream,
                 BucketName = internalS3Info.BucketName,
-                Key = request.TargetKey,
+                Key = targetKey,
                 StorageClass = S3StorageClass.Standard,
                 PartSize = partitionSize, // 5 MB minimum for multipart
                 AutoCloseStream = true,
@@ -137,7 +143,11 @@ public class S3CopyService(
         }
 
         if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("Successfully decrypted and uploaded {Key}", request.TargetKey);
+        {
+            logger.LogInformation("Successfully decrypted and uploaded {Key}", targetKey);
+        }
+
+        return targetKey;
     }
 
     private static long CalculateOptimalPartSize(long fileSizeBytes)

@@ -5,6 +5,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Application.DataLoad.Csv.Abstractions;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -12,24 +14,28 @@ public class CsvDataFileSplitBackgroundService(
     Channel<CsvDataFileSplitJob> channel,
     ILogger<CsvDataFileSplitBackgroundService> logger,
     ISplitJobProgressStore progressStore,
-    ICsvDataFileSplitterService csvDataFileSplitterService) : BackgroundService
+    IFileImportStatusStore fileImportStatusStore,
+    ICsvDataFileSplitterService csvDataFileSplitterService,
+    DataLoadConfiguration config) : BackgroundService
 {
-    private readonly Channel<CsvDataFileSplitJob> _channel = channel;
-    private readonly ILogger<CsvDataFileSplitBackgroundService> _logger = logger;
-    private readonly ISplitJobProgressStore _progressStore = progressStore;
-    private readonly int _maxParallelDownloads = 4;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var semaphore = new SemaphoreSlim(_maxParallelDownloads);
+        var semaphore = new SemaphoreSlim(config.MaxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in _channel.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
         {
             if (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested, aborting split");
+                logger.LogInformation("Cancellation requested, aborting split");
                 return;
+            }
+
+            if (!request.FileImportStatusId.HasValue)
+            {
+                logger.LogError("FileImportStatusId is required for split job {Key}", request.SourceKey);
+                progressStore.MarkFailed(request.JobId, request.SourceKey, "FileImportStatusId is required for split job");
+                continue;
             }
 
             await semaphore.WaitAsync(stoppingToken);
@@ -39,23 +45,25 @@ public class CsvDataFileSplitBackgroundService(
                 {
                     try
                     {
-                        _progressStore.MarkInProgress(request.JobId, request.Key);
-
+                        progressStore.MarkInProgress(request.JobId, request.SourceKey);
                         var result = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
                         if (result)
                         {
-                            _progressStore.MarkSucceeded(request.JobId, request.Key);
+                            progressStore.MarkSucceeded(request.JobId, request.SourceKey);
+                            await fileImportStatusStore.MarkSucceeded(request.FileImportStatusId.Value, stoppingToken);
                         }
                         else
                         {
-                            _progressStore.MarkFailed(request.JobId, request.Key, "Unknown error during split");
+                            progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during split");
+                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to split file {Key}", request.Key);
-                        _progressStore.MarkFailed(request.JobId, request.Key, ex.Message);
+                        logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
+                        progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                        await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
                     }
                     finally
                     {

@@ -2,11 +2,11 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
-using CadsBridge.Core.DataLoad.Jobs;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -14,27 +14,40 @@ public class CsvDataFileImportBackgroundService(
     Channel<CsvDataFileImportJob> channel,
     ILogger<CsvDataFileImportBackgroundService> logger,
     IImportJobProgressStore progressStore,
+    IFileImportStatusStore fileImportStatusStore,
     ISplitMessageProducer splitMessageProducer,
-    IS3CopyService s3ExternalToInternalCopyService) : BackgroundService
+    IS3FileMetaDataService s3FileMetaDataService,
+    IS3CopyService s3ExternalToInternalCopyService,
+    DataLoadConfiguration config) : BackgroundService
 {
-    private readonly Channel<CsvDataFileImportJob> _channel = channel;
-    private readonly ILogger<CsvDataFileImportBackgroundService> _logger = logger;
-    private readonly IImportJobProgressStore _progressStore = progressStore;
-    private readonly ISplitMessageProducer _splitMessageProducer = splitMessageProducer;
-    private readonly IS3CopyService _s3ExternalToInternalCopyService = s3ExternalToInternalCopyService;
-    private readonly int _maxParallelDownloads = 4;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var semaphore = new SemaphoreSlim(_maxParallelDownloads);
+        var semaphore = new SemaphoreSlim(config.MaxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in _channel.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
         {
             if (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested, aborting copy");
+                logger.LogInformation("Cancellation requested, aborting copy");
                 return;
+            }
+
+            long fileImportStatusId;
+            try
+            {
+                var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(
+                    request.SourceKey, stoppingToken);
+
+                fileImportStatusId = await fileImportStatusStore.Initiate(
+                    request.SourceKey, totalRowsToProcess, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
+                progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                continue;
             }
 
             await semaphore.WaitAsync(stoppingToken);
@@ -44,35 +57,34 @@ public class CsvDataFileImportBackgroundService(
                 {
                     try
                     {
-                        _progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                        var result = await _s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
+                        progressStore.MarkInProgress(request.JobId, request.SourceKey);
+                        await fileImportStatusStore.MarkInProgress(fileImportStatusId, stoppingToken);
+
+                        var result = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
 
                         if (result)
                         {
-                            _progressStore.MarkSucceeded(request.JobId, request.SourceKey);
+                            progressStore.MarkSucceeded(request.JobId, request.SourceKey);
 
-                            if (request.SplitType != SplitType.None)
-                            {
-                                await _splitMessageProducer.SendAsync(
-                                    new CsvDataFileSplitJob(
-                                        JobId: request.JobId,
-                                        Key: request.TargetKey,
-                                        TargetFolder: Path.GetFileNameWithoutExtension(request.TargetKey),
-                                        SplitType: request.SplitType,
-                                        SplitValue: request.SplitValue
-                                    ),
-                                    stoppingToken);
-                            }
+                            await splitMessageProducer.SendAsync(
+                                new CsvDataFileSplitJob(
+                                    JobId: request.JobId,
+                                    SourceKey: request.TargetKey,
+                                    FileImportStatusId: fileImportStatusId
+                                ),
+                                stoppingToken);
                         }
                         else
                         {
-                            _progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
+                            progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during copy");
+                            await fileImportStatusStore.MarkFailed(fileImportStatusId, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                        _progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                        logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
+                        progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
+                        await fileImportStatusStore.MarkFailed(fileImportStatusId, stoppingToken);
                     }
                     finally
                     {
