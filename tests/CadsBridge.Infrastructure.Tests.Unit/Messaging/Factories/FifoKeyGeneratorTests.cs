@@ -10,16 +10,14 @@ public class FifoKeyGeneratorTests
     {
         var id1 = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "PreProd");
 
         var id2 = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "PreProd");
 
         id1.Should().Be(id2);
@@ -30,50 +28,37 @@ public class FifoKeyGeneratorTests
     {
         var baseId = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "PreProd");
 
         var changedBucket = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "bucketB",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "PreProd");
 
         var changedObjectKey = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "other-path/to/import-file.dat",
+            objectKey: "other-path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "PreProd");
 
         var changedEtag = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag999",
-            importType: "BulkUpload",
-            environment: "PreProd");
-
-        var changedImportType = FifoKeyGenerator.GenerateDeduplicationId(
-            bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
-            etag: "etag123",
-            importType: "OtherType",
             environment: "PreProd");
 
         var changedEnvironment = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "Prod");
 
         changedBucket.Should().NotBe(baseId);
         changedObjectKey.Should().NotBe(baseId);
         changedEtag.Should().NotBe(baseId);
-        changedImportType.Should().NotBe(baseId);
         changedEnvironment.Should().NotBe(baseId);
     }
 
@@ -82,9 +67,8 @@ public class FifoKeyGeneratorTests
     {
         var id = FifoKeyGenerator.GenerateDeduplicationId(
             bucket: "example-bucket",
-            objectKey: "path/to/import-file.dat",
+            objectKey: "path/abc/import-file.dat",
             etag: "etag123",
-            importType: "BulkUpload",
             environment: "PreProd");
 
         id.Should().NotBeNullOrWhiteSpace();
@@ -95,17 +79,17 @@ public class FifoKeyGeneratorTests
     [Fact]
     public void GenerateMessageGroupId_ShouldFollowExpectedPattern()
     {
-        var groupId = FifoKeyGenerator.GenerateMessageGroupId("BulkUpload", "PreProd");
+        var groupId = FifoKeyGenerator.GenerateMessageGroupId("path/abc/import-file.dat", "PreProd");
 
-        groupId.Should().Be("BulkUpload:PreProd");
+        groupId.Should().Be("path/abc:PreProd");
     }
 
     [Fact]
     public void GenerateMessageGroupId_ShouldChangeWhenInputsChange()
     {
-        var id1 = FifoKeyGenerator.GenerateMessageGroupId("BulkUpload", "PreProd");
-        var id2 = FifoKeyGenerator.GenerateMessageGroupId("BulkUpload", "Prod");
-        var id3 = FifoKeyGenerator.GenerateMessageGroupId("OtherType", "PreProd");
+        var id1 = FifoKeyGenerator.GenerateMessageGroupId("path/abc/import-file.dat", "PreProd");
+        var id2 = FifoKeyGenerator.GenerateMessageGroupId("path/abc/import-file.dat", "Prod");
+        var id3 = FifoKeyGenerator.GenerateMessageGroupId("path/def/import-file.dat", "PreProd");
 
         id2.Should().NotBe(id1);
         id3.Should().NotBe(id1);

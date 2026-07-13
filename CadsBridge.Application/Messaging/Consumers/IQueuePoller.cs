@@ -3,7 +3,7 @@ using CadsBridge.Application.Messaging.Clients;
 namespace CadsBridge.Application.Messaging.Consumers;
 
 public interface IQueuePoller<in T>
-    where T : IQueueClient, new()
+    where T : IQueueClient
 {
     string? QueueUrl { get; }
 

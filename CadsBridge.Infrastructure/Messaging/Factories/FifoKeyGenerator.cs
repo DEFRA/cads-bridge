@@ -9,14 +9,19 @@ public static class FifoKeyGenerator
         string bucket,
         string objectKey,
         string etag,
-        string importType,
         string environment)
     {
-        var raw = $"{bucket}:{objectKey}:{etag}:{importType}:{environment}";
+        var raw = $"{bucket}:{objectKey}:{etag}:{environment}";
         var bytes = Encoding.UTF8.GetBytes(raw);
         return Convert.ToHexString(SHA256.HashData(bytes));
     }
 
-    public static string GenerateMessageGroupId(string importType, string environment)
-        => $"{importType}:{environment}";
+    public static string GenerateMessageGroupId(string objectKey, string environment)
+    {
+        var prefix = objectKey.Contains('/')
+            ? objectKey[..objectKey.LastIndexOf('/')]
+            : objectKey;
+
+        return $"{prefix}:{environment}";
+    }
 }

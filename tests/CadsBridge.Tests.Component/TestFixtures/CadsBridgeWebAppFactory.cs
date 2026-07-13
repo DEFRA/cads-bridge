@@ -77,7 +77,6 @@ public class CadsBridgeWebAppFactory(
         OverrideHttpClientHandler(clientName, handler);
     }
 
-
     private void OverrideFileImportStatusStore(IServiceCollection services)
     {
         services.RemoveAll<IS3FileMetaDataService>();
@@ -85,7 +84,6 @@ public class CadsBridgeWebAppFactory(
         services.RemoveAll<IFileImportStatusStore>();
         services.AddSingleton(FileImportStatusStoreMock.Object);
     }
-
 
     private void OverrideAmazonS3(IServiceCollection services)
     {

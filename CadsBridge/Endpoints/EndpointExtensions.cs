@@ -70,9 +70,11 @@ public static class EndpointsExtensions
         {
             try
             {
+                // Move into background service
                 var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(
                     importFile.sourceKey, cancellationToken);
 
+                // Move into background service
                 var fileImportStatusId = await fileImportStatusStore.Initiate(
                     importFile.sourceKey, totalRowsToProcess, cancellationToken);
 
