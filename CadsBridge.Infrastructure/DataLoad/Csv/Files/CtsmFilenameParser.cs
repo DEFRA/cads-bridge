@@ -1,29 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CadsBridge.Application.DataLoad.Services;
-
-public record CtsmFilename(
-    string App,
-    string Env,
-    string Type,
-    string BatchId,
-    string? PartNo,
-    string TableName,
-    string Timestamp
-);
-
-public static class CtsmFilenameExtensions
-{
-    extension(CtsmFilename ctsmFilename)
-    {
-        public string DerivePassword()
-        {
-            var timeStamp = ctsmFilename.Timestamp.Substring(0, ctsmFilename.Timestamp.LastIndexOf('-'));
-            var reversedTableName = string.Join("_", ctsmFilename.TableName.Split('_').Reverse());
-            return $"{timeStamp}_{reversedTableName}_{ctsmFilename.BatchId}_{ctsmFilename.Type}_{ctsmFilename.Env}_{ctsmFilename.App}_CTSM";
-        }
-    }
-}
+namespace CadsBridge.Infrastructure.DataLoad.Csv.Files;
 
 public static partial class CtsmFilenameParser
 {
