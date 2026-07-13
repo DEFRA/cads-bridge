@@ -3,7 +3,6 @@ using CadsBridge.Application.Commands.MessageProcessing;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.Messaging.Messages;
 using CadsBridge.Application.Messaging.Serializers;
-using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Core.Exceptions;
 using System.Threading.Channels;
 
@@ -31,16 +30,10 @@ public class CsvDataFileImportMessageHandler(
 
         try
         {
-            // TODO: Remove Drops
             await _channel.Writer.WriteAsync(
                 new CsvDataFileImportJob(
                     JobId: Guid.NewGuid().ToString("N"),
-                    SourceKey: messagePayload.ObjectKey,
-                    "Drop",
-                    "Drop",
-                    "Drop",
-                    SplitType.None,
-                    null
+                    SourceKey: messagePayload.ObjectKey
                 ), cancellationToken);
         }
         catch (ChannelClosedException ex)

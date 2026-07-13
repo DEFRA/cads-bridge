@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
 
         services.AddApiServices();
 
-        services.AddDataLoad();
+        services.AddDataLoad(config);
 
         services.RegistryCrypto();
 

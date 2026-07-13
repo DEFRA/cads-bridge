@@ -1,6 +1,6 @@
 using CadsBridge.Application.DataLoad.Jobs;
 
-namespace CadsBridge.Application.DataLoad.Services;
+namespace CadsBridge.Application.DataLoad.Csv.Abstractions;
 
 public interface ICsvDataFileSplitterService
 {

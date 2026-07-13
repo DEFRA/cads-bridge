@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -17,10 +18,12 @@ public class SplitMessageProducerTests
     {
         _channel = Channel.CreateUnbounded<CsvDataFileSplitJob>();
 
+        var config = new DataLoadConfiguration { SplitType = SplitType.ByLines, SplitValue = 100 };
+
         var logger = new Mock<ILogger<SplitMessageProducer>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        _sut = new SplitMessageProducer(_channel, logger.Object);
+        _sut = new SplitMessageProducer(_channel, config, logger.Object);
     }
 
     [Fact]
@@ -28,10 +31,7 @@ public class SplitMessageProducerTests
     {
         var job = new CsvDataFileSplitJob(
             JobId: "job-1",
-            Key: "key",
-            TargetFolder: "target-folder",
-            SplitType: SplitType.ByLines,
-            SplitValue: 100);
+            SourceKey: "key");
 
         await _sut.SendAsync(job, CancellationToken.None);
 
