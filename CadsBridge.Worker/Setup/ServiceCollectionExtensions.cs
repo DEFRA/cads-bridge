@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Worker.Configuration;
 using CadsBridge.Worker.Jobs;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,7 @@ using Quartz;
 
 namespace CadsBridge.Worker.Setup;
 
+[ExcludeFromCodeCoverage]
 public static class ServiceCollectionExtensions
 {
     public static void AddBackgroundServiceScheduling(this IServiceCollection services, IConfiguration configuration)
