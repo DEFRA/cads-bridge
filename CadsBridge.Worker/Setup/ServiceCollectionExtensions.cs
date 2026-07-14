@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
     {
         var scheduledJobsConfiguration =
             configuration.GetRequiredSection("Quartz:Jobs").Get<List<ScheduledJobConfiguration>>() ?? [];
-        if (scheduledJobsConfiguration.Any())
+        if (scheduledJobsConfiguration.Count > 0)
         {
             services.AddQuartz(q =>
             {

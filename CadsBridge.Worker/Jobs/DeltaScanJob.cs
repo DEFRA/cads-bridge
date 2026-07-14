@@ -12,13 +12,19 @@ public class DeltaScanJob(IDistributedLock distributedLock, ILogger<DeltaScanJob
     {
         if (!await distributedLock.TryAcquireAsync(LockName, context.CancellationToken))
         {
-            logger.LogInformation("Delta scan job skipped - lock {LockName} held by another instance", LockName);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Delta scan job skipped - lock {LockName} held by another instance", LockName);
+            }
             return;
         }
 
         try
         {
-            logger.LogInformation("Delta scan job started");
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Delta scan job started");
+            }
             // ... job work ...
         }
         finally

@@ -108,12 +108,18 @@ public sealed class S3DistributedLock(
                 Key = key,
                 IfMatch = held.ETag
             }, cancellationToken);
-            logger.LogDebug("Released distributed lock {LockName}", lockName);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("Released distributed lock {LockName}", lockName);
+            }
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode is HttpStatusCode.PreconditionFailed or HttpStatusCode.NotFound)
         {
             // Lease was taken over or already gone - safe to ignore.
-            logger.LogDebug("Distributed lock {LockName} was already released or taken over", lockName);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("Distributed lock {LockName} was already released or taken over", lockName);
+            }
         }
     }
 
@@ -130,7 +136,10 @@ public sealed class S3DistributedLock(
         {
             var etag = await ConditionalPutAsync(client, bucket, key, entry, ifNoneMatch: null, ifMatch: existingETag, cancellationToken);
             _heldLocks[lockName] = new HeldLock(entry.Owner, etag);
-            logger.LogInformation("Took over stale distributed lock {LockName}", lockName);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Took over stale distributed lock {LockName}", lockName);
+            }
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
