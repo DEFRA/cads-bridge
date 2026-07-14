@@ -1,4 +1,3 @@
-using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
@@ -6,6 +5,7 @@ using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 
 namespace CadsBridge.Tests.Component.ApiClients;
 

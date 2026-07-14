@@ -1,5 +1,3 @@
-using CadsBridge.Core.Exceptions;
-
 namespace CadsBridge.Application.DataLoad.Services;
 
 public interface IS3FileMetaDataService
