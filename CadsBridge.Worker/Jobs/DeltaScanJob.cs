@@ -1,16 +1,29 @@
+using CadsBridge.Core.Locking;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace CadsBridge.Worker.Jobs;
 
-public class DeltaScanJob(ILogger<DeltaScanJob> logger) : IJob
+public class DeltaScanJob(IDistributedLock distributedLock, ILogger<DeltaScanJob> logger) : IJob
 {
-    public Task Execute(IJobExecutionContext context)
+    private const string LockName = nameof(DeltaScanJob);
+
+    public async Task Execute(IJobExecutionContext context)
     {
-        if (logger.IsEnabled(LogLevel.Information))
+        if (!await distributedLock.TryAcquireAsync(LockName, context.CancellationToken))
+        {
+            logger.LogInformation("Delta scan job skipped - lock {LockName} held by another instance", LockName);
+            return;
+        }
+
+        try
         {
             logger.LogInformation("Delta scan job started");
+            // ... job work ...
         }
-        return Task.CompletedTask;
+        finally
+        {
+            await distributedLock.ReleaseAsync(LockName, context.CancellationToken);
+        }
     }
 }
