@@ -149,7 +149,7 @@ public class S3FileMetaDataServiceTests
         public void ParseTrailerLine_IsCaseInsensitive_ForFileName()
         {
             var parts = new[] { "T", "FILE.CSV", "13092020 17:59:11", "50" };
-            S3FileMetaDataService<ExternalStorageClient>        .ParseTrailerLine(parts, "imports/file.csv")
+            S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(50L);
         }
     }
