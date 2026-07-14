@@ -1,4 +1,3 @@
-using System.Net;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.Services;
@@ -8,20 +7,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.ApiClients.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddApiServices(this IServiceCollection services)
-    {
-        services.AddTransient<IFileImportStatusApiService, FileImportStatusApiService>();
-    }
-
     public static void AddApiClients(
         this IServiceCollection services,
-        IConfiguration configuration,
-        IHealthChecksBuilder healthChecksBuilder)
+        IConfiguration configuration)
     {
         var apiClientsConfigs = configuration
             .GetSection("ApiClients")
@@ -30,6 +24,17 @@ public static class ServiceCollectionExtensions
         if (apiClientsConfigs == null) return;
 
         services.AddSingleton(apiClientsConfigs);
+
+        if (configuration.GetValue<bool>("ApiClients:CdsApi:UseFakeClient"))
+        {
+            services.AddScoped<IFileImportStatusApiService, Fakes.FakeFileImportStatusApiService>();
+        }
+        else
+        {
+            services.AddScoped<IFileImportStatusApiService, FileImportStatusApiService>();
+        }
+
+        var healthChecksBuilder = services.AddHealthChecks();
 
         foreach (var (clientName, clientConfig) in apiClientsConfigs)
         {
@@ -45,39 +50,37 @@ public static class ServiceCollectionExtensions
                 continue;
             }
 
-            services.RegisterNamedHttpClient(clientName, clientConfig);
+            services.RegisterNamedHttpClient(
+                clientName,
+                clientConfig);
 
             if (clientConfig.HealthcheckEnabled)
             {
-                // Dedicated probe client: same BaseAddress, NO resilience/retry wrapper,
-                // so health checks fail fast and report the true downstream status.
-                var healthClientName = HealthClientName(clientName);
-                services.AddHttpClient(healthClientName, client =>
-                {
-                    client.BaseAddress = new Uri(clientConfig.BaseUrl.TrimEnd('/'));
-                });
-
                 healthChecksBuilder.Add(new HealthCheckRegistration(
                     name: $"http-client-{clientName}",
                     factory: sp => new ApiClientHealthCheck(
                         sp.GetRequiredService<IHttpClientFactory>(),
-                        healthClientName,
                         clientName,
                         sp.GetRequiredService<ILogger<ApiClientHealthCheck>>()),
-                    failureStatus: null,
+                    failureStatus: HealthStatus.Unhealthy,
                     tags: ["api-client"]
                 ));
             }
         }
     }
 
-    public static string HealthClientName(string clientName) => $"{clientName}-health";
-    private static void RegisterNamedHttpClient(this IServiceCollection services, string clientName,
+    private static void RegisterNamedHttpClient(
+        this IServiceCollection services,
+        string clientName,
         ApiClientConfiguration clientConfig)
     {
         services.AddHttpClient(clientName, client =>
         {
             client.BaseAddress = new Uri(clientConfig.BaseUrl.TrimEnd('/'));
+            if (clientConfig.BasicApiKey != null)
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Basic {clientConfig.BasicApiKey}");
+            }
             if (!string.IsNullOrWhiteSpace(clientConfig.XApiKey))
             {
                 client.DefaultRequestHeaders.Add("x-api-key", clientConfig.XApiKey);

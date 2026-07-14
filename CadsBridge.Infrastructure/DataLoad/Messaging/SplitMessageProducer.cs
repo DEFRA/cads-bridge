@@ -1,8 +1,8 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
-using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.DataLoad.Messaging;
 

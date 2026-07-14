@@ -2,12 +2,12 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
-using CadsBridge.Infrastructure.DataLoad.Configuration;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 

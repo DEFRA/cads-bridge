@@ -21,7 +21,8 @@ public abstract class WebAppFactoryBase<TStart>(
     where TStart : class
 {
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
-    public List<Action<IServiceCollection>> ServiceOverrides { get; private set; } = new();
+
+    public readonly List<Action<IServiceCollection>> _serviceOverrides = [];
 
     private readonly IDictionary<string, string?> _configOverrides = configOverrides ?? new Dictionary<string, string?>();
 
@@ -60,7 +61,7 @@ public abstract class WebAppFactoryBase<TStart>(
             if (disableHostedServices)
                 services.RemoveAll<IHostedService>();
 
-            foreach (var serviceOverride in ServiceOverrides)
+            foreach (var serviceOverride in _serviceOverrides)
             {
                 serviceOverride(services);
             }
@@ -69,11 +70,16 @@ public abstract class WebAppFactoryBase<TStart>(
 
     public void OverrideSingleton<T>(T service) where T : class
     {
-        ServiceOverrides.Add(x =>
+        _serviceOverrides.Add(x =>
         {
             x.RemoveAll<T>();
             x.AddSingleton<T>(service);
         });
+    }
+
+    public void ResetMocks()
+    {
+        ResetInfrastructureMocks();
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
@@ -95,8 +101,19 @@ public abstract class WebAppFactoryBase<TStart>(
         Environment.SetEnvironmentVariable("AWS__ServiceURL", "http://cads-bridge-localstack-emulator:4566");
         Environment.SetEnvironmentVariable("Storage__Internal__BucketName", "cads-bridge-internal-bucket");
         Environment.SetEnvironmentVariable("Storage__External__BucketName", "cads-bridge-external-bucket");
+
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__HealthcheckEnabled", "true");
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__BaseUrl", "http://localhost:5555");
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__BasicApiKey", "XYZ");
+
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_KEY", "test");
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_SECRET", "test");
+    }
+
+    private void ResetInfrastructureMocks()
+    {
+        AmazonS3Mock.Reset();
+        ApplyDefaultS3MockSetup();
     }
 
     private void OverrideAmazonS3(IServiceCollection services)
