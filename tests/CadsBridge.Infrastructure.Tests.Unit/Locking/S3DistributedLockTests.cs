@@ -227,4 +227,3 @@ public class S3DistributedLockTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 }
-

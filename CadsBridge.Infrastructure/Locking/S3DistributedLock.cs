@@ -190,4 +190,3 @@ public sealed class S3DistributedLock(
 
     private readonly record struct HeldLock(string Owner, string ETag);
 }
-

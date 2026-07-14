@@ -23,4 +23,3 @@ public record S3DistributedLockOptions
     /// </summary>
     public int MaxAcquireAttempts { get; init; } = 3;
 }
-

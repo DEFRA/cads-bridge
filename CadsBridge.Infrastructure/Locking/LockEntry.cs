@@ -8,4 +8,3 @@ public sealed record LockEntry(
     string Owner,
     DateTimeOffset AcquiredAtUtc,
     DateTimeOffset ExpiresAtUtc);
-
