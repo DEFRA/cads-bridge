@@ -76,7 +76,7 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
-        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, FileImportStatusId: 1L);
+        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, FileImportId: 1L);
         await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
         var status = await GetImportJobStatus(jobId, client);
         status!.JobId.Should().Be(jobId);
@@ -93,7 +93,7 @@ public class CsvDataFileImportEndpointTests
         factory.S3FileMetaDataServiceMock
             .Setup(x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(555L);
-        factory.FileImportStatusStoreMock
+        factory.FileImportStoreMock
             .Setup(x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
@@ -105,9 +105,9 @@ public class CsvDataFileImportEndpointTests
 
         factory.S3FileMetaDataServiceMock.Verify(
             x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStatusStoreMock.Verify(
+        factory.FileImportStoreMock.Verify(
             x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStatusStoreMock.Verify(
+        factory.FileImportStoreMock.Verify(
             x => x.MarkInProgress(9L, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -135,16 +135,16 @@ public class CsvDataFileImportEndpointTests
             status.Files.First().ErrorMessage.Should().Be(notFoundMessage);
         });
 
-        factory.FileImportStatusStoreMock.Verify(
+        factory.FileImportStoreMock.Verify(
             x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task ImportFile_WhenFileImportStatusStoreInitiateThrows_MarksFileAsFailedButReturnsOk()
+    public async Task ImportFile_WhenFileImportStoreInitiateThrows_MarksFileAsFailedButReturnsOk()
     {
         await using var factory = new CadsBridgeWebAppFactory(null, false);
         const string errorMessage = "downstream unavailable";
-        factory.FileImportStatusStoreMock
+        factory.FileImportStoreMock
             .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(errorMessage));
         var client = factory.CreateClient();
@@ -163,7 +163,7 @@ public class CsvDataFileImportEndpointTests
             status.Files.First().ErrorMessage.Should().Be(errorMessage);
         });
 
-        factory.FileImportStatusStoreMock.Verify(
+        factory.FileImportStoreMock.Verify(
             x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -173,7 +173,7 @@ public class CsvDataFileImportEndpointTests
         await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
-        factory.FileImportStatusStoreMock
+        factory.FileImportStoreMock
             .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42L);
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
@@ -192,8 +192,8 @@ public class CsvDataFileImportEndpointTests
         // The split step (which marks the file import status as succeeded) only runs via the
         // real CsvDataFileSplitBackgroundService; since ISplitMessageProducer is mocked out here,
         // only the import stage's audit call (MarkInProgress) is expected.
-        factory.FileImportStatusStoreMock.Verify(x => x.MarkInProgress(42L, It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStatusStoreMock.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        factory.FileImportStoreMock.Verify(x => x.MarkInProgress(42L, It.IsAny<CancellationToken>()), Times.Once);
+        factory.FileImportStoreMock.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private sealed record ImportJobResponse(string JobId);

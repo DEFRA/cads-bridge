@@ -1,3 +1,5 @@
+using CadsBridge.Core.ApiClients;
+
 namespace CadsBridge.Infrastructure.ApiClients.DTOs;
 
 public record FileImportStatusDto

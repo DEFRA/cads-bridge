@@ -69,7 +69,7 @@ public class CsvDataFileSplitterServiceTests
 
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(1);
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
             [ExpectedKey()] = SmallInputFile
@@ -116,7 +116,7 @@ public class CsvDataFileSplitterServiceTests
 
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(4);
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
@@ -243,7 +243,7 @@ public class CsvDataFileSplitterServiceTests
 
         var result = await sut.ExecuteAsync(request, cts.Token);
 
-        result.Should().BeFalse();
+        result.Should().Be(0);
         s3.PutRequests.Should().BeEmpty();
     }
 

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
@@ -18,12 +19,12 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
     private const string markReset = "reset";
 
     private static readonly Dictionary<FileImportStatus, string> FileImportStatusUrlMap =
-        new Dictionary<FileImportStatus, string>
-        {
+       new()
+       {
             { FileImportStatus.Importing, "importing" },
             { FileImportStatus.Completed, "complete" },
             { FileImportStatus.Failed, "failed" }
-        };
+       };
 
     public async Task<FileImportStatusDto?> GetByFileName(string fileName, CancellationToken cancellationToken)
     {
@@ -45,6 +46,22 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
 
         var dto = await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
         return dto.Id;
+    }
+
+    public async Task Update(long id, FileImportStatus status, long totalRowsToProcess, long rowsProcessed, CancellationToken cancellationToken)
+    {
+        var context = $"Updating file import with with id {id} with status: {status}', total rows to process: {totalRowsToProcess}, and rows processed {rowsProcessed}.";
+        var body = new UpdateFileImportRequest
+        {
+            Status = status,
+            TotalRowsToProcess = totalRowsToProcess,
+            RowsProcessed = rowsProcessed
+        };
+
+        var endPoint = $"{baseApiUrl}/{id}";
+        var response = await PutRequestToApiAsync(endPoint, body, context, cancellationToken);
+
+        await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
     }
 
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
@@ -81,7 +98,15 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
         }
         return response;
     }
-
+    private async Task<HttpResponseMessage> PutRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("API call succeeded: {Context}", context);
+        }
+        return response;
+    }
     // Single place that performs the HTTP call and maps transport-level faults to
     // Retryable/NonRetryable exceptions, so GET/POST callers stay free of duplicated try/catch.
     private async Task<HttpResponseMessage> SendAsync(

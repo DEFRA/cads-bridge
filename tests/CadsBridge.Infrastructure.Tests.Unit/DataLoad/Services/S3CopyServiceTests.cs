@@ -167,5 +167,5 @@ public class S3CopyServiceTests
         new(
             JobId: "job-1",
             SourceKey: SourceKey,
-            FileImportStatusId: 1L);
+            FileImportId: 1L);
 }

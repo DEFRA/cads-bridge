@@ -49,10 +49,7 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 
-        services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
-        services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
-
-        services.AddTransient<IFileImportStatusStore, FileImportStatusStore>();
+        services.AddTransient<IFileImportStore, FileImportStore>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

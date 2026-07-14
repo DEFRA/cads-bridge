@@ -1,3 +1,4 @@
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
@@ -11,9 +12,9 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Persistence;
 public class FileImportStatusStoreTests
 {
     private readonly Mock<IFileImportStatusApiService> _apiService = new();
-    private readonly Mock<ILogger<FileImportStatusStore>> _logger = new();
+    private readonly Mock<ILogger<FileImportStore>> _logger = new();
 
-    private FileImportStatusStore CreateSut() => new(_apiService.Object, _logger.Object);
+    private FileImportStore CreateSut() => new(_apiService.Object, _logger.Object);
 
     public class InitiateTests : FileImportStatusStoreTests
     {

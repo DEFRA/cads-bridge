@@ -1,21 +1,15 @@
 using CadsBridge.Application.DataLoad.Persistence;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
-using CadsBridge.Infrastructure.ApiClients.DTOs;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
-public class FileImportStatusStore : IFileImportStatusStore
+public class FileImportStore(IFileImportStatusApiService fileImportStatusApiService, ILogger<FileImportStore> logger) : IFileImportStore
 {
-    private readonly IFileImportStatusApiService _fileImportStatusApiService;
-    private readonly ILogger<FileImportStatusStore> _logger;
-
-    public FileImportStatusStore(IFileImportStatusApiService fileImportStatusApiService, ILogger<FileImportStatusStore> logger)
-    {
-        _fileImportStatusApiService = fileImportStatusApiService;
-        _logger = logger;
-    }
+    private readonly IFileImportStatusApiService _fileImportStatusApiService = fileImportStatusApiService;
+    private readonly ILogger<FileImportStore> _logger = logger;
 
     public async Task<long> Initiate(string fileName, long totalRowsToProcess, CancellationToken cancellationToken = default)
     {
@@ -59,5 +53,10 @@ public class FileImportStatusStore : IFileImportStatusStore
     public async Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Failed, cancellationToken);
+    }
+
+    public Task Update(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsProcessed, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 }

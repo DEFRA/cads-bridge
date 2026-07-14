@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.DTOs;

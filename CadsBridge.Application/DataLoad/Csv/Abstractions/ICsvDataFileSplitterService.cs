@@ -4,5 +4,5 @@ namespace CadsBridge.Application.DataLoad.Csv.Abstractions;
 
 public interface ICsvDataFileSplitterService
 {
-    Task<bool> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken);
+    Task<long> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken);
 }

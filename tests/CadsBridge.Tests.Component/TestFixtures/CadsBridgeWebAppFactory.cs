@@ -21,7 +21,7 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
 
     public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
     public Mock<IS3FileMetaDataService> S3FileMetaDataServiceMock { get; } = CreateDefaultS3FileMetaDataServiceMock();
-    public Mock<IFileImportStatusStore> FileImportStatusStoreMock { get; } = CreateDefaultFileImportStatusStoreMock();
+    public Mock<IFileImportStore> FileImportStoreMock { get; } = CreateDefaultFileImportStoreMock();
 
     private readonly List<Action<IServiceCollection>> _testServiceOverrides = [];
 
@@ -33,9 +33,9 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
         return mock;
     }
 
-    private static Mock<IFileImportStatusStore> CreateDefaultFileImportStatusStoreMock()
+    private static Mock<IFileImportStore> CreateDefaultFileImportStoreMock()
     {
-        var mock = new Mock<IFileImportStatusStore>();
+        var mock = new Mock<IFileImportStore>();
         mock.Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1L);
         mock.Setup(x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()))
@@ -79,15 +79,13 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
         OverrideHttpClientHandler(clientName, handler);
     }
 
-
     private void OverrideFileImportStatusStore(IServiceCollection services)
     {
         services.RemoveAll<IS3FileMetaDataService>();
         services.AddSingleton(S3FileMetaDataServiceMock.Object);
-        services.RemoveAll<IFileImportStatusStore>();
-        services.AddSingleton(FileImportStatusStoreMock.Object);
+        services.RemoveAll<IFileImportStore>();
+        services.AddSingleton(FileImportStoreMock.Object);
     }
-
 
     private void OverrideAmazonS3(IServiceCollection services)
     {

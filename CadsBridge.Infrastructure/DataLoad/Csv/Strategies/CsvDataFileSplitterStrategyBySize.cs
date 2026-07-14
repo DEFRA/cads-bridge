@@ -19,7 +19,7 @@ public class CsvDataFileSplitterStrategyBySize(
 {
     public SplitType SplitType => SplitType.BySize;
 
-    public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
+    public async Task<long> Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (!config.SplitValue.HasValue)
         {
@@ -46,6 +46,7 @@ public class CsvDataFileSplitterStrategyBySize(
 
         var chunkNumber = 1;
         var bytesInChunk = 0;
+        long totalBytesProcessed = 0;
         var chunkStream = new MemoryStream();
         var chunkWriter = new StreamWriter(chunkStream, Encoding.UTF8);
 
@@ -57,7 +58,7 @@ public class CsvDataFileSplitterStrategyBySize(
             {
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
-                return;
+                return 0;
             }
 
             var lineBytes = Encoding.UTF8.GetBytes(line + Environment.NewLine);
@@ -75,6 +76,7 @@ public class CsvDataFileSplitterStrategyBySize(
 
                 chunkStream = new MemoryStream();
                 chunkWriter = new StreamWriter(chunkStream, Encoding.UTF8);
+                totalBytesProcessed += bytesInChunk;
                 bytesInChunk = 0;
             }
 
@@ -86,11 +88,14 @@ public class CsvDataFileSplitterStrategyBySize(
         // Upload the last chunk if it has data
         if (bytesInChunk > 0)
         {
+            totalBytesProcessed += bytesInChunk;
             await s3.UploadChunkAsync(
                 internalS3Info.BucketName,
                 job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                 chunkStream,
                 cancellationToken: cancellationToken);
         }
+
+        return totalBytesProcessed;
     }
 }

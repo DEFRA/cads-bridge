@@ -1,7 +1,7 @@
 using System.Net;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
-using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;

@@ -19,7 +19,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
     private readonly Channel<CsvDataFileImportJob> _channel = Channel.CreateUnbounded<CsvDataFileImportJob>();
     private readonly Mock<ILogger<CsvDataFileImportBackgroundService>> _logger = new();
     private readonly Mock<IImportJobProgressStore> _progress = new();
-    private readonly Mock<IFileImportStatusStore> _fileImportStatusStore = new();
+    private readonly Mock<IFileImportStore> _fileImportStore = new();
     private readonly Mock<ISplitMessageProducer> _splitProducer = new();
     private readonly Mock<IS3FileMetaDataService> _s3FileMetaDataService = new();
     private readonly Mock<IS3CopyService> _copy = new();
@@ -38,11 +38,11 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _s3FileMetaDataService.Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(DefaultRecordCount);
 
-        _fileImportStatusStore.Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .ReturnsAsync(DefaultFileImportStatusId);
-        _fileImportStatusStore.Setup(x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
-        _fileImportStatusStore.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
 
         var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
@@ -50,10 +50,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _sut = new CsvDataFileImportBackgroundService(
             _channel,
             _logger.Object,
-            _progress.Object,
-            _fileImportStatusStore.Object,
+            _fileImportStore.Object,
             _splitProducer.Object,
-            _s3FileMetaDataService.Object,
             _copy.Object,
             config);
     }
@@ -67,8 +65,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         await Write(job);
 
         await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.SourceKey), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.Initiate(job.SourceKey, DefaultRecordCount, It.IsAny<CancellationToken>()), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkInProgress(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.Initiate(job.SourceKey, DefaultRecordCount, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.MarkInProgress(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
         await _copy.AsyncVerify(x => x.ExecAsync(job, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -82,7 +80,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.SourceKey), Times.Once);
         _progress.Verify(x => x.MarkFailed(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -95,7 +93,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         var expected = new CsvDataFileSplitJob(
             JobId: job.JobId,
             SourceKey: expectedTargetKey,
-            FileImportStatusId: DefaultFileImportStatusId);
+            FileImportId: DefaultFileImportStatusId);
 
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
@@ -120,7 +118,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         await _progress.AsyncVerify(
             x => x.MarkFailed(job.JobId, job.SourceKey, "Unknown error during copy"),
             Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.MarkFailed(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
 
         _progress.Verify(x => x.MarkSucceeded(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _splitProducer.Verify(x => x.SendAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -140,7 +138,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.SourceKey), Times.Once);
         await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, ex.Message), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
+        await  _fileImportStore.AsyncVerify(x => x.MarkFailed(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(
@@ -167,7 +165,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         await Write(job);
 
         await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, ex.Message), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.MarkFailed(DefaultFileImportStatusId, It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(

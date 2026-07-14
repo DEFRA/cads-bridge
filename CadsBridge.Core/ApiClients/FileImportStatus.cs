@@ -1,4 +1,4 @@
-namespace CadsBridge.Infrastructure.ApiClients.DTOs;
+namespace CadsBridge.Core.ApiClients;
 
 public enum FileImportStatus : short
 {

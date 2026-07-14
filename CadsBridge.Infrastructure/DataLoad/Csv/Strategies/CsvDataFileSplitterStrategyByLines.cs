@@ -19,7 +19,7 @@ public class CsvDataFileSplitterStrategyByLines(
 {
     public SplitType SplitType => SplitType.ByLines;
 
-    public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
+    public async Task<long> Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (!config.SplitValue.HasValue)
         {
@@ -40,14 +40,14 @@ public class CsvDataFileSplitterStrategyByLines(
         var header = await reader.ReadLineAsync(cancellationToken);
         if (header is null)
         {
-            return;
+            return 0;
         }
 
         // read the column definitions, should be the second line in the file.
         var columns = await reader.ReadLineAsync(cancellationToken);
         if (columns is null)
         {
-            return;
+            return 0;
         }
 
         // Process the column definitions to remove the first column
@@ -56,6 +56,7 @@ public class CsvDataFileSplitterStrategyByLines(
 
         var chunkNumber = 1;
         var lineCount = 0;
+        var totalLinesProcessed = 0;
         var chunkBuilder = new StringBuilder();
 
         chunkBuilder.AppendLine(columns);
@@ -66,7 +67,7 @@ public class CsvDataFileSplitterStrategyByLines(
             {
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
-                return;
+                return 0;
             }
 
             chunkBuilder.AppendLine(line);
@@ -81,6 +82,7 @@ public class CsvDataFileSplitterStrategyByLines(
                     cancellationToken: cancellationToken);
 
                 chunkNumber++;
+                totalLinesProcessed += lineCount;
                 lineCount = 0;
                 chunkBuilder.Clear();
 
@@ -90,11 +92,14 @@ public class CsvDataFileSplitterStrategyByLines(
 
         if (lineCount > 0)
         {
+            totalLinesProcessed += lineCount;
+
             await s3.UploadChunkAsync(
                 internalS3Info.BucketName,
                 job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                 chunkBuilder.ToString(),
                 cancellationToken: cancellationToken);
         }
+        return totalLinesProcessed;
     }
 }
