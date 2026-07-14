@@ -3,10 +3,10 @@ using CadsBridge.Setup;
 using CadsBridge.Utils.Http;
 using CadsBridge.Utils.Logging;
 using FluentValidation;
-using Serilog;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Serilog;
+using System.Diagnostics.CodeAnalysis;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();

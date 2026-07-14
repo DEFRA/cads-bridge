@@ -13,7 +13,7 @@ using Moq;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace CadsBridge.Tests.Component.EndPoints;
+namespace CadsBridge.Tests.Component.Endpoints;
 
 public class CsvDataFileImportEndpointTests
 {

@@ -73,12 +73,6 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
                 .ConfigurePrimaryHttpMessageHandler(() => handler));
     }
 
-    public void OverrideApiClientHealthHandler(string apiClientName, HttpMessageHandler handler)
-    {
-        var clientName = CadsBridge.Infrastructure.ApiClients.Setup.ServiceCollectionExtensions.HealthClientName(apiClientName);
-        OverrideHttpClientHandler(clientName, handler);
-    }
-
     private void OverrideFileImportStatusStore(IServiceCollection services)
     {
         services.RemoveAll<IS3FileMetaDataService>();
