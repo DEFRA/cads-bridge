@@ -10,7 +10,9 @@ public static class ServiceCollectionExtensions
 {
     public static void AddBackgroundServiceScheduling(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddQuartzJobs(configuration);
+        services
+            .AddQuartzJobs(configuration)
+            .AddJobs();
     }
 
     private static IServiceCollection AddQuartzJobs(this IServiceCollection services, IConfiguration configuration)
@@ -56,7 +58,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static void AddJobs<T>(this IServiceCollection services)
+    private static void AddJobs(this IServiceCollection services)
     {
         services.AddScoped<BulkScanJob>();
         services.AddScoped<DeltaScanJob>();
