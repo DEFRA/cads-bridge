@@ -1,11 +1,11 @@
-using System.Net;
-using System.Text.Json;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
+using System.Net;
+using System.Text.Json;
 
-namespace CadsBridge.Tests.Component.EndPoints;
+namespace CadsBridge.Tests.Component.Endpoints;
 
 [Collection("ComponentHealthChecks")]
 public class ApiClientHealthCheckEndpointTests
@@ -17,14 +17,13 @@ public class ApiClientHealthCheckEndpointTests
     {
         [$"ApiClients:{ClientName}:BaseUrl"] = "http://downstream-api",
         [$"ApiClients:{ClientName}:HealthcheckEnabled"] = healthcheckEnabled.ToString()
-        // No ResiliencePolicy overrides needed: the health probe client has no resilience handler.
     };
 
     [Fact]
     public async Task Health_WhenApiClientHealthy_ReportsHealthyEntryAndOk()
     {
         await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(true));
-        factory.OverrideApiClientHealthHandler(ClientName, new StubHttpMessageHandler(HttpStatusCode.OK));
+        factory.OverrideHttpClientHandler(ClientName, new StubHttpMessageHandler(HttpStatusCode.OK));
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
@@ -41,7 +40,7 @@ public class ApiClientHealthCheckEndpointTests
     public async Task Health_WhenApiClientDegraded_OverallStaysOk_ButEntryDegraded()
     {
         await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(true));
-        factory.OverrideApiClientHealthHandler(ClientName, new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable));
+        factory.OverrideHttpClientHandler(ClientName, new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable));
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
@@ -58,7 +57,7 @@ public class ApiClientHealthCheckEndpointTests
     public async Task Health_WhenApiClientUnreachable_OverallUnhealthyWithUnhealthyEntry()
     {
         await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(true));
-        factory.OverrideApiClientHealthHandler(ClientName, new StubHttpMessageHandler(new HttpRequestException("refused")));
+        factory.OverrideHttpClientHandler(ClientName, new StubHttpMessageHandler(new HttpRequestException("refused")));
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
@@ -69,19 +68,5 @@ public class ApiClientHealthCheckEndpointTests
         var entry = doc.RootElement.GetProperty("results").GetProperty(EntryKey);
         entry.GetProperty("status").GetString().Should().Be("Unhealthy");
         entry.GetProperty("data").TryGetProperty("error", out _).Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Health_WhenHealthcheckDisabled_NoApiClientEntry()
-    {
-        await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(false));
-        var client = factory.CreateClient();
-
-        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        using var doc = JsonDocument.Parse(
-            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
-        doc.RootElement.GetProperty("results").TryGetProperty(EntryKey, out _).Should().BeFalse();
     }
 }

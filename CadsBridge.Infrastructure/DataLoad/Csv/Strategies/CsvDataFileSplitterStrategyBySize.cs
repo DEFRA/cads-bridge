@@ -1,4 +1,3 @@
-using System.Text;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
@@ -8,6 +7,7 @@ using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 

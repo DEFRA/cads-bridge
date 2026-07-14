@@ -1,67 +1,78 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
 using Microsoft.Extensions.Logging;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
-public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, ILogger<FileImportStatusApiService> logger) : IFileImportStatusApiService
+public class FileImportStatusApiService(
+    IHttpClientFactory httpClientFactory,
+    ILogger<FileImportStatusApiService> logger)
+    : IFileImportStatusApiService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
-    private const string baseApiUrl = "api/v1/systemadmin/fileimports";
-    private const string getByFileNameEndpoint = "search";
-    private const string markReset = "reset";
+    private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
+    private const string GetByFileNameEndpoint = "search";
+    private const string MarkResetEndpoint = "reset";
 
-    private static readonly Dictionary<FileImportStatus, string> FileImportStatusUrlMap =
-        new Dictionary<FileImportStatus, string>
+    private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
+        new()
         {
             { FileImportStatus.Importing, "importing" },
             { FileImportStatus.Completed, "complete" },
             { FileImportStatus.Failed, "failed" }
         };
 
-    public async Task<FileImportStatusDto?> GetByFileName(string fileName, CancellationToken cancellationToken)
+    public async Task<FileImportStatusDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {
-        var endpoint = $"{baseApiUrl}/{getByFileNameEndpoint}?fileName={fileName}";
-        var context = $"Getting file import status for '{fileName}'";
+        var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
+        var context = $"Getting file import status for '{objectKey}'";
         return await GetRequestToApiAsync<FileImportStatusDto>(endpoint, context, cancellationToken);
     }
 
-    public async Task<long> Create(string s3Key, long recordCount, CancellationToken cancellationToken)
+    public async Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
     {
-        var context = $"Creating file import for '{s3Key}' with {recordCount} records";
+        var context = $"Creating file import for '{objectKey}' with {totalRowsToProcess} records";
         var body = new CreateFileImportRequest
         {
-            FileName = s3Key,
-            TotalRowsToProcess = recordCount
+            FileName = objectKey,
+            TotalRowsToProcess = totalRowsToProcess
         };
 
-        var response = await PostRequestToApiAsync(baseApiUrl, body, context, cancellationToken);
+        var response = await PostRequestToApiAsync(BaseApiUrl, body, context, cancellationToken);
 
         var dto = await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
         return dto.Id;
     }
 
+    public async Task Update(long id, UpdateFileImportRequest request, CancellationToken cancellationToken)
+    {
+        var context = $"Updating file import for id: '{id}'";
+        var endPoint = $"{BaseApiUrl}/{id}";
+        var response = await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
+        await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
+    }
+
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
     {
-        if (!FileImportStatusUrlMap.TryGetValue(status, out var statusSegment))
+        if (!s_fileImportStatusUrlMap.TryGetValue(status, out var statusSegment))
         {
             throw new DomainException($"No URL mapping exists for file import status '{status}'.");
         }
 
-        var endPoint = $"{baseApiUrl}/{id}/{statusSegment}";
+        var endPoint = $"{BaseApiUrl}/{id}/{statusSegment}";
         var context = $"Marking status of file import with id {id} as {status}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
     }
 
     public async Task MarkReset(long id, CancellationToken cancellationToken)
     {
-        var endPoint = $"{baseApiUrl}/{id}/{markReset}";
+        var endPoint = $"{BaseApiUrl}/{id}/{MarkResetEndpoint}";
         var context = $"Resetting file import with id {id}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
     }
@@ -75,6 +86,16 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
     private async Task<HttpResponseMessage> PostRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
     {
         var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("API call succeeded: {Context}", context);
+        }
+        return response;
+    }
+
+    private async Task<HttpResponseMessage> PutRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, ct), context, cancellationToken);
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("API call succeeded: {Context}", context);

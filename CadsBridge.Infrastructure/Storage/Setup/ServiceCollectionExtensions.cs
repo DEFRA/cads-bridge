@@ -47,8 +47,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddAmazonS3Core(
         this IServiceCollection services,
-        IConfiguration configuration,
-        IHealthChecksBuilder healthChecksBuilder)
+        IConfiguration configuration)
     {
         var amazonConfig = GetDefaultAmazonS3Config(configuration);
         services.AddSingleton(amazonConfig);
@@ -58,8 +57,11 @@ public static class ServiceCollectionExtensions
 
         var storageConfig = configuration.GetSection(StorageConfigurationSection.StorageSectionName)
             .Get<StorageConfiguration>();
+
         if (storageConfig?.Internal.HealthcheckEnabled == true || storageConfig?.External.HealthcheckEnabled == true)
         {
+            var healthChecksBuilder = services.AddHealthChecks();
+
             healthChecksBuilder.Add(new HealthCheckRegistration(
                 "aws_s3",
                 sp => sp.GetRequiredService<AwsS3HealthCheck>(),
