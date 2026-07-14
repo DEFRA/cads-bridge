@@ -3,38 +3,26 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Storage.Abstractions;
-using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
-public class S3FileMetaDataService : IS3FileMetaDataService
+public class S3FileMetaDataService<TClient>(
+    IS3ClientFactory s3ClientFactory,
+    ICsvParser csvParser,
+    ILogger<S3FileMetaDataService<TClient>> logger) : IS3FileMetaDataService
+    where TClient : IStorageClient, new()
 {
     // 1 KB buffer for reading the trailer line
     private const int TailReadBytes = 1024;
-    private readonly IAmazonS3? _s3;
-    private readonly string _bucket;
-    private readonly ICsvParser _csvParser;
-    private readonly ILogger<S3FileMetaDataService> _logger;
-
-    public S3FileMetaDataService(
-        IS3ClientFactory s3ClientFactory,
-        ICsvParser csvParser,
-        ILogger<S3FileMetaDataService> logger)
-    {
-        _csvParser = csvParser;
-        _logger = logger;
-        var clientInfo = s3ClientFactory.GetClientInfo<InternalStorageClient>();
-        _s3 = clientInfo.Client;
-        _bucket = clientInfo.BucketName;
-    }
+    private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
+    private readonly ICsvParser _csvParser = csvParser;
+    private readonly ILogger<S3FileMetaDataService<TClient>> _logger = logger;
 
     public async Task<long> GetRecordCountAsync(string s3Key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(s3Key);
-
-
 
         // HEAD the object to get its size
         var fileSize = await GetFileSize(s3Key, cancellationToken);
@@ -64,35 +52,38 @@ public class S3FileMetaDataService : IS3FileMetaDataService
 
     private async Task<long> GetFileSize(string s3Key, CancellationToken cancellationToken)
     {
+        var clientInfo = _s3ClientFactory.GetClientInfo<TClient>();
+
         try
         {
-            var meta = await _s3!.GetObjectMetadataAsync(_bucket, s3Key, cancellationToken);
+            var meta = await clientInfo.Client!.GetObjectMetadataAsync(clientInfo.BucketName, s3Key, cancellationToken);
             return meta.ContentLength;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            throw new NotFoundException($"S3 object '{s3Key}' was not found in bucket '{_bucket}'.", ex);
+            throw new NotFoundException($"S3 object '{s3Key}' was not found in bucket '{clientInfo.BucketName}'.", ex);
         }
     }
 
     private async Task<string> GetLastLine(string s3Key, long fileSize, CancellationToken cancellationToken)
     {
         var rangeStart = Math.Max(0L, fileSize - TailReadBytes);
+        var clientInfo = _s3ClientFactory.GetClientInfo<TClient>();
 
         var getRequest = new GetObjectRequest
         {
-            BucketName = _bucket,
+            BucketName = clientInfo.BucketName,
             Key = s3Key,
             ByteRange = new ByteRange(rangeStart, fileSize - 1)
         };
         try
         {
-            using var response = await _s3!.GetObjectAsync(getRequest, cancellationToken);
+            using var response = await clientInfo.Client!.GetObjectAsync(getRequest, cancellationToken);
             return ExtractLastLine(response.ResponseStream);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            throw new NotFoundException($"S3 object '{s3Key}' was not found in bucket '{_bucket}'.", ex);
+            throw new NotFoundException($"S3 object '{s3Key}' was not found in bucket '{clientInfo.BucketName}'.", ex);
         }
     }
 

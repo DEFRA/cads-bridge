@@ -22,7 +22,7 @@ public class S3FileMetaDataServiceTests
         {
             var stream = ToStream("line1\nline2\nT|file.csv|13092020 17:59:11|999");
 
-            S3FileMetaDataService.ExtractLastLine(stream)
+            S3FileMetaDataService<ExternalStorageClient>.ExtractLastLine(stream)
                 .Should().Be("T|file.csv|13092020 17:59:11|999");
         }
 
@@ -31,7 +31,7 @@ public class S3FileMetaDataServiceTests
         {
             var stream = ToStream("line1\r\nline2\r\nT|file.csv|13092020 17:59:11|999");
 
-            S3FileMetaDataService.ExtractLastLine(stream)
+            S3FileMetaDataService<ExternalStorageClient>.ExtractLastLine(stream)
                 .Should().Be("T|file.csv|13092020 17:59:11|999");
         }
 
@@ -40,7 +40,7 @@ public class S3FileMetaDataServiceTests
         {
             var stream = ToStream("line1\nT|file.csv|13092020 17:59:11|999\n");
 
-            S3FileMetaDataService.ExtractLastLine(stream)
+            S3FileMetaDataService<ExternalStorageClient>.ExtractLastLine(stream)
                 .Should().Be("T|file.csv|13092020 17:59:11|999");
         }
 
@@ -49,7 +49,7 @@ public class S3FileMetaDataServiceTests
         {
             var stream = ToStream("line1\r\nT|file.csv|13092020 17:59:11|999\r\n");
 
-            S3FileMetaDataService.ExtractLastLine(stream)
+            S3FileMetaDataService<ExternalStorageClient>.ExtractLastLine(stream)
                 .Should().Be("T|file.csv|13092020 17:59:11|999");
         }
 
@@ -58,7 +58,7 @@ public class S3FileMetaDataServiceTests
         {
             var stream = ToStream("T|file.csv|13092020 17:59:11|42");
 
-            S3FileMetaDataService.ExtractLastLine(stream)
+            S3FileMetaDataService<ExternalStorageClient>.ExtractLastLine(stream)
                 .Should().Be("T|file.csv|13092020 17:59:11|42");
         }
 
@@ -67,7 +67,7 @@ public class S3FileMetaDataServiceTests
         {
             var stream = ToStream("\n\r\n\n");
 
-            S3FileMetaDataService.ExtractLastLine(stream)
+            S3FileMetaDataService<ExternalStorageClient>.ExtractLastLine(stream)
                 .Should().BeEmpty();
         }
 
@@ -104,7 +104,7 @@ public class S3FileMetaDataServiceTests
         public void ParseTrailerLine_ReturnsRecordCount_WhenLineIsValid()
         {
             var parts = new[] { "T", "file.csv", "13092020 17:59:11", "1234567" };
-            S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv")
+            S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(1234567L);
         }
 
@@ -112,7 +112,7 @@ public class S3FileMetaDataServiceTests
         public void ParseTrailerLine_ReturnsZero_WhenRecordCountIsZero()
         {
             var parts = new[] { "T", "file.csv", "13092020 17:59:11", "0" };
-            S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv")
+            S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(0L);
         }
 
@@ -120,7 +120,7 @@ public class S3FileMetaDataServiceTests
         public void ParseTrailerLine_Throws_WhenFirstFieldIsNotT()
         {
             var parts = new[] { "H", "file.csv", "13092020 17:59:11", "1234567" };
-            var act = () => S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv");
+            var act = () => S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*does not begin with 'T'*");
         }
@@ -129,7 +129,7 @@ public class S3FileMetaDataServiceTests
         public void ParseTrailerLine_Throws_WhenFileNameDoesNotMatch()
         {
             var parts = new[] { "T", "other.csv", "13092020 17:59:11", "1234567" };
-            var act = () => S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv");
+            var act = () => S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*does not match expected*");
         }
@@ -140,7 +140,7 @@ public class S3FileMetaDataServiceTests
         [InlineData("T", "file.csv", "13092020 17:59:11", "")]
         public void ParseTrailerLine_Throws_WhenRecordCountIsInvalid(params string[] parts)
         {
-            var act = () => S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv");
+            var act = () => S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv");
 
             act.Should().Throw<DomainException>().WithMessage("*not a valid non-negative integer*");
         }
@@ -149,7 +149,7 @@ public class S3FileMetaDataServiceTests
         public void ParseTrailerLine_IsCaseInsensitive_ForFileName()
         {
             var parts = new[] { "T", "FILE.CSV", "13092020 17:59:11", "50" };
-            S3FileMetaDataService.ParseTrailerLine(parts, "imports/file.csv")
+            S3FileMetaDataService<ExternalStorageClient>.ParseTrailerLine(parts, "imports/file.csv")
                 .Should().Be(50L);
         }
     }
@@ -266,7 +266,7 @@ public class S3FileMetaDataServiceTests
             await act.Should().ThrowAsync<NotFoundException>();
         }
 
-        private static S3FileMetaDataService CreateSut(long fileSize, string tailContent)
+        private static S3FileMetaDataService<ExternalStorageClient> CreateSut(long fileSize, string tailContent)
         {
             var s3 = new Mock<IAmazonS3>();
 
@@ -282,16 +282,16 @@ public class S3FileMetaDataServiceTests
             return CreateSut(s3.Object);
         }
 
-        private static S3FileMetaDataService CreateSut(IAmazonS3 s3Client)
+        private static S3FileMetaDataService<ExternalStorageClient> CreateSut(IAmazonS3 s3Client)
         {
             var factory = new Mock<IS3ClientFactory>();
-            factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+            factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(s3Client, Bucket));
 
-            return new S3FileMetaDataService(
+            return new S3FileMetaDataService<ExternalStorageClient>(
                 factory.Object,
                 new CsvParser(),
-                Mock.Of<ILogger<S3FileMetaDataService>>());
+                Mock.Of<ILogger<S3FileMetaDataService<ExternalStorageClient>>>());
         }
     }
 }

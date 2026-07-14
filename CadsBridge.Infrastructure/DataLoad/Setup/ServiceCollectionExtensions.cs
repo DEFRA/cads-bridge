@@ -9,6 +9,7 @@ using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
 using CadsBridge.Infrastructure.DataLoad.Services;
+using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -44,7 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICsvDataFileSplitterStrategy, CsvDataFileSplitterStrategyBySize>();
 
         services.AddTransient<ICsvParser, CsvParser>();
-        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService>();
+        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService<ExternalStorageClient>>();
 
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 
