@@ -114,8 +114,8 @@ public abstract class WebAppFactoryBase<TStart>(
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
         Environment.SetEnvironmentVariable("AWS__ServiceURL", "http://cads-bridge-localstack-emulator:4566");
-        Environment.SetEnvironmentVariable("Storage__Internal__BucketName", "cads-bridge-internal-bucket");
-        Environment.SetEnvironmentVariable("Storage__External__BucketName", "cads-bridge-external-bucket");
+        Environment.SetEnvironmentVariable("Storage__Internal__BucketName", TestS3Constants.TestCadsBridgeInternalBucketName);
+        Environment.SetEnvironmentVariable("Storage__External__BucketName", TestS3Constants.TestCadsBridgeExternalBucketName);
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__QueueUrl", TestSqsConstants.TestQueueUrl);
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", TestSqsConstants.TestQueueDlqUrl);
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled", "true");

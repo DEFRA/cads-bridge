@@ -23,6 +23,7 @@ services:
       - Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled=true
       - IMB_S3_ACCESS_KEY=test
       - IMB_S3_ACCESS_SECRET=test
+      - DataLoad__Salt=test-salt
     ports:
       - "5550"
     volumes:

@@ -13,18 +13,19 @@ using System.Net.Http.Json;
 namespace CadsBridge.Tests.Integration.EndPoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
-public class CsvDataFileImportEndpointTests
+public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixture)
 {
+    private const string Salt = "test-salt";
+    private const string TestDerivedValue = "2026-07-10_MYTABLE_BATCH1_FULL_TEST_CADS_CTSM";
+    private const string FileNameWithoutFileType = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000";
+
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
     {
-        await using var fixture = new ApiContainerFixture();
-        await fixture.InitializeAsync();
-
-        var jobId = await TriggerImportJob(fixture);
+        var jobId = await TriggerImportJob(apiContainerFixture);
         jobId.Should().NotBeNullOrEmpty();
 
-        var status = await GetImportJobStatus(fixture, jobId);
+        var status = await GetImportJobStatus(apiContainerFixture, jobId);
 
         status!.JobId.Should().Be(jobId);
         status.TotalFiles.Should().Be(0);
@@ -36,13 +37,8 @@ public class CsvDataFileImportEndpointTests
     public async Task ImportFile_WithOneFile_DecryptsAndSplitsFile()
     {
         // Arrange
-        const string fileNameWithoutFileType = "test-file";
-        const string incomingTestFileCsv = "incoming/test-file.csv";
-        const string importedTestFileCsv = "import/test-file.csv";
-        const string password = "pwd1";
-        const string salt = "adfsb8123";
-        await using var fixture = new ApiContainerFixture();
-        await fixture.InitializeAsync();
+        var incomingObjectKey = $"incoming/{FileNameWithoutFileType}.csv";
+        var importedObjectKey = $"import/{FileNameWithoutFileType}.csv";
 
         var fileContents = string.Join(
             Environment.NewLine,
@@ -50,57 +46,58 @@ public class CsvDataFileImportEndpointTests
             "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
             "D|1|One",
             "D|2|Two",
-            "D|3|Three") + Environment.NewLine;
+            "D|3|Three",
+            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|3") + Environment.NewLine;
 
-        using var encryptedStream = await fileContents.Encrypt(password, salt, TestContext.Current.CancellationToken);
-        await fixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
+        using var encryptedStream = await fileContents.Encrypt(TestDerivedValue, Salt, TestContext.Current.CancellationToken);
+        await apiContainerFixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
         {
             BucketName = TestS3Constants.TestCadsBridgeExternalBucketName,
-            Key = incomingTestFileCsv,
+            Key = incomingObjectKey,
             InputStream = encryptedStream
         }, TestContext.Current.CancellationToken);
 
         // Act
-        var jobId = await TriggerImportJob(fixture, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: incomingTestFileCsv)
+        var jobId = await TriggerImportJob(apiContainerFixture, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(incomingObjectKey)
         ]));
 
         // Assert
         await AsyncAssert.WaitForAssertion(async () =>
             {
-                var status = await GetImportJobStatus(fixture, jobId);
+                var status = await GetImportJobStatus(apiContainerFixture, jobId);
                 status!.JobId.Should().Be(jobId);
                 status.TotalFiles.Should().Be(1);
                 status.Files.First().Status.Should().Be(JobStatus.Succeeded);
             },
             backOffMilliSeconds: 500,
-            attempts: 20);
+            attempts: 10);
 
         await AsyncAssert.WaitForAssertion(async () =>
             {
-                var listObjectsV2Response = await fixture.LocalStackFixture.S3Client.ListObjectsV2Async(
+                var listObjectsV2Response = await apiContainerFixture.LocalStackFixture.S3Client.ListObjectsV2Async(
                     new ListObjectsV2Request()
                     {
                         BucketName = TestS3Constants.TestCadsBridgeInternalBucketName,
-                        Prefix = $"import/{fileNameWithoutFileType}"
+                        Prefix = $"import/{FileNameWithoutFileType}"
                     },
                     TestContext.Current.CancellationToken);
                 listObjectsV2Response.S3Objects.Should().HaveCount(2);
-                listObjectsV2Response.S3Objects[0].Key.Should().Be($"import/{fileNameWithoutFileType}/{fileNameWithoutFileType}-part-0001.csv");
-                listObjectsV2Response.S3Objects[1].Key.Should().Be($"import/{fileNameWithoutFileType}/{fileNameWithoutFileType}-part-0002.csv");
+                listObjectsV2Response.S3Objects[0].Key.Should().Be($"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv");
+                listObjectsV2Response.S3Objects[1].Key.Should().Be($"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv");
             });
 
         // The original imported file should always remain alongside the split parts.
         await AsyncAssert.WaitForAssertion(async () =>
             {
-                var importedFile = await fixture.LocalStackFixture.S3Client.ListObjectsV2Async(
+                var importedFile = await apiContainerFixture.LocalStackFixture.S3Client.ListObjectsV2Async(
                     new ListObjectsV2Request()
                     {
                         BucketName = TestS3Constants.TestCadsBridgeInternalBucketName,
-                        Prefix = importedTestFileCsv
+                        Prefix = "import"
                     },
                     TestContext.Current.CancellationToken);
-                importedFile.S3Objects.Should().ContainSingle(o => o.Key == importedTestFileCsv);
+                importedFile.S3Objects.Should().ContainSingle(o => o.Key == importedObjectKey);
             });
     }
 
@@ -111,18 +108,17 @@ public class CsvDataFileImportEndpointTests
         const string fileNameWithoutFileType = "test-file-none";
         const string incomingTestFileCsv = "incoming/test-file-none.csv";
         const string password = "pwd1";
-        const string salt = "adfsb8123";
-        await using var fixture = new ApiContainerFixture();
-        await fixture.InitializeAsync();
+        const string salt = "test-salt";
 
         var fileContents = string.Join(
             Environment.NewLine,
             "HEADER|ignored",
             "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
-            "D|1|One") + Environment.NewLine;
+            "D|1|One",
+            "T|test-file-none.csv|01012000 00:00:00|1") + Environment.NewLine;
 
         using var encryptedStream = await fileContents.Encrypt(password, salt, TestContext.Current.CancellationToken);
-        await fixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
+        await apiContainerFixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
         {
             BucketName = TestS3Constants.TestCadsBridgeExternalBucketName,
             Key = incomingTestFileCsv,
@@ -130,14 +126,14 @@ public class CsvDataFileImportEndpointTests
         }, TestContext.Current.CancellationToken);
 
         // Act
-        var jobId = await TriggerImportJob(fixture, new CsvDataFileImportRequest([
+        var jobId = await TriggerImportJob(apiContainerFixture, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: incomingTestFileCsv)
         ]));
 
         // Assert
         await AsyncAssert.WaitForAssertion(async () =>
             {
-                var status = await GetImportJobStatus(fixture, jobId);
+                var status = await GetImportJobStatus(apiContainerFixture, jobId);
                 status!.JobId.Should().Be(jobId);
                 status.TotalFiles.Should().Be(1);
                 status.Files.First().Status.Should().Be(JobStatus.Succeeded);
@@ -147,7 +143,7 @@ public class CsvDataFileImportEndpointTests
 
         await AsyncAssert.WaitForAssertion(async () =>
             {
-                var listObjectsV2Response = await fixture.LocalStackFixture.S3Client.ListObjectsV2Async(
+                var listObjectsV2Response = await apiContainerFixture.LocalStackFixture.S3Client.ListObjectsV2Async(
                     new ListObjectsV2Request()
                     {
                         BucketName = TestS3Constants.TestCadsBridgeInternalBucketName,

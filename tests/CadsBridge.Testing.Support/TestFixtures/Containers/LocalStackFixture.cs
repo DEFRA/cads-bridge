@@ -16,15 +16,16 @@ public class LocalStackFixture : IAsyncLifetime
     public IAmazonSQS SqsClient { get; private set; } = null!;
 
     public string? SqsEndpoint { get; private set; }
+    public string? CadsBridgeFifoQueueUrl { get; private set; }
+    public string? CadsBridgeFifoDeadLetterQueueUrl { get; private set; }
+
     public static string ServiceUrl => $"http://localhost:{LocalStackContainer!.GetMappedPublicPort(TestContainerConstants.LocalStackPort)}";
     public static string NetworkServiceUrl => $"http://{TestContainerConstants.NetworkAlias}:{TestContainerConstants.LocalStackPort}";
-    public static string CadsBridgeFifoQueueUrl => $"http://sqs.eu-west-2.localhost.localstack.cloud:{TestContainerConstants.LocalStackPort}/000000000000/{TestSqsConstants.CadsBridgeFifoQueueName}";
-    public static string CadsBridgeFifoDeadLetterQueueUrl => $"http://sqs.eu-west-2.localhost.localstack.cloud:{TestContainerConstants.LocalStackPort}/000000000000/{TestSqsConstants.CadsBridgeFifoDeadLetterQueueName}";
 
     public const string AwsAccessKeyId = "test";
     public const string AwsSecretAccessKey = "test";
-    public const string InternalBucketName = "cads-bridge-internal-bucket";
-    public const string ExternalBucketName = "cads-bridge-external-bucket";
+    public const string InternalBucketName = TestS3Constants.TestCadsBridgeInternalBucketName;
+    public const string ExternalBucketName = TestS3Constants.TestCadsBridgeExternalBucketName;
     public const string AwsRegion = TestAwsConstants.AwsRegion;
     private static Amazon.Runtime.BasicAWSCredentials GetBasicAWSCredentials => new(AwsAccessKeyId, AwsSecretAccessKey);
 
@@ -33,7 +34,7 @@ public class LocalStackFixture : IAsyncLifetime
         DockerNetworkHelper.EnsureNetworkExists(TestContainerConstants.NetworkName);
 
         LocalStackContainer = new LocalStackBuilder("localstack/localstack:3.0.2")
-            .WithEnvironment("SERVICES", "s3")
+            .WithEnvironment("SERVICES", "s3,sqs")
             .WithEnvironment("DEBUG", "1")
             .WithEnvironment("AWS_DEFAULT_REGION", AwsRegion)
             .WithEnvironment("AWS_ACCESS_KEY_ID", AwsAccessKeyId)
@@ -81,10 +82,8 @@ public class LocalStackFixture : IAsyncLifetime
 
         var cadsBridgeFifoQueueCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest { QueueName = TestSqsConstants.CadsBridgeFifoQueueName });
 
-        if (CadsBridgeFifoDeadLetterQueueUrl != cadsBridgeFifoDlqCreated.QueueUrl || CadsBridgeFifoQueueUrl != cadsBridgeFifoQueueCreated.QueueUrl)
-        {
-            throw new ApplicationException("Localstack queues have unexpected urls");
-        }
+        CadsBridgeFifoQueueUrl = cadsBridgeFifoQueueCreated.QueueUrl;
+        CadsBridgeFifoDeadLetterQueueUrl = cadsBridgeFifoDlqCreated.QueueUrl;
 
         var redrivePolicy = $"{{\"deadLetterTargetArn\":\"{cadsBridgeFifoDlqAttr.QueueARN}\",\"maxReceiveCount\":\"3\"}}";
         await SqsClient.SetQueueAttributesAsync(new SetQueueAttributesRequest

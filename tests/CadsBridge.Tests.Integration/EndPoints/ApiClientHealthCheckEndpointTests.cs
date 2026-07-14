@@ -17,7 +17,7 @@ public class ApiClientHealthCheckEndpointTests
         // Point the API client at LocalStack (already on the shared docker network) so the
         // dedicated health probe reaches a reachable endpoint and the full wiring is exercised:
         // env config -> AddApiClients -> health-check registration -> /health JSON output.
-        await using var fixture = new ApiContainerFixture(new Dictionary<string, string>
+        await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
             [$"ApiClients__{ClientName}__BaseUrl"] = LocalStackFixture.NetworkServiceUrl,
             [$"ApiClients__{ClientName}__HealthcheckEnabled"] = "true"
@@ -38,7 +38,7 @@ public class ApiClientHealthCheckEndpointTests
     [Fact]
     public async Task Health_WithApiClientHealthcheckDisabled_DoesNotRegisterClientEntry()
     {
-        await using var fixture = new ApiContainerFixture(new Dictionary<string, string>
+        await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
             [$"ApiClients__{ClientName}__BaseUrl"] = LocalStackFixture.NetworkServiceUrl,
             [$"ApiClients__{ClientName}__HealthcheckEnabled"] = "false"
