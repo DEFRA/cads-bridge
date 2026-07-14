@@ -2,6 +2,7 @@ using CadsBridge.Application.Setup;
 using CadsBridge.Infrastructure.Configuration.Aws;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Setup;
+using CadsBridge.Worker.Setup;
 
 namespace CadsBridge.Setup;
 
@@ -25,6 +26,8 @@ public static class ServiceCollectionExtensions
 
         var healthChecksBuilder = services.AddHealthChecks();
         services.AddInfrastructureLayer(configuration, healthChecksBuilder);
+
+        services.AddBackgroundServiceScheduling(configuration);
 
         services.AddApplicationLayer();
     }
