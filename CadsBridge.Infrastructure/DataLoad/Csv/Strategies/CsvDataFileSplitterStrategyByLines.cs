@@ -19,7 +19,7 @@ public class CsvDataFileSplitterStrategyByLines(
 {
     public SplitType SplitType => SplitType.ByLines;
 
-    public async Task<long> Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
+    public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (!config.SplitValue.HasValue)
         {

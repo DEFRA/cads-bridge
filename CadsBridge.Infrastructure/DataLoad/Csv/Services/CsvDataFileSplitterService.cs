@@ -39,14 +39,14 @@ public class CsvDataFileSplitterService(
                         job.SourceKey,
                         attempt);
 
-                await csvDataFileSplitterStrategy.Process(job, cancellationToken);
+                var result = await csvDataFileSplitterStrategy.ProcessAsync(job, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 file split complete: {SourceKey}",
                         job.SourceKey);
 
-                return 1;
+                return result;
             }
             catch (Exception ex) when (attempt < config.MaxRetryAttempts)
             {
