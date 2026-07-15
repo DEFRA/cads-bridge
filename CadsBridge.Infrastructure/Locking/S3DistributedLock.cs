@@ -52,7 +52,10 @@ public sealed class S3DistributedLock(
                 // Atomic create-if-absent: succeeds only when no object exists for this key.
                 var etag = await ConditionalPutAsync(client, bucket, key, entry, ifNoneMatch: "*", ifMatch: null, cancellationToken);
                 _heldLocks[lockName] = new HeldLock(entry.Owner, etag);
-                logger.LogDebug("Acquired distributed lock {LockName}", lockName);
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("Acquired distributed lock {LockName}", lockName);
+                }
                 return true;
             }
             catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
@@ -67,7 +70,11 @@ public sealed class S3DistributedLock(
 
                 if (existing.Value.Entry.ExpiresAtUtc > now)
                 {
-                    logger.LogDebug("Distributed lock {LockName} is held and valid until {Expiry}", lockName, existing.Value.Entry.ExpiresAtUtc);
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug("Distributed lock {LockName} is held and valid until {Expiry}", lockName,
+                            existing.Value.Entry.ExpiresAtUtc);
+                    }
                     return false;
                 }
 
@@ -80,8 +87,11 @@ public sealed class S3DistributedLock(
                 return false;
             }
         }
-
-        logger.LogDebug("Failed to acquire distributed lock {LockName} after {Attempts} attempts", lockName, options.MaxAcquireAttempts);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Failed to acquire distributed lock {LockName} after {Attempts} attempts", lockName,
+                options.MaxAcquireAttempts);
+        }
         return false;
     }
 
