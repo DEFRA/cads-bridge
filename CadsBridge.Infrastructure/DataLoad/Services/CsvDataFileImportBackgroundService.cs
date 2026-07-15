@@ -37,6 +37,7 @@ public class CsvDataFileImportBackgroundService(
             long fileImportStatusId;
             try
             {
+                // TODO: Remove as part of David's PR
                 var totalRowsToProcess = 3; //  await s3FileMetaDataService.GetRecordCountAsync(request.SourceKey, stoppingToken);
 
                 fileImportStatusId = await fileImportStatusStore.Initiate(request.SourceKey, totalRowsToProcess, stoppingToken);
