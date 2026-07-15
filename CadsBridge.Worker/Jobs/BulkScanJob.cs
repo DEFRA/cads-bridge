@@ -33,4 +33,5 @@ public class BulkScanJob(IDistributedLock distributedLock, ILogger<BulkScanJob> 
         {
             await distributedLock.ReleaseAsync(LockName, context.CancellationToken);
         }
-    }}
+    }
+}
