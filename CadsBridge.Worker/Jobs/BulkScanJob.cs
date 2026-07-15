@@ -1,16 +1,36 @@
+using System.Diagnostics.CodeAnalysis;
+using CadsBridge.Core.Locking;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace CadsBridge.Worker.Jobs;
 
-public class BulkScanJob(ILogger<BulkScanJob> logger) : IJob
+[ExcludeFromCodeCoverage] // Exclude until actual implementation is added
+public class BulkScanJob(IDistributedLock distributedLock, ILogger<BulkScanJob> logger) : IJob
 {
-    public Task Execute(IJobExecutionContext context)
+    private const string LockName = nameof(BulkScanJob);
+
+    public async Task Execute(IJobExecutionContext context)
     {
-        if (logger.IsEnabled(LogLevel.Information))
+        if (!await distributedLock.TryAcquireAsync(LockName, context.CancellationToken))
         {
-            logger.LogInformation("Bulk scan job started");
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Bulk scan job skipped - lock {LockName} held by another instance", LockName);
+            }
+            return;
         }
-        return Task.CompletedTask;
-    }
-}
+
+        try
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Bulk scan job started");
+            }
+            // ... job work ...
+        }
+        finally
+        {
+            await distributedLock.ReleaseAsync(LockName, context.CancellationToken);
+        }
+    }}
