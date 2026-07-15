@@ -14,10 +14,12 @@ services:
       - Storage__External__BucketName=cads-external-bucket
       - Storage__External__HealthcheckEnabled=true
       - Storage__External__AccessKeySecretName=
-      - Storage__External__SecretKeySecretName=
-      - ApiClients__Cds__BaseUrl=http://cads_cds:5555
+      - Storage__External__SecretKeySecretName=  
+      - ApiClients__CdsApi__BaseUrl=http://cads_cds:5555/
+      - ApiClients__CdsApi__BasicApiKey=
       - ApiClients__CdsApi__XApiKey=
-      - ApiClients__Cds__HealthcheckEnabled=true
+      - ApiClients__CdsApi__HealthcheckEnabled=true
+      - ApiClients__CdsApi__UseFakeClient=true
       - Messaging__Queues__CadsBridgeFifo__QueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue
       - Messaging__Queues__CadsBridgeFifo__DlqQueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue-deadletter
       - Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled=true

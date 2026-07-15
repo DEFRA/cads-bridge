@@ -12,15 +12,13 @@ namespace CadsBridge.Infrastructure.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructureLayer(this IServiceCollection services, IConfiguration config, IHealthChecksBuilder healthChecksBuilder)
+    public static IServiceCollection AddInfrastructureLayer(this IServiceCollection services, IConfiguration config)
     {
         services.AddStorage(config);
 
-        services.AddAmazonS3Core(config, healthChecksBuilder);
+        services.AddAmazonS3Core(config);
 
-        services.AddApiClients(config, healthChecksBuilder);
-
-        services.AddApiServices();
+        services.AddApiClients(config);
 
         services.AddDataLoad(config);
 

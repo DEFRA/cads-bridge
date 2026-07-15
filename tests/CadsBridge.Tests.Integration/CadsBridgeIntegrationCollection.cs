@@ -4,6 +4,6 @@ namespace CadsBridge.Tests.Integration;
 
 [CollectionDefinition("CadsBridgeIntegration")]
 public class CadsBridgeIntegrationCollection :
-    ICollectionFixture<ApiContainerFixture>
+ICollectionFixture<ApiContainerFixture>
 {
 }

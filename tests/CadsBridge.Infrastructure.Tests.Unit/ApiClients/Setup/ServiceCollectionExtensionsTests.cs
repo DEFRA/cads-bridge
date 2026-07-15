@@ -18,30 +18,23 @@ public class ServiceCollectionExtensionsTests
     private static IConfiguration BuildConfig(Dictionary<string, string?> values) =>
         new ConfigurationBuilder().AddInMemoryCollection(values).Build();
 
-    private static (ServiceCollection Services, IHealthChecksBuilder HealthChecks) CreateServices()
+    private static ServiceCollection CreateServices()
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        var healthChecks = services.AddHealthChecks();
-        return (services, healthChecks);
+        return services;
     }
 
     private static List<HealthCheckRegistration> GetRegistrations(IServiceProvider sp) =>
         [.. sp.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations];
 
     [Fact]
-    public void HealthClientName_AppendsHealthSuffix()
-    {
-        ApiClientSetup.HealthClientName("foo").Should().Be("foo-health");
-    }
-
-    [Fact]
     public void AddApiClients_WhenNoApiClientsSection_RegistersNothing()
     {
-        var (services, healthChecks) = CreateServices();
-        var config = BuildConfig(new Dictionary<string, string?>());
+        var services = CreateServices();
+        var config = BuildConfig([]);
 
-        services.AddApiClients(config, healthChecks);
+        services.AddApiClients(config);
 
         var sp = services.BuildServiceProvider();
         GetRegistrations(sp).Should().BeEmpty();
@@ -50,35 +43,33 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddApiClients_WhenHealthcheckEnabled_RegistersHealthCheckAndBothClients()
     {
-        var (services, healthChecks) = CreateServices();
+        var services = CreateServices();
         var config = BuildConfig(new Dictionary<string, string?>
         {
             [$"ApiClients:{ClientName}:BaseUrl"] = "http://test-api/",
             [$"ApiClients:{ClientName}:HealthcheckEnabled"] = "true"
         });
 
-        services.AddApiClients(config, healthChecks);
+        services.AddApiClients(config);
 
         var sp = services.BuildServiceProvider();
         GetRegistrations(sp).Should().ContainSingle(r => r.Name == $"http-client-{ClientName}");
 
         var factory = sp.GetRequiredService<IHttpClientFactory>();
         factory.CreateClient(ClientName).BaseAddress.Should().Be(new Uri("http://test-api"));
-        factory.CreateClient(ApiClientSetup.HealthClientName(ClientName))
-            .BaseAddress.Should().Be(new Uri("http://test-api"));
     }
 
     [Fact]
     public void AddApiClients_WhenHealthcheckDisabled_RegistersClientButNoHealthCheck()
     {
-        var (services, healthChecks) = CreateServices();
+        var services = CreateServices();
         var config = BuildConfig(new Dictionary<string, string?>
         {
             [$"ApiClients:{ClientName}:BaseUrl"] = "http://test-api",
             [$"ApiClients:{ClientName}:HealthcheckEnabled"] = "false"
         });
 
-        services.AddApiClients(config, healthChecks);
+        services.AddApiClients(config);
 
         var sp = services.BuildServiceProvider();
         GetRegistrations(sp).Should().BeEmpty();
@@ -92,14 +83,14 @@ public class ServiceCollectionExtensionsTests
     [InlineData("not-a-uri")]
     public void AddApiClients_WhenBaseUrlIsNotAValidAbsoluteUri_SkipsClientAndHealthCheck(string baseUrl)
     {
-        var (services, healthChecks) = CreateServices();
+        var services = CreateServices();
         var config = BuildConfig(new Dictionary<string, string?>
         {
             [$"ApiClients:{ClientName}:BaseUrl"] = baseUrl,
             [$"ApiClients:{ClientName}:HealthcheckEnabled"] = "true"
         });
 
-        services.AddApiClients(config, healthChecks);
+        services.AddApiClients(config);
 
         var sp = services.BuildServiceProvider();
         GetRegistrations(sp).Should().BeEmpty("a placeholder/invalid BaseUrl should be skipped, not fail the health endpoint");
@@ -149,7 +140,7 @@ public class ServiceCollectionExtensionsTests
 
     private static HttpClient BuildResilientClient(HttpMessageHandler primaryHandler, int retries)
     {
-        var (services, healthChecks) = CreateServices();
+        var services = CreateServices();
         var config = BuildConfig(new Dictionary<string, string?>
         {
             [$"ApiClients:{ClientName}:BaseUrl"] = "http://test-api",
@@ -160,7 +151,7 @@ public class ServiceCollectionExtensionsTests
             [$"ApiClients:{ClientName}:ResiliencePolicy:TimeoutPeriodSeconds"] = "30"
         });
 
-        services.AddApiClients(config, healthChecks);
+        services.AddApiClients(config);
         services.AddHttpClient(ClientName).ConfigurePrimaryHttpMessageHandler(() => primaryHandler);
 
         var sp = services.BuildServiceProvider();

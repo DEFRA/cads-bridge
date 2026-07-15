@@ -10,12 +10,15 @@ using System.Text.Json;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
-public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, ILogger<FileImportStatusApiService> logger) : IFileImportStatusApiService
+public class FileImportStatusApiService(
+    IHttpClientFactory httpClientFactory,
+    ILogger<FileImportStatusApiService> logger)
+    : IFileImportStatusApiService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
     private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
-    private const string GetByFileNameUri = "search";
-    private const string MarkResetUri = "reset";
+    private const string GetByFileNameEndpoint = "search";
+    private const string MarkResetEndpoint = "reset";
 
     private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
         new()
@@ -25,26 +28,34 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
             { FileImportStatus.Failed, "failed" }
         };
 
-    public async Task<FileImportStatusDto?> GetByFileName(string fileName, CancellationToken cancellationToken)
+    public async Task<FileImportStatusDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {
-        var endpoint = $"{BaseApiUrl}/{GetByFileNameUri}?fileName={fileName}";
-        var context = $"Getting file import status for '{fileName}'";
+        var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
+        var context = $"Getting file import status for '{objectKey}'";
         return await GetRequestToApiAsync<FileImportStatusDto>(endpoint, context, cancellationToken);
     }
 
-    public async Task<long> Create(string s3Key, long recordCount, CancellationToken cancellationToken)
+    public async Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
     {
-        var context = $"Creating file import for '{s3Key}' with {recordCount} records";
+        var context = $"Creating file import for '{objectKey}' with {totalRowsToProcess} records";
         var body = new CreateFileImportRequest
         {
-            FileName = s3Key,
-            TotalRowsToProcess = recordCount
+            FileName = objectKey,
+            TotalRowsToProcess = totalRowsToProcess
         };
 
         var response = await PostRequestToApiAsync(BaseApiUrl, body, context, cancellationToken);
 
         var dto = await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
         return dto.Id;
+    }
+
+    public async Task Update(long id, UpdateFileImportRequest request, CancellationToken cancellationToken)
+    {
+        var context = $"Updating file import for id: '{id}'";
+        var endPoint = $"{BaseApiUrl}/{id}";
+        var response = await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
+        await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
     }
 
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
@@ -61,7 +72,7 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
 
     public async Task MarkReset(long id, CancellationToken cancellationToken)
     {
-        var endPoint = $"{BaseApiUrl}/{id}/{MarkResetUri}";
+        var endPoint = $"{BaseApiUrl}/{id}/{MarkResetEndpoint}";
         var context = $"Resetting file import with id {id}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
     }
@@ -75,6 +86,16 @@ public class FileImportStatusApiService(IHttpClientFactory httpClientFactory, IL
     private async Task<HttpResponseMessage> PostRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
     {
         var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("API call succeeded: {Context}", context);
+        }
+        return response;
+    }
+
+    private async Task<HttpResponseMessage> PutRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, ct), context, cancellationToken);
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("API call succeeded: {Context}", context);

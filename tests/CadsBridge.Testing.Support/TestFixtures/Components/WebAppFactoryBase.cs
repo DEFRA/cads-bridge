@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using System;
 using System.Globalization;
 using System.Net;
 
@@ -33,7 +34,7 @@ public abstract class WebAppFactoryBase<TStart>(
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
     public Mock<IAmazonSQS> AmazonSQSMock { get; private set; } = new();
 
-    public List<Action<IServiceCollection>> ServiceOverrides { get; private set; } = [];
+    public readonly List<Action<IServiceCollection>> _serviceOverrides = [];
 
     private readonly IDictionary<string, string?> _configOverrides = configOverrides ?? new Dictionary<string, string?>();
 
@@ -76,7 +77,7 @@ public abstract class WebAppFactoryBase<TStart>(
             if (disableHostedServices)
                 services.RemoveAll<IHostedService>();
 
-            foreach (var serviceOverride in ServiceOverrides)
+            foreach (var serviceOverride in _serviceOverrides)
             {
                 serviceOverride(services);
             }
@@ -85,7 +86,7 @@ public abstract class WebAppFactoryBase<TStart>(
 
     public void OverrideSingleton<T>(T service) where T : class
     {
-        ServiceOverrides.Add(x =>
+        _serviceOverrides.Add(x =>
         {
             x.RemoveAll<T>();
             x.AddSingleton<T>(service);
@@ -114,11 +115,18 @@ public abstract class WebAppFactoryBase<TStart>(
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
         Environment.SetEnvironmentVariable("AWS__ServiceURL", "http://cads-bridge-localstack-emulator:4566");
+
         Environment.SetEnvironmentVariable("Storage__Internal__BucketName", TestS3Constants.TestCadsBridgeInternalBucketName);
         Environment.SetEnvironmentVariable("Storage__External__BucketName", TestS3Constants.TestCadsBridgeExternalBucketName);
+
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__HealthcheckEnabled", "true");
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__BaseUrl", "http://localhost:5555");
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__BasicApiKey", "XYZ");
+
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__QueueUrl", TestSqsConstants.TestQueueUrl);
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", TestSqsConstants.TestQueueDlqUrl);
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled", "true");
+
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_KEY", "test");
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_SECRET", "test");
     }
