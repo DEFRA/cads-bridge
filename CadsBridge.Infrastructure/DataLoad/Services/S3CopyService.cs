@@ -21,6 +21,7 @@ public class S3CopyService(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
     ITransferUtilityAdapter transferUtilityAdapter,
+    IS3FileMetaDataService s3FileMetaDataService,
     DataLoadConfiguration config,
     ILogger<S3CopyService> logger) : IS3CopyService
 {
@@ -28,7 +29,7 @@ public class S3CopyService(
     private const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
     private const long MaxSingleFileSize = 100L * 1024 * 1024;
 
-    public async Task<bool> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default)
+    public async Task<long> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default)
     {
         var attempt = 0;
         var delayBaseMs = 500;
@@ -38,6 +39,7 @@ public class S3CopyService(
 
         var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var internalS3 = internalS3Info.Client;
+        long rowCount;
 
         while (true)
         {
@@ -47,7 +49,7 @@ public class S3CopyService(
                 {
                     logger.LogInformation("Cancellation requested for {Key}, aborting copy", job.SourceKey);
                 }
-                return false;
+                return 0;
             }
 
             attempt++;
@@ -68,6 +70,9 @@ public class S3CopyService(
                         attempt);
 
                 var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
+
+                // Retrieve row count from the decrypted file and update the file import status accordingly.
+                rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
@@ -92,7 +97,7 @@ public class S3CopyService(
             }
         }
 
-        return true;
+        return rowCount;
     }
 
     private async Task<string> DecryptAndCopyAsync(

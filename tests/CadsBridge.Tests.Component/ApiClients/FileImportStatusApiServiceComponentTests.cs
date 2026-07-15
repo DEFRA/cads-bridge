@@ -1,3 +1,4 @@
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Testing.Support.Utilities.Http;
@@ -34,7 +35,7 @@ public class FileImportStatusApiServiceComponentTests
         factory.OverrideHttpClientHandler(ClientName, stub);
         _ = factory.CreateClient(); // force host build so ConfigureTestServices runs
 
-        var sut = factory.Services.GetRequiredService<IFileImportStatusApiService>();
+        var sut = factory.Services.GetRequiredService<IFileImportApiService>();
         await sut.MarkStatus(99, status, TestContext.Current.CancellationToken);
 
         stub.Requests.Should().ContainSingle();
@@ -51,7 +52,7 @@ public class FileImportStatusApiServiceComponentTests
         factory.OverrideHttpClientHandler(ClientName, stub);
         _ = factory.CreateClient();
 
-        var sut = factory.Services.GetRequiredService<IFileImportStatusApiService>();
+        var sut = factory.Services.GetRequiredService<IFileImportApiService>();
         await sut.MarkReset(99, TestContext.Current.CancellationToken);
 
         stub.Requests.Should().ContainSingle();

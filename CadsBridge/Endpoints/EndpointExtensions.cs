@@ -1,5 +1,4 @@
 using CadsBridge.Application.DataLoad.Jobs;
-using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Endpoints.Requests;
 using Microsoft.AspNetCore.Mvc;
@@ -13,15 +12,7 @@ public static class EndpointsExtensions
     {
         app.MapPost("import", Import);
 
-        app.MapGet("import/{jobId}/progress", GetImportProgress);
-
-        app.MapGet("import/progress", GetImportProgress);
-
         app.MapPost("split", Split);
-
-        app.MapGet("split/{jobId}/progress", GetSplitProgress);
-
-        app.MapGet("split/progress", GetSplitProgress);
 
         app.MapGet("data-seed/import", GetDataSeed);
     }
@@ -56,76 +47,34 @@ public static class EndpointsExtensions
     private static async Task<IResult> Import(
         [FromBody] CsvDataFileImportRequest request,
         Channel<CsvDataFileImportJob> channel,
-        IImportJobProgressStore progressStore,
         ILogger<Program> logger,
         CancellationToken cancellationToken)
     {
-        var jobId = Guid.NewGuid().ToString("N");
-
-        progressStore.InitJob(jobId, request.Files.Count);
-
         foreach (var importFile in request.Files)
         {
             try
             {
                 await channel.Writer.WriteAsync(new CsvDataFileImportJob(
-                    JobId: jobId,
                     SourceKey: importFile.sourceKey
                 ), cancellationToken);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to initiate import for {SourceKey} (job {JobId})",
-                    importFile.sourceKey, jobId);
-                progressStore.MarkFailed(jobId, importFile.sourceKey, ex.Message);
+                logger.LogError(ex, "Failed to initiate import for {SourceKey}",
+                    importFile.sourceKey);
             }
         }
 
-        return Results.Ok(new { jobId });
+        return Results.Ok();
     }
 
-    private static async Task<IResult> GetImportProgress(string jobId, IImportJobProgressStore progressStore)
+    private static async Task<IResult> Split([FromBody] CsvDataFileSplitRequest request, Channel<CsvDataFileSplitJob> channel)
     {
-        if (!string.IsNullOrEmpty(jobId))
-        {
-            var job = progressStore.GetJob(jobId);
-            if (job is null) return Results.NotFound();
-
-            return Results.Ok(job);
-        }
-
-        return Results.Ok(progressStore.GetJobs());
-    }
-
-    private static async Task<IResult> Split([FromBody] CsvDataFileSplitRequest request, Channel<CsvDataFileSplitJob> channel, ISplitJobProgressStore progressStore)
-    {
-        var jobId = Guid.NewGuid().ToString("N");
-
-        progressStore.InitJob(jobId, request.Files.Count);
-
         foreach (var file in request.Files)
         {
-            var targetFolder = $"import/{Path.GetFileNameWithoutExtension(file.Key)}";
-
-            await channel.Writer.WriteAsync(new CsvDataFileSplitJob(
-                JobId: jobId,
-                SourceKey: file.Key
-            ));
+            await channel.Writer.WriteAsync(new CsvDataFileSplitJob(file.Key));
         }
 
-        return Results.Ok(new { jobId });
-    }
-
-    private static async Task<IResult> GetSplitProgress(string jobId, ISplitJobProgressStore progressStore)
-    {
-        if (string.IsNullOrEmpty(jobId))
-        {
-            var job = progressStore.GetJob(jobId);
-            if (job is null) return Results.NotFound();
-
-            return Results.Ok(job);
-        }
-
-        return Results.Ok(progressStore.GetJobs());
+        return Results.Ok();
     }
 }

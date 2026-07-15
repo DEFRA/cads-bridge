@@ -4,13 +4,13 @@ namespace CadsBridge.Application.DataLoad.Persistence;
 
 public interface IFileImportStore
 {
-    Task<long> Initiate(string fileName, long totalRowsToProcess, CancellationToken cancellationToken = default);
+    Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default);
 
-    Task Update(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsProcessed, CancellationToken cancellationToken = default);
+    Task UpdateAsync(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsFound = 0, CancellationToken cancellationToken = default);
 
-    Task MarkInProgress(long fileImportId, CancellationToken cancellationToken = default);
+    Task MarkInProgressAsync(long fileImportId, CancellationToken cancellationToken = default);
 
-    Task MarkSucceeded(long fileImportId, CancellationToken cancellationToken = default);
+    Task MarkCompletedAsync(long fileImportId, CancellationToken cancellationToken = default);
 
-    Task MarkFailed(long fileImportId, CancellationToken cancellationToken = default);
+    Task MarkFailedAsync(long fileImportId, CancellationToken cancellationToken = default);
 }

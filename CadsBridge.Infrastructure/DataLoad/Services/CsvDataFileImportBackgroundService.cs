@@ -34,8 +34,7 @@ public class CsvDataFileImportBackgroundService(
             long fileImportId;
             try
             {
-                fileImportId = await fileImportStore.Initiate(
-                    request.SourceKey, 0, stoppingToken);
+                fileImportId = await fileImportStore.CreateAsync(request.SourceKey, cancellationToken: stoppingToken);
             }
             catch (Exception ex)
             {
@@ -50,31 +49,25 @@ public class CsvDataFileImportBackgroundService(
                 {
                     try
                     {
-                        await fileImportStore.MarkInProgress(fileImportId, stoppingToken);
+                        var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
 
-                        var result = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
-
-                        if (result)
+                        if (totalRowsToProcess > 0)
                         {
-                            await fileImportStore.MarkSucceeded(fileImportId, stoppingToken);
+                            await fileImportStore.UpdateAsync(fileImportId, Core.ApiClients.FileImportStatus.Completed, totalRowsToProcess, cancellationToken: stoppingToken);
 
                             await splitMessageProducer.SendAsync(
-                                new CsvDataFileSplitJob(
-                                    JobId: request.JobId,
-                                    SourceKey: request.TargetKey,
-                                    FileImportId: fileImportId
-                                ),
+                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess),
                                 stoppingToken);
                         }
                         else
                         {
-                            await fileImportStore.MarkFailed(fileImportId, stoppingToken);
+                            await fileImportStore.MarkFailedAsync(fileImportId, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailed(fileImportId, stoppingToken);
+                        await fileImportStore.MarkFailedAsync(fileImportId, stoppingToken);
                     }
                     finally
                     {

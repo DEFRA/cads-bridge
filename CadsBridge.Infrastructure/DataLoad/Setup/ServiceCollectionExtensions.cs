@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICsvDataFileSplitterStrategy, CsvDataFileSplitterStrategyBySize>();
 
         services.AddTransient<ICsvParser, CsvParser>();
-        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService<ExternalStorageClient>>();
+        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService<InternalStorageClient>>();
 
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
 

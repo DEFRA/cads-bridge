@@ -42,21 +42,21 @@ public class CsvDataFileSplitBackgroundService(
                 {
                     try
                     {
-                        var rows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
+                        var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
-                        if (rows > 0)
+                        if (foundRows > 0)
                         {
-                            await fileImportStore.MarkSucceeded(request.FileImportId.Value, stoppingToken);
+                            await fileImportStore.UpdateAsync(request.FileImportId.Value, Core.ApiClients.FileImportStatus.Completed, request.TotalRowsToProcess, foundRows, stoppingToken);
                         }
                         else
                         {
-                            await fileImportStore.MarkFailed(request.FileImportId.Value, stoppingToken);
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailed(request.FileImportId.Value, stoppingToken);
+                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, stoppingToken);
                     }
                     finally
                     {

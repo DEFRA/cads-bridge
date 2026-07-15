@@ -1,16 +1,17 @@
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
 
 namespace CadsBridge.Infrastructure.ApiClients.Fakes;
 
-public class FakeFileImportStatusApiService : IFileImportStatusApiService
+public class FakeFileImportApiService : IFileImportApiService
 {
     private readonly Random _random = new();
 
-    public Task<FileImportStatusDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
+    public Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {
-        var response = new FileImportStatusDto
+        var response = new FileImportDto
         {
             Id = _random.Next(1, 99),
             FileName = objectKey,
@@ -19,7 +20,7 @@ public class FakeFileImportStatusApiService : IFileImportStatusApiService
             TotalRowsToProcess = 0,
             RowsFound = 0
         };
-        return Task.FromResult<FileImportStatusDto?>(response);
+        return Task.FromResult<FileImportDto?>(response);
     }
 
     public Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
