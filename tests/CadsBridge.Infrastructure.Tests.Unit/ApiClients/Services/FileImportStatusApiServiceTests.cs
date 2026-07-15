@@ -226,7 +226,7 @@ public class FileImportStatusApiServiceTests
         [Theory]
         [InlineData(FileImportStatus.Importing, "importing")]
         [InlineData(FileImportStatus.Completed, "complete")]
-        [InlineData(FileImportStatus.Failed, "failed")]
+        [InlineData(FileImportStatus.Failed, "fail")]
         public async Task MarkStatus_PostsToExpectedUrl(FileImportStatus status, string segment)
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK));

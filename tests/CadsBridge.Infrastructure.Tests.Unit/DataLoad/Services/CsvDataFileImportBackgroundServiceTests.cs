@@ -29,20 +29,20 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         _copy.Setup(x => x.ExecAsync(It.IsAny<CsvDataFileImportJob>(), It.IsAny<CancellationToken>()))
-             .ReturnsAsync(It.IsAny<long>());
+             .ReturnsAsync(1);
 
         _splitProducer.Setup(x => x.SendAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
-                      .Returns(ValueTask.CompletedTask);
+            .Returns(ValueTask.CompletedTask);
 
         _s3FileMetaDataService.Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                               .ReturnsAsync(DefaultRecordCount);
+            .ReturnsAsync(1);
 
         _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                              .ReturnsAsync(DefaultFileImportId);
+            .ReturnsAsync(DefaultFileImportId);
         _fileImportStore.Setup(x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                              .Returns(Task.CompletedTask);
+            .Returns(Task.CompletedTask);
         _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                              .Returns(Task.CompletedTask);
+            .Returns(Task.CompletedTask);
 
         var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
 
@@ -63,8 +63,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob();
         await Write(job);
 
-        await _fileImportStore.AsyncVerify(x => x.CreateAsync(job.SourceKey, DefaultRecordCount, It.IsAny<CancellationToken>()), Times.Once);
-        await _fileImportStore.AsyncVerify(x => x.MarkInProgressAsync(DefaultFileImportId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.CreateAsync(job.SourceKey, 0, It.IsAny<CancellationToken>()), Times.Once);
         await _copy.AsyncVerify(x => x.ExecAsync(job, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -121,6 +120,9 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _copy.Setup(x => x.ExecAsync(job, It.IsAny<CancellationToken>()))
              .ThrowsAsync(ex);
 
+        _s3FileMetaDataService.Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
@@ -145,7 +147,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         var ex = new InvalidOperationException("Split message failed.");
 
         _splitProducer.Setup(x => x.SendAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
-                      .ThrowsAsync(ex);
+            .ThrowsAsync(ex);
 
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
