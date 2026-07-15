@@ -26,7 +26,7 @@ public class FileImportStatusApiServiceComponentTests
     [Theory]
     [InlineData(FileImportStatus.Importing, "importing")]
     [InlineData(FileImportStatus.Completed, "complete")]
-    [InlineData(FileImportStatus.Failed, "failed")]
+    [InlineData(FileImportStatus.Failed, "fail")]
     public async Task MarkStatus_SendsPostThroughRealCdsApiClient_ToExpectedUrl(
         FileImportStatus status, string segment)
     {

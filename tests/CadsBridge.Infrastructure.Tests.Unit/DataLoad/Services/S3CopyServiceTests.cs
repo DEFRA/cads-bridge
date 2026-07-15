@@ -36,13 +36,13 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
-        var s3FileMetaDataService = new FakeS3fileMetaDataService();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
         var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
 
-        result.Should().Be(0);
+        result.Should().Be(s3FileMetaDataService.RecordCount);
         s3.PutRequests.Should().ContainSingle();
         transfer.Uploads.Should().BeEmpty();
     }
@@ -58,13 +58,13 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
-        var s3FileMetaDataService = new FakeS3fileMetaDataService();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
         var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
 
-        result.Should().Be(0);
+        result.Should().Be(s3FileMetaDataService.RecordCount);
         transfer.Uploads.Should().ContainSingle();
         s3.PutRequests.Should().BeEmpty();
     }
@@ -94,13 +94,13 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
-        var s3FileMetaDataService = new FakeS3fileMetaDataService();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
         var sut = CreateSut(s3.Object, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
 
-        result.Should().Be(0);
+        result.Should().Be(s3FileMetaDataService.RecordCount);
         attempts.Should().Be(2);
     }
 
@@ -113,7 +113,7 @@ public class S3CopyServiceTests
         var s3 = new FakeS3();
         var aes = new FakeAesCryptoTransform("ignored");
         var transfer = new FakeTransferUtilityAdapter();
-        var s3FileMetaDataService = new FakeS3fileMetaDataService();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
         var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
@@ -140,7 +140,7 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
-        var s3FileMetaDataService = new FakeS3fileMetaDataService();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
         var sut = CreateSut(s3.Object, aes, transfer, s3FileMetaDataService);
 
