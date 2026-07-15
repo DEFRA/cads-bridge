@@ -6,8 +6,26 @@ using Xunit;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Containers;
 
-public class ApiContainerFixture(IDictionary<string, string>? extraEnvironment = null) : IAsyncLifetime
+public class ApiContainerFixture : IAsyncLifetime
 {
+    private readonly IDictionary<string, string>? _extraEnvironment;
+
+    // Single public constructor — required by xUnit ICollectionFixture<T>
+    public ApiContainerFixture() : this(null) { }
+
+    // Private — use WithExtraEnvironment() factory method instead
+    private ApiContainerFixture(IDictionary<string, string>? extraEnvironment)
+    {
+        _extraEnvironment = extraEnvironment;
+    }
+
+    /// <summary>
+    /// Creates a standalone fixture with additional environment variables.
+    /// Use this when the test manages its own fixture lifetime (await using).
+    /// </summary>
+    public static ApiContainerFixture WithExtraEnvironment(IDictionary<string, string> extraEnvironment)
+        => new(extraEnvironment);
+
     public IContainer? ApiContainer { get; private set; } = null;
     public HttpClient? HttpClient { get; private set; } = null;
     public LocalStackFixture LocalStackFixture { get; } = new();
@@ -49,8 +67,8 @@ public class ApiContainerFixture(IDictionary<string, string>? extraEnvironment =
                     req => req.ForPort(5550).ForPath("/health"),
                     o => o.WithTimeout(TimeSpan.FromSeconds(60))));
 
-        if (extraEnvironment is not null)
-            foreach (var (key, value) in extraEnvironment)
+        if (_extraEnvironment is not null)
+            foreach (var (key, value) in _extraEnvironment)
                 builder = builder.WithEnvironment(key, value);
 
         ApiContainer = builder.Build();

@@ -13,14 +13,11 @@ using System.Net.Http.Json;
 namespace CadsBridge.Tests.Integration.EndPoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
-public class CsvDataFileImportEndpointTests
+public class CsvDataFileImportEndpointTests(ApiContainerFixture fixture)
 {
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
     {
-        await using var fixture = new ApiContainerFixture();
-        await fixture.InitializeAsync();
-
         var jobId = await TriggerImportJob(fixture);
         jobId.Should().NotBeNullOrEmpty();
 
@@ -41,8 +38,6 @@ public class CsvDataFileImportEndpointTests
         const string importedTestFileCsv = "import/test-file.csv";
         const string password = "pwd1";
         const string salt = "adfsb8123";
-        await using var fixture = new ApiContainerFixture();
-        await fixture.InitializeAsync();
 
         var fileContents = string.Join(
             Environment.NewLine,
@@ -112,8 +107,6 @@ public class CsvDataFileImportEndpointTests
         const string incomingTestFileCsv = "incoming/test-file-none.csv";
         const string password = "pwd1";
         const string salt = "adfsb8123";
-        await using var fixture = new ApiContainerFixture();
-        await fixture.InitializeAsync();
 
         var fileContents = string.Join(
             Environment.NewLine,

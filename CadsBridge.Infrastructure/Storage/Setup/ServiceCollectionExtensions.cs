@@ -1,6 +1,8 @@
 using Amazon;
 using Amazon.S3;
 using CadsBridge.Application.Storage.Transfer;
+using CadsBridge.Core.Locking;
+using CadsBridge.Infrastructure.Locking;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
@@ -9,6 +11,7 @@ using CadsBridge.Infrastructure.Storage.Transfer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace CadsBridge.Infrastructure.Storage.Setup;
@@ -27,7 +30,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConfigureS3Clients, StorageS3Configurator>();
         services.AddTransient<ITransferUtilityAdapter, TransferUtilityAdapter>();
 
+        AddDistributedLock(services, configuration);
+
         return services;
+    }
+
+    private static void AddDistributedLock(IServiceCollection services, IConfiguration configuration)
+    {
+        var lockOptions = configuration.GetSection("DistributedLock").Get<S3DistributedLockOptions>()
+            ?? new S3DistributedLockOptions();
+
+        services.AddSingleton(lockOptions);
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IDistributedLock, S3DistributedLock>();
     }
 
     public static IServiceCollection AddAmazonS3Core(
