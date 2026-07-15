@@ -69,7 +69,7 @@ public class CsvDataFileSplitterServiceTests
 
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        result.Should().Be(1);
+        result.Should().Be(SmallInputFile.Length);
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
             [ExpectedKey()] = SmallInputFile

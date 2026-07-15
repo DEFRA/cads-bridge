@@ -60,7 +60,6 @@ public class S3CopyServiceTests
         var transfer = new FakeTransferUtilityAdapter();
         var s3FileMetaDataService = new FakeS3fileMetaDataService();
 
-
         var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
