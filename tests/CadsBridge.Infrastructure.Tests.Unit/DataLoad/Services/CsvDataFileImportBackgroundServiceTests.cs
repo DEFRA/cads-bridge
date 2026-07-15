@@ -8,6 +8,7 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -46,12 +47,17 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
 
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddTransient<IS3CopyService>(f => _copy.Object);
+        serviceCollection.AddTransient<IFileImportStore>(f => _fileImportStore.Object);
+        serviceCollection.AddTransient<ISplitMessageProducer>(f => _splitProducer.Object);
+        serviceCollection.AddTransient<IS3FileMetaDataService>(f => _s3FileMetaDataService.Object);
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
         _sut = new CsvDataFileImportBackgroundService(
             _channel,
             _logger.Object,
-            _fileImportStore.Object,
-            _splitProducer.Object,
-            _copy.Object,
+            serviceScopeFactory,
             config);
     }
 
@@ -87,7 +93,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         var expected = new CsvDataFileSplitJob(
             SourceKey: expectedTargetKey,
-            FileImportId: DefaultFileImportId);
+            FileImportId: DefaultFileImportId,
+            TotalRowsToProcess: 1);
 
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);

@@ -7,15 +7,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
 public class CsvDataFileImportBackgroundService(
     Channel<CsvDataFileImportJob> channel,
     ILogger<CsvDataFileImportBackgroundService> logger,
-    IFileImportStore fileImportStore,
-    ISplitMessageProducer splitMessageProducer,
-    IS3CopyService s3ExternalToInternalCopyService,
+    IServiceScopeFactory serviceScopeFactory,
     DataLoadConfiguration config) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,6 +31,10 @@ public class CsvDataFileImportBackgroundService(
             }
 
             long fileImportId;
+            using var scope = serviceScopeFactory.CreateScope();
+            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+            var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
+            var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
             try
             {
                 fileImportId = await fileImportStore.CreateAsync(request.SourceKey, cancellationToken: stoppingToken);
