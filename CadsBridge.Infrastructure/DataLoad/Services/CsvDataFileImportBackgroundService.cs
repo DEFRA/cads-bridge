@@ -56,7 +56,7 @@ public class CsvDataFileImportBackgroundService(
 
                         if (totalRowsToProcess > 0)
                         {
-                            await fileImportStore.UpdateAsync(fileImportId, Core.ApiClients.FileImportStatus.Completed, totalRowsToProcess, cancellationToken: stoppingToken);
+                            await fileImportStore.UpdateAsync(fileImportId, Core.ApiClients.FileImportStatus.Importing, totalRowsToProcess, cancellationToken: stoppingToken);
 
                             await splitMessageProducer.SendAsync(
                                 new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess),
