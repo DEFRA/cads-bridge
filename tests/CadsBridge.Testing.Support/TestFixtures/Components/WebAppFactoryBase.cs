@@ -20,7 +20,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
-using System;
 using System.Globalization;
 using System.Net;
 
@@ -154,9 +153,13 @@ public abstract class WebAppFactoryBase<TStart>(
         {
             var factory = new S3ClientFactory();
 
-            factory.RegisterMockClient<InternalStorageClient>(
-                "cads-internal-bucket",
+            factory.RegisterMockClient<ExternalStorageClient>(
+                TestS3Constants.TestCadsBridgeExternalBucketName,
                 AmazonS3Mock.Object);
+            factory.RegisterMockClient<InternalStorageClient>(
+                TestS3Constants.TestCadsBridgeInternalBucketName,
+                AmazonS3Mock.Object);
+
             return factory;
         });
     }

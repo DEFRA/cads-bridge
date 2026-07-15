@@ -8,9 +8,9 @@ using Xunit;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Containers;
 
-public class LocalStackFixture : IAsyncLifetime
+public class LocalStackFixture(string networkName) : IAsyncLifetime
 {
-    public static LocalStackContainer? LocalStackContainer { get; private set; }
+    public LocalStackContainer? LocalStackContainer { get; private set; }
 
     public IAmazonS3 S3Client { get; private set; } = null!;
     public IAmazonSQS SqsClient { get; private set; } = null!;
@@ -19,7 +19,7 @@ public class LocalStackFixture : IAsyncLifetime
     public string? CadsBridgeFifoQueueUrl { get; private set; }
     public string? CadsBridgeFifoDeadLetterQueueUrl { get; private set; }
 
-    public static string ServiceUrl => $"http://localhost:{LocalStackContainer!.GetMappedPublicPort(TestContainerConstants.LocalStackPort)}";
+    public string ServiceUrl => $"http://localhost:{LocalStackContainer!.GetMappedPublicPort(TestContainerConstants.LocalStackPort)}";
     public static string NetworkServiceUrl => $"http://{TestContainerConstants.NetworkAlias}:{TestContainerConstants.LocalStackPort}";
 
     public const string AwsAccessKeyId = "test";
@@ -31,7 +31,7 @@ public class LocalStackFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        DockerNetworkHelper.EnsureNetworkExists(TestContainerConstants.NetworkName);
+        DockerNetworkHelper.EnsureNetworkExists(networkName);
 
         LocalStackContainer = new LocalStackBuilder("localstack/localstack:3.0.2")
             .WithEnvironment("SERVICES", "s3,sqs")
@@ -39,7 +39,7 @@ public class LocalStackFixture : IAsyncLifetime
             .WithEnvironment("AWS_DEFAULT_REGION", AwsRegion)
             .WithEnvironment("AWS_ACCESS_KEY_ID", AwsAccessKeyId)
             .WithEnvironment("AWS_SECRET_ACCESS_KEY", AwsSecretAccessKey)
-            .WithNetwork(TestContainerConstants.NetworkName)
+            .WithNetwork(networkName)
             .WithNetworkAliases(TestContainerConstants.NetworkAlias)
             .Build();
 
@@ -73,14 +73,28 @@ public class LocalStackFixture : IAsyncLifetime
         await S3Client.PutBucketAsync(new PutBucketRequest { BucketName = InternalBucketName });
         await S3Client.PutBucketAsync(new PutBucketRequest { BucketName = ExternalBucketName });
 
-        var cadsBridgeFifoDlqCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest { QueueName = TestSqsConstants.CadsBridgeFifoDeadLetterQueueName });
+        var cadsBridgeFifoDlqCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest
+        {
+            QueueName = TestSqsConstants.CadsBridgeFifoDeadLetterQueueName,
+            Attributes = new Dictionary<string, string>
+            {
+                { QueueAttributeName.FifoQueue, "true" }
+            }
+        });
         var cadsBridgeFifoDlqAttr = await SqsClient.GetQueueAttributesAsync(new GetQueueAttributesRequest
         {
             QueueUrl = cadsBridgeFifoDlqCreated.QueueUrl,
             AttributeNames = ["QueueArn"]
         });
 
-        var cadsBridgeFifoQueueCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest { QueueName = TestSqsConstants.CadsBridgeFifoQueueName });
+        var cadsBridgeFifoQueueCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest
+        {
+            QueueName = TestSqsConstants.CadsBridgeFifoQueueName,
+            Attributes = new Dictionary<string, string>
+            {
+                { QueueAttributeName.FifoQueue, "true" }
+            }
+        });
 
         CadsBridgeFifoQueueUrl = cadsBridgeFifoQueueCreated.QueueUrl;
         CadsBridgeFifoDeadLetterQueueUrl = cadsBridgeFifoDlqCreated.QueueUrl;

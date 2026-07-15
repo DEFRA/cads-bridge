@@ -27,11 +27,11 @@ public static class ServiceCollectionExtensions
 
         if (configuration.GetValue<bool>("ApiClients:CdsApi:UseFakeClient"))
         {
-            services.AddScoped<IFileImportStatusApiService, Fakes.FakeFileImportStatusApiService>();
+            services.AddTransient<IFileImportStatusApiService, Fakes.FakeFileImportStatusApiService>();
         }
         else
         {
-            services.AddScoped<IFileImportStatusApiService, FileImportStatusApiService>();
+            services.AddTransient<IFileImportStatusApiService, FileImportStatusApiService>();
         }
 
         var healthChecksBuilder = services.AddHealthChecks();

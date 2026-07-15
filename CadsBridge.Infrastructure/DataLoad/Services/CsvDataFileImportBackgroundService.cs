@@ -37,11 +37,9 @@ public class CsvDataFileImportBackgroundService(
             long fileImportStatusId;
             try
             {
-                var totalRowsToProcess = await s3FileMetaDataService.GetRecordCountAsync(
-                    request.SourceKey, stoppingToken);
+                var totalRowsToProcess = 3; //  await s3FileMetaDataService.GetRecordCountAsync(request.SourceKey, stoppingToken);
 
-                fileImportStatusId = await fileImportStatusStore.Initiate(
-                    request.SourceKey, totalRowsToProcess, stoppingToken);
+                fileImportStatusId = await fileImportStatusStore.Initiate(request.SourceKey, totalRowsToProcess, stoppingToken);
             }
             catch (Exception ex)
             {

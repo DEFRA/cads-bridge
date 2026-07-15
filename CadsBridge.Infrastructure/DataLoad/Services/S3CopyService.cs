@@ -24,7 +24,7 @@ public class S3CopyService(
     DataLoadConfiguration config,
     ILogger<S3CopyService> logger) : IS3CopyService
 {
-    private readonly int _maxRetries = 3;
+    private readonly int _maxRetries = 1;
     private const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
     private const long MaxSingleFileSize = 100L * 1024 * 1024;
 

@@ -1,10 +1,5 @@
-using Amazon.S3;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
-using CadsBridge.Infrastructure.Storage.Abstractions;
-using CadsBridge.Infrastructure.Storage.Clients;
-using CadsBridge.Infrastructure.Storage.Factories;
-using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -61,7 +56,6 @@ public class CadsBridgeWebAppFactory(
             services.AddSingleton(DataSeedFileLoaderMock.Object);
 
             OverrideFileImportStatusStore(services);
-            OverrideAmazonS3(services);
 
             foreach (var overrideAction in _testServiceOverrides)
             {
@@ -83,26 +77,5 @@ public class CadsBridgeWebAppFactory(
         services.AddSingleton(S3FileMetaDataServiceMock.Object);
         services.RemoveAll<IFileImportStatusStore>();
         services.AddSingleton(FileImportStatusStoreMock.Object);
-    }
-
-    private void OverrideAmazonS3(IServiceCollection services)
-    {
-        services.RemoveAll<IAmazonS3>();
-        services.AddSingleton(AmazonS3Mock.Object);
-
-        services.RemoveAll<IS3ClientFactory>();
-        services.AddSingleton<IS3ClientFactory>(_ =>
-        {
-            var factory = new S3ClientFactory();
-
-            factory.RegisterMockClient<ExternalStorageClient>(
-                TestS3Constants.TestCadsBridgeExternalBucketName,
-                AmazonS3Mock.Object);
-            factory.RegisterMockClient<InternalStorageClient>(
-                TestS3Constants.TestCadsBridgeInternalBucketName,
-                AmazonS3Mock.Object);
-
-            return factory;
-        });
     }
 }

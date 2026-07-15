@@ -12,13 +12,10 @@ public static class AmazonS3MockExtensions
         string key,
         string password,
         string salt,
-        CancellationToken cancellationToken,
-        string? content = null)
+        string content,
+        CancellationToken cancellationToken)
     {
-        var inputData = content ?? @"test stream data for encryption
-                            second line
-                            third line";
-        using var encryptedStream = await inputData.Encrypt(password, salt, cancellationToken);
+        using var encryptedStream = await content.Encrypt(password, salt, cancellationToken);
         var buffer = new byte[encryptedStream.Length];
         await encryptedStream.ReadExactlyAsync(buffer, 0, buffer.Length, cancellationToken);
 
@@ -27,6 +24,7 @@ public static class AmazonS3MockExtensions
                 key,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GetObjectResponse() { ResponseStream = new MemoryStream(buffer) });
+
         s3Mock.Setup(x => x.GetObjectMetadataAsync(
                 bucketName,
                 key,

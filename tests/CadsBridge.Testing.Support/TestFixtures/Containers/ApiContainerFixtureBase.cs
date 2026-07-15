@@ -6,16 +6,25 @@ using Xunit;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Containers;
 
-public abstract class ApiContainerFixtureBase(IDictionary<string, string>? extraEnvironment = null) : IAsyncLifetime
+public abstract class ApiContainerFixtureBase : IAsyncLifetime
 {
+    private readonly string _networkName = $"integration-test-network-{Guid.NewGuid():N}";
+
+    private readonly IDictionary<string, string>? _extraEnvironment;
+
     public IContainer? ApiContainer { get; private set; } = null;
     public HttpClient? HttpClient { get; private set; } = null;
-    public LocalStackFixture LocalStackFixture { get; } = new();
+    public LocalStackFixture LocalStackFixture { get; }
+
+    public ApiContainerFixtureBase(IDictionary<string, string>? extraEnvironment = null)
+    {
+        _extraEnvironment = extraEnvironment;
+        LocalStackFixture = new LocalStackFixture(_networkName);
+    }
 
     public async ValueTask InitializeAsync()
     {
         await LocalStackFixture.InitializeAsync();
-        DockerNetworkHelper.EnsureNetworkExists(TestContainerConstants.NetworkName);
 
         var builder = new ContainerBuilder("cads_bridge:latest")
             .WithImagePullPolicy(PullPolicy.Never)
@@ -46,15 +55,15 @@ public abstract class ApiContainerFixtureBase(IDictionary<string, string>? extra
             .WithEnvironment("AWS_ACCESS_KEY_ID", LocalStackFixture.AwsAccessKeyId)
             .WithEnvironment("AWS_SECRET_ACCESS_KEY", LocalStackFixture.AwsSecretAccessKey)
             .WithEnvironment("DOTNET_SYSTEM_NET_SOCKETS_HTTP_USEIPV6", "false")
-            .WithNetwork(TestContainerConstants.NetworkName)
+            .WithNetwork(_networkName)
             .WithNetworkAliases("cads_bridge")
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilHttpRequestIsSucceeded(
                     req => req.ForPort(5550).ForPath("/health"),
                     o => o.WithTimeout(TimeSpan.FromSeconds(60))));
 
-        if (extraEnvironment is not null)
-            foreach (var (key, value) in extraEnvironment)
+        if (_extraEnvironment is not null)
+            foreach (var (key, value) in _extraEnvironment)
                 builder = builder.WithEnvironment(key, value);
 
         ApiContainer = builder.Build();
