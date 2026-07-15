@@ -6,14 +6,16 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
 public class CsvDataFileSplitBackgroundService(
     Channel<CsvDataFileSplitJob> channel,
     ILogger<CsvDataFileSplitBackgroundService> logger,
-    IFileImportStore fileImportStore,
-    ICsvDataFileSplitterService csvDataFileSplitterService,
+    IServiceScopeFactory scopeFactory,
+//    IFileImportStore fileImportStore,
+ //   ICsvDataFileSplitterService csvDataFileSplitterService,
     DataLoadConfiguration config) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,6 +36,9 @@ public class CsvDataFileSplitBackgroundService(
                 logger.LogError("FileImportId is required for split job {Key}", request.SourceKey);
                 continue;
             }
+            using var scope = scopeFactory.CreateScope();
+            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+            var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
 
             await semaphore.WaitAsync(stoppingToken);
 

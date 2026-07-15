@@ -7,6 +7,8 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
+using CadsBridge.Core.ApiClients;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -31,12 +33,16 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
                               .Returns(Task.CompletedTask);
 
         var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddTransient<IFileImportStore>(f => _fileImportStatusStore.Object);
+        serviceCollection.AddTransient<ICsvDataFileSplitterService>(f => _splitter.Object);
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         _sut = new CsvDataFileSplitBackgroundService(
             _channel,
             _logger.Object,
-            _fileImportStatusStore.Object,
-            _splitter.Object,
+            serviceScopeFactory,
             config);
     }
 
@@ -56,13 +62,12 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     [Fact]
     public async Task Processes_job_successfully()
     {
-        await _sut.StartAsync(CancellationToken.None);
-
         var job = CreateJob(1);
+        await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkCompletedAsync(job.FileImportId!.Value, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.UpdateAsync(job.FileImportId!.Value, FileImportStatus.Completed, 0, 1, It.IsAny<CancellationToken>()), Times.Once);
 
         _fileImportStatusStore.Verify(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -74,7 +79,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob(1);
 
         _splitter.Setup(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()))
-                 .ReturnsAsync(1);
+                 .ReturnsAsync(0);
 
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
