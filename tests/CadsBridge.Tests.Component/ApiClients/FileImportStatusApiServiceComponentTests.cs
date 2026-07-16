@@ -1,6 +1,6 @@
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
-using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
@@ -18,6 +18,7 @@ public class FileImportStatusApiServiceComponentTests
     {
         [$"ApiClients:{ClientName}:BaseUrl"] = "http://cds-api",
         [$"ApiClients:{ClientName}:HealthcheckEnabled"] = "false",
+        [$"ApiClients:{ClientName}:UseFakeClient"] = "false",
         [$"ApiClients:{ClientName}:ResiliencePolicy:Retries"] = "1",
         [$"ApiClients:{ClientName}:ResiliencePolicy:BaseDelaySeconds"] = "0",
         [$"ApiClients:{ClientName}:ResiliencePolicy:UseJitter"] = "false"
@@ -26,7 +27,7 @@ public class FileImportStatusApiServiceComponentTests
     [Theory]
     [InlineData(FileImportStatus.Importing, "importing")]
     [InlineData(FileImportStatus.Completed, "complete")]
-    [InlineData(FileImportStatus.Failed, "failed")]
+    [InlineData(FileImportStatus.Failed, "fail")]
     public async Task MarkStatus_SendsPostThroughRealCdsApiClient_ToExpectedUrl(
         FileImportStatus status, string segment)
     {
@@ -35,7 +36,7 @@ public class FileImportStatusApiServiceComponentTests
         factory.OverrideHttpClientHandler(ClientName, stub);
         _ = factory.CreateClient(); // force host build so ConfigureTestServices runs
 
-        var sut = factory.Services.GetRequiredService<IFileImportStatusApiService>();
+        var sut = factory.Services.GetRequiredService<IFileImportApiService>();
         await sut.MarkStatus(99, status, TestContext.Current.CancellationToken);
 
         stub.Requests.Should().ContainSingle();
@@ -52,7 +53,7 @@ public class FileImportStatusApiServiceComponentTests
         factory.OverrideHttpClientHandler(ClientName, stub);
         _ = factory.CreateClient();
 
-        var sut = factory.Services.GetRequiredService<IFileImportStatusApiService>();
+        var sut = factory.Services.GetRequiredService<IFileImportApiService>();
         await sut.MarkReset(99, TestContext.Current.CancellationToken);
 
         stub.Requests.Should().ContainSingle();

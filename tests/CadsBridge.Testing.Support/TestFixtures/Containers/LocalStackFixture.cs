@@ -1,35 +1,45 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.SQS;
+using Amazon.SQS.Model;
 using CadsBridge.Testing.Support.Constants;
 using Testcontainers.LocalStack;
 using Xunit;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Containers;
 
-public class LocalStackFixture : IAsyncLifetime
+public class LocalStackFixture(string networkName) : IAsyncLifetime
 {
-    public static LocalStackContainer? LocalStackContainer { get; private set; }
+    public LocalStackContainer? LocalStackContainer { get; private set; }
+
     public IAmazonS3 S3Client { get; private set; } = null!;
-    public static string ServiceUrl => $"http://localhost:{LocalStackContainer!.GetMappedPublicPort(TestContainerConstants.LocalStackPort)}";
+    public IAmazonSQS SqsClient { get; private set; } = null!;
+
+    public string? SqsEndpoint { get; private set; }
+    public string? CadsBridgeFifoQueueUrl { get; private set; }
+    public string? CadsBridgeFifoDeadLetterQueueUrl { get; private set; }
+
+    public string ServiceUrl => $"http://localhost:{LocalStackContainer!.GetMappedPublicPort(TestContainerConstants.LocalStackPort)}";
     public static string NetworkServiceUrl => $"http://{TestContainerConstants.NetworkAlias}:{TestContainerConstants.LocalStackPort}";
+
     public const string AwsAccessKeyId = "test";
     public const string AwsSecretAccessKey = "test";
-    public const string InternalBucketName = "cads-bridge-internal-bucket";
-    public const string ExternalBucketName = "cads-bridge-external-bucket";
+    public const string InternalBucketName = TestS3Constants.TestCadsBridgeInternalBucketName;
+    public const string ExternalBucketName = TestS3Constants.TestCadsBridgeExternalBucketName;
     public const string AwsRegion = TestAwsConstants.AwsRegion;
     private static Amazon.Runtime.BasicAWSCredentials GetBasicAWSCredentials => new(AwsAccessKeyId, AwsSecretAccessKey);
 
     public async ValueTask InitializeAsync()
     {
-        DockerNetworkHelper.EnsureNetworkExists(TestContainerConstants.NetworkName);
+        DockerNetworkHelper.EnsureNetworkExists(networkName);
 
         LocalStackContainer = new LocalStackBuilder("localstack/localstack:3.0.2")
-            .WithEnvironment("SERVICES", "s3")
+            .WithEnvironment("SERVICES", "s3,sqs")
             .WithEnvironment("DEBUG", "1")
             .WithEnvironment("AWS_DEFAULT_REGION", AwsRegion)
             .WithEnvironment("AWS_ACCESS_KEY_ID", AwsAccessKeyId)
             .WithEnvironment("AWS_SECRET_ACCESS_KEY", AwsSecretAccessKey)
-            .WithNetwork(TestContainerConstants.NetworkName)
+            .WithNetwork(networkName)
             .WithNetworkAliases(TestContainerConstants.NetworkAlias)
             .Build();
 
@@ -47,18 +57,66 @@ public class LocalStackFixture : IAsyncLifetime
             ServiceURL = ServiceUrl,
             ForcePathStyle = true
         });
+
+        SqsClient = new AmazonSQSClient(GetBasicAWSCredentials, new AmazonSQSConfig
+        {
+            ServiceURL = ServiceUrl,
+            AuthenticationRegion = AwsRegion,
+            UseHttp = true
+        });
+
+        SqsEndpoint = SqsClient.Config.ServiceURL!;
     }
 
     private async Task InitialiseResourcesAsync()
     {
         await S3Client.PutBucketAsync(new PutBucketRequest { BucketName = InternalBucketName });
         await S3Client.PutBucketAsync(new PutBucketRequest { BucketName = ExternalBucketName });
+
+        var cadsBridgeFifoDlqCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest
+        {
+            QueueName = TestSqsConstants.CadsBridgeFifoDeadLetterQueueName,
+            Attributes = new Dictionary<string, string>
+            {
+                { QueueAttributeName.FifoQueue, "true" }
+            }
+        });
+        var cadsBridgeFifoDlqAttr = await SqsClient.GetQueueAttributesAsync(new GetQueueAttributesRequest
+        {
+            QueueUrl = cadsBridgeFifoDlqCreated.QueueUrl,
+            AttributeNames = ["QueueArn"]
+        });
+
+        var cadsBridgeFifoQueueCreated = await SqsClient.CreateQueueAsync(new CreateQueueRequest
+        {
+            QueueName = TestSqsConstants.CadsBridgeFifoQueueName,
+            Attributes = new Dictionary<string, string>
+            {
+                { QueueAttributeName.FifoQueue, "true" }
+            }
+        });
+
+        CadsBridgeFifoQueueUrl = cadsBridgeFifoQueueCreated.QueueUrl;
+        CadsBridgeFifoDeadLetterQueueUrl = cadsBridgeFifoDlqCreated.QueueUrl;
+
+        var redrivePolicy = $"{{\"deadLetterTargetArn\":\"{cadsBridgeFifoDlqAttr.QueueARN}\",\"maxReceiveCount\":\"3\"}}";
+        await SqsClient.SetQueueAttributesAsync(new SetQueueAttributesRequest
+        {
+            QueueUrl = CadsBridgeFifoQueueUrl,
+            Attributes = new Dictionary<string, string>
+            {
+                { "RedrivePolicy", redrivePolicy }
+            }
+        });
     }
 
     private async Task VerifyResourcesAsync()
     {
         await S3Client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = InternalBucketName });
         await S3Client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = ExternalBucketName });
+
+        await SqsClient.GetQueueAttributesAsync(TestSqsConstants.CadsBridgeFifoDeadLetterQueueName, ["All"], CancellationToken.None);
+        await SqsClient.GetQueueAttributesAsync(TestSqsConstants.CadsBridgeFifoQueueName, ["All"], CancellationToken.None);
     }
 
     public async ValueTask DisposeAsync()
@@ -73,6 +131,9 @@ public class LocalStackFixture : IAsyncLifetime
 
         // Synchronous disposals wrapped safely
         try { S3Client?.Dispose(); }
+        catch (Exception ex) { error ??= ex; }
+
+        try { SqsClient?.Dispose(); }
         catch (Exception ex) { error ??= ex; }
 
         // Async disposal using the same Safe pattern

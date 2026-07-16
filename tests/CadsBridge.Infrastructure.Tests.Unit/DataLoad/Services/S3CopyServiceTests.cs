@@ -1,6 +1,7 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
@@ -35,12 +36,13 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
-        var sut = CreateSut(s3, aes, transfer);
+        var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(s3FileMetaDataService.RecordCount);
         s3.PutRequests.Should().ContainSingle();
         transfer.Uploads.Should().BeEmpty();
     }
@@ -56,12 +58,13 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
-        var sut = CreateSut(s3, aes, transfer);
+        var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(s3FileMetaDataService.RecordCount);
         transfer.Uploads.Should().ContainSingle();
         s3.PutRequests.Should().BeEmpty();
     }
@@ -91,12 +94,13 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
-        var sut = CreateSut(s3.Object, aes, transfer);
+        var sut = CreateSut(s3.Object, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(s3FileMetaDataService.RecordCount);
         attempts.Should().Be(2);
     }
 
@@ -109,12 +113,13 @@ public class S3CopyServiceTests
         var s3 = new FakeS3();
         var aes = new FakeAesCryptoTransform("ignored");
         var transfer = new FakeTransferUtilityAdapter();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
-        var sut = CreateSut(s3, aes, transfer);
+        var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService);
 
         var result = await sut.ExecAsync(CreateJob(), cts.Token);
 
-        result.Should().BeFalse();
+        result.Should().Be(0);
         s3.PutRequests.Should().BeEmpty();
         transfer.Uploads.Should().BeEmpty();
     }
@@ -135,8 +140,9 @@ public class S3CopyServiceTests
 
         var aes = new FakeAesCryptoTransform("decrypted");
         var transfer = new FakeTransferUtilityAdapter();
+        var s3FileMetaDataService = new FakeS3FileMetaDataService();
 
-        var sut = CreateSut(s3.Object, aes, transfer);
+        var sut = CreateSut(s3.Object, aes, transfer, s3FileMetaDataService);
 
         await Assert.ThrowsAsync<AmazonS3Exception>(() =>
             sut.ExecAsync(CreateJob(), CancellationToken.None));
@@ -145,7 +151,8 @@ public class S3CopyServiceTests
     private static S3CopyService CreateSut(
         IAmazonS3 s3,
         IAesCryptoTransform aes,
-        ITransferUtilityAdapter transfer)
+        ITransferUtilityAdapter transfer,
+        IS3FileMetaDataService s3FileMetaDataService)
     {
         var factory = new Mock<IS3ClientFactory>();
 
@@ -160,12 +167,9 @@ public class S3CopyServiceTests
 
         var config = new DataLoadConfiguration { Salt = Salt };
 
-        return new S3CopyService(factory.Object, aes, transfer, config, logger.Object);
+        return new S3CopyService(factory.Object, aes, transfer, s3FileMetaDataService, config, logger.Object);
     }
 
     private static CsvDataFileImportJob CreateJob() =>
-        new(
-            JobId: "job-1",
-            SourceKey: SourceKey,
-            FileImportStatusId: 1L);
+        new(SourceKey: SourceKey);
 }

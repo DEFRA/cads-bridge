@@ -33,7 +33,7 @@ public class CsvDataFileSplitterServiceTests
     public async Task Throws_when_split_value_is_null_for_by_lines()
     {
         var sut = CreateSut(new FakeS3(), SplitType.ByLines, null);
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
@@ -43,7 +43,7 @@ public class CsvDataFileSplitterServiceTests
     public async Task Throws_when_split_value_is_null_for_by_size()
     {
         var sut = CreateSut(new FakeS3(), SplitType.BySize, null);
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
@@ -53,7 +53,7 @@ public class CsvDataFileSplitterServiceTests
     public async Task Throws_when_split_type_is_invalid()
     {
         var sut = CreateSut(new FakeS3(), (SplitType)999, 2);
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
@@ -65,11 +65,11 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = SmallInputFile };
         var sut = CreateSut(s3, SplitType.None, null);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(SmallInputFile.Length);
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
             [ExpectedKey()] = SmallInputFile
@@ -86,7 +86,7 @@ public class CsvDataFileSplitterServiceTests
 
         var sut = CreateSut(s3.Object, SplitType.ByLines, 2);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
@@ -112,11 +112,11 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = sourceContent };
         var sut = CreateSut(s3, SplitType.ByLines, 2);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        result.Should().BeTrue();
+        result.Should().Be(4);
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
@@ -146,7 +146,7 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = sourceContent };
         var sut = CreateSut(s3, SplitType.ByLines, 2);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await sut.ExecuteAsync(request, CancellationToken.None);
 
@@ -167,7 +167,7 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = sourceContent };
         var sut = CreateSut(s3, SplitType.ByLines, 2);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await sut.ExecuteAsync(request, CancellationToken.None);
 
@@ -193,7 +193,7 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = SmallInputFile };
         var sut = CreateSut(s3, SplitType.BySize, 1);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await sut.ExecuteAsync(request, CancellationToken.None);
 
@@ -215,7 +215,7 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = sourceContent };
         var sut = CreateSut(s3, SplitType.BySize, 1);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         await sut.ExecuteAsync(request, CancellationToken.None);
 
@@ -239,11 +239,11 @@ public class CsvDataFileSplitterServiceTests
         var s3 = new FakeS3 { EncryptedContent = SmallInputFile };
         var sut = CreateSut(s3, SplitType.BySize, 1);
 
-        var request = new CsvDataFileSplitJob("", SourceKey, null);
+        var request = new CsvDataFileSplitJob(SourceKey, null);
 
         var result = await sut.ExecuteAsync(request, cts.Token);
 
-        result.Should().BeFalse();
+        result.Should().Be(0);
         s3.PutRequests.Should().BeEmpty();
     }
 

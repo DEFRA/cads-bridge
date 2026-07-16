@@ -7,6 +7,8 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
+using CadsBridge.Core.ApiClients;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -14,8 +16,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 {
     private readonly Channel<CsvDataFileSplitJob> _channel = Channel.CreateUnbounded<CsvDataFileSplitJob>();
     private readonly Mock<ILogger<CsvDataFileSplitBackgroundService>> _logger = new();
-    private readonly Mock<ISplitJobProgressStore> _progress = new();
-    private readonly Mock<IFileImportStatusStore> _fileImportStatusStore = new();
+    private readonly Mock<IFileImportStore> _fileImportStatusStore = new();
     private readonly Mock<ICsvDataFileSplitterService> _splitter = new();
     private readonly CsvDataFileSplitBackgroundService _sut;
 
@@ -24,21 +25,24 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         _splitter.Setup(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
-                 .ReturnsAsync(true);
+                 .ReturnsAsync(1);
 
-        _fileImportStatusStore.Setup(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStatusStore.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
-        _fileImportStatusStore.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStatusStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
 
         var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddTransient<IFileImportStore>(f => _fileImportStatusStore.Object);
+        serviceCollection.AddTransient<ICsvDataFileSplitterService>(f => _splitter.Object);
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         _sut = new CsvDataFileSplitBackgroundService(
             _channel,
             _logger.Object,
-            _progress.Object,
-            _fileImportStatusStore.Object,
-            _splitter.Object,
+            serviceScopeFactory,
             config);
     }
 
@@ -47,31 +51,25 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     {
         await _sut.StartAsync(CancellationToken.None);
 
-        var job = CreateJob(1, fileImportStatusId: null);
+        var job = CreateJob(1, fileImportId: null);
         await Write(job);
 
-        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, It.IsAny<string>()), Times.Once);
-
         _splitter.Verify(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
-        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-        _fileImportStatusStore.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Processes_job_successfully()
     {
-        await _sut.StartAsync(CancellationToken.None);
-
         var job = CreateJob(1);
+        await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.SourceKey), Times.Once);
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
-        await _progress.AsyncVerify(x => x.MarkSucceeded(job.JobId, job.SourceKey), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkSucceeded(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.UpdateAsync(job.FileImportId!.Value, FileImportStatus.Completed, 0, 1, It.IsAny<CancellationToken>()), Times.Once);
 
-        _progress.Verify(x => x.MarkFailed(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _fileImportStatusStore.Verify(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStatusStore.Verify(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
 
@@ -81,16 +79,12 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob(1);
 
         _splitter.Setup(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()))
-                 .ReturnsAsync(false);
+                 .ReturnsAsync(0);
 
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _progress.AsyncVerify(x => x.MarkInProgress(job.JobId, job.SourceKey), Times.Once);
-        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, It.IsAny<string>()), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
-
-        _progress.Verify(x => x.MarkSucceeded(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailedAsync(job.FileImportId!.Value, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -106,8 +100,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         await Write(job);
 
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()), Times.Once);
-        await _progress.AsyncVerify(x => x.MarkFailed(job.JobId, job.SourceKey, It.IsAny<string>()), Times.Once);
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailed(job.FileImportStatusId!.Value, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailedAsync(job.FileImportId!.Value, It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(
@@ -133,18 +126,15 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         await _splitter.AsyncVerify(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job1, It.IsAny<CancellationToken>()), Times.Once);
         await _splitter.AsyncVerify(x => x.ExecuteAsync(job2, It.IsAny<CancellationToken>()), Times.Once);
-
-        await _progress.AsyncVerify(x => x.MarkSucceeded(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
     }
 
     private Task Write(CsvDataFileSplitJob job) =>
         _channel.Writer.WriteAsync(job).AsTask();
 
-    private static CsvDataFileSplitJob CreateJob(int n, long? fileImportStatusId = 1) =>
+    private static CsvDataFileSplitJob CreateJob(int n, long? fileImportId = 1) =>
         new(
-            JobId: $"job-{n}",
             SourceKey: $"import/file-{n}.csv",
-            FileImportStatusId: fileImportStatusId);
+            FileImportId: fileImportId);
 
     public async ValueTask DisposeAsync()
     {

@@ -4,5 +4,5 @@ namespace CadsBridge.Application.DataLoad.Services;
 
 public interface IS3CopyService
 {
-    Task<bool> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default);
+    Task<long> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default);
 }

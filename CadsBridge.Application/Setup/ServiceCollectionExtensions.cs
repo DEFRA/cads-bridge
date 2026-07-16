@@ -8,9 +8,18 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationLayer(this IServiceCollection services)
     {
+        services.ConfigureMediatR();
         services.RegisterChannels();
 
         return services;
+    }
+
+    private static void ConfigureMediatR(this IServiceCollection services)
+    {
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(IApplicationMarker).Assembly);
+        });
     }
 
     public static void RegisterChannels(this IServiceCollection services)

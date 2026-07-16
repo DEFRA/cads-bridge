@@ -1,7 +1,6 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
-using CadsBridge.Core.DataLoad.Jobs;
-using CadsBridge.Core.Exceptions;
+using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Endpoints.Requests;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Utilities.Assertions;
@@ -11,7 +10,6 @@ using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
 using Moq;
 using System.Net;
-using System.Net.Http.Json;
 
 namespace CadsBridge.Tests.Component.Endpoints;
 
@@ -27,19 +25,25 @@ public class CsvDataFileImportEndpointTests
 
     private static Dictionary<string, string?> SaltOverride(string salt) => new() { ["DataLoad:Salt"] = salt };
 
+    private static string GetDefaultFileContents() =>
+        string.Join(
+            Environment.NewLine,
+            "HEADER|ignored",
+            "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
+            "D|1|One",
+            "D|2|Two",
+            "D|3|Three",
+            $"T|{CtsmFilename}.csv|01012000 00:00:00|3") + Environment.NewLine;
+
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
     {
         await using var factory = new CadsBridgeWebAppFactory();
         var client = factory.CreateClient();
 
-        var jobId = await TriggerImportJob(client);
+        var response = await TriggerImportJob(client);
 
-        var status = await GetImportJobStatus(jobId, client);
-        status!.JobId.Should().Be(jobId);
-        status.TotalFiles.Should().Be(0);
-        status.CompletedFiles.Should().Be(0);
-        status.Files.Should().BeEmpty();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -52,169 +56,131 @@ public class CsvDataFileImportEndpointTests
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]);
 
-        var jobId = await TriggerImportJob(client, request);
+        var response = await TriggerImportJob(client, request);
 
-        await AsyncAssert.WaitForAssertion(async () =>
-        {
-            var status = await GetImportJobStatus(jobId, client);
-            status!.JobId.Should().Be(jobId);
-            status.TotalFiles.Should().Be(1);
-            status.Files.First().Status.Should().Be(JobStatus.Failed);
-        });
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task ImportFile_WithOneFile_CreatesAnImportJobWithOneFile_DecryptsAndSplitsFile()
     {
         await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
+
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
-        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
+
+        var s3ExternalToInternalCopyServiceMock = new Mock<IS3CopyService>();
+        s3ExternalToInternalCopyServiceMock
+            .Setup(x => x.ExecAsync(It.IsAny<CsvDataFileImportJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(555L);
+        factory.OverrideSingleton(s3ExternalToInternalCopyServiceMock.Object);
+
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
-        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
-        var expectedFileSplitJob = new CsvDataFileSplitJob(jobId, _importedKey, FileImportStatusId: 1L);
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var expectedFileSplitJob = new CsvDataFileSplitJob(_importedKey, FileImportId: 1L, 555L);
         await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
-        var status = await GetImportJobStatus(jobId, client);
-        status!.JobId.Should().Be(jobId);
-        status.TotalFiles.Should().Be(1);
-        status.Files.First().Status.Should().Be(JobStatus.Succeeded);
     }
 
     [Fact]
     public async Task ImportFile_WithOneFile_CallsS3MetaDataServiceAndFileImportStatusStore_WithExpectedArguments()
     {
         await using var factory = new CadsBridgeWebAppFactory(null, false);
+
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
-        factory.S3FileMetaDataServiceMock
-            .Setup(x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(555L);
-        factory.FileImportStatusStoreMock
-            .Setup(x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()))
+
+        factory.FileImportStoreMock
+            .Setup(x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
-        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
+
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
-        await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
-        factory.S3FileMetaDataServiceMock.Verify(
-            x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStatusStoreMock.Verify(
-            x => x.Initiate(_incomingKey, 555L, It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStatusStoreMock.Verify(
-            x => x.MarkInProgress(9L, It.IsAny<CancellationToken>()), Times.Once);
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        factory.FileImportStoreMock.Verify(
+            x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ImportFile_WhenS3MetaDataServiceThrowsNotFoundException_MarksFileAsFailedButReturnsOk()
-    {
-        await using var factory = new CadsBridgeWebAppFactory(null, false);
-        var notFoundMessage = $"S3 object '{_incomingKey}' was not found.";
-        factory.S3FileMetaDataServiceMock
-            .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new NotFoundException(notFoundMessage));
-        var client = factory.CreateClient();
-
-        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
-        ]));
-
-        await AsyncAssert.WaitForAssertion(async () =>
-        {
-            var status = await GetImportJobStatus(jobId, client);
-            status!.JobId.Should().Be(jobId);
-            status.TotalFiles.Should().Be(1);
-            status.CompletedFiles.Should().Be(1);
-            status.Files.First().Status.Should().Be(JobStatus.Failed);
-            status.Files.First().ErrorMessage.Should().Be(notFoundMessage);
-        });
-
-        factory.FileImportStatusStoreMock.Verify(
-            x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ImportFile_WhenFileImportStatusStoreInitiateThrows_MarksFileAsFailedButReturnsOk()
+    public async Task ImportFile_WhenFileImportStoreCreateThrows_MarksFileAsFailedButReturnsOk()
     {
         await using var factory = new CadsBridgeWebAppFactory(null, false);
         const string errorMessage = "downstream unavailable";
-        factory.FileImportStatusStoreMock
-            .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        factory.FileImportStoreMock
+            .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(errorMessage));
         var client = factory.CreateClient();
 
-        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
-        await AsyncAssert.WaitForAssertion(async () =>
-        {
-            var status = await GetImportJobStatus(jobId, client);
-            status!.JobId.Should().Be(jobId);
-            status.TotalFiles.Should().Be(1);
-            status.CompletedFiles.Should().Be(1);
-            status.Files.First().Status.Should().Be(JobStatus.Failed);
-            status.Files.First().ErrorMessage.Should().Be(errorMessage);
-        });
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        factory.FileImportStatusStoreMock.Verify(
-            x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        factory.FileImportStoreMock.Verify(
+            x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task ImportFile_WhenCopySucceeds_MarksFileImportStatusInProgress()
     {
         await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
+
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
+
         factory.OverrideSingleton(fileSplitterMock.Object);
-        factory.FileImportStatusStoreMock
-            .Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        factory.FileImportStoreMock
+            .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42L);
-        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
+
+        factory.S3FileMetaDataServiceMock
+            .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(123L);
+
+        await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
-        var jobId = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
-        await AsyncAssert.WaitForAssertion(async () =>
-        {
-            var status = await GetImportJobStatus(jobId, client);
-            status!.Files.First().Status.Should().Be(JobStatus.Succeeded);
-        });
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // The split step (which marks the file import status as succeeded) only runs via the
         // real CsvDataFileSplitBackgroundService; since ISplitMessageProducer is mocked out here,
         // only the import stage's audit call (MarkInProgress) is expected.
-        factory.FileImportStatusStoreMock.Verify(x => x.MarkInProgress(42L, It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStatusStoreMock.Verify(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        await AsyncAssert.WaitForAssertion(async () =>
+        {
+            factory.FileImportStoreMock.Verify(x => x.UpdateAsync(It.IsAny<long>(), Core.ApiClients.FileImportStatus.Importing, It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Once);
+        }, 1000);
     }
 
     private sealed record ImportJobResponse(string JobId);
-    private static async Task<string> TriggerImportJob(HttpClient httpClient, CsvDataFileImportRequest? request = null)
+
+    private static async Task<HttpResponseMessage> TriggerImportJob(HttpClient httpClient, CsvDataFileImportRequest? request = null)
     {
         var content = HttpContentUtility.CreateApplicationJsonAsStringContent(request ?? new CsvDataFileImportRequest([]));
 
         var response = await httpClient.PostAsync("import", content, TestContext.Current.CancellationToken);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<ImportJobResponse>(cancellationToken: TestContext.Current.CancellationToken);
-        var jobId = result!.JobId;
-        jobId.Should().NotBeNullOrEmpty();
-        return jobId;
-    }
-
-    private static async Task<JobProgress?> GetImportJobStatus(string jobId, HttpClient httpClient)
-    {
-        var response = await httpClient.GetAsync($"import/{jobId}/progress", TestContext.Current.CancellationToken);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        return await response.Content.ReadFromJsonAsync<JobProgress>(TestContext.Current.CancellationToken);
+        return response;
     }
 }

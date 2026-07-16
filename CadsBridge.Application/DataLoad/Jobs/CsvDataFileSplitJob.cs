@@ -1,7 +1,7 @@
 namespace CadsBridge.Application.DataLoad.Jobs;
 
 public record CsvDataFileSplitJob(
-    string JobId,
     string SourceKey,
-    long? FileImportStatusId = null
+    long? FileImportId = null,
+    long TotalRowsToProcess = 0
 );

@@ -12,9 +12,8 @@ public class CsvDataFileSplitterService(
     ILogger<CsvDataFileSplitterService> logger)
     : ICsvDataFileSplitterService
 {
-    public async Task<bool> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
+    public async Task<long> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
-
         var attempt = 0;
         var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(config.SplitType);
         while (true)
@@ -23,7 +22,7 @@ public class CsvDataFileSplitterService(
             {
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
-                return false;
+                return 0;
             }
 
             attempt++;
@@ -40,14 +39,14 @@ public class CsvDataFileSplitterService(
                         job.SourceKey,
                         attempt);
 
-                await csvDataFileSplitterStrategy.Process(job, cancellationToken);
+                var result = await csvDataFileSplitterStrategy.ProcessAsync(job, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "S3 file split complete: {SourceKey}",
                         job.SourceKey);
 
-                return true;
+                return result;
             }
             catch (Exception ex) when (attempt < config.MaxRetryAttempts)
             {

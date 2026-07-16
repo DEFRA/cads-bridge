@@ -1,14 +1,15 @@
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Json;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using System.Text.Json;
 
 namespace CadsBridge.Middleware;
 
 public sealed class ExceptionHandlingMiddleware(
-        RequestDelegate next,
-        ILogger<ExceptionHandlingMiddleware> logger,
-        IConfiguration cfg)
+    RequestDelegate next,
+    ILogger<ExceptionHandlingMiddleware> logger,
+    IConfiguration cfg)
 {
     private readonly RequestDelegate _next = next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger = logger;
@@ -25,19 +26,19 @@ public sealed class ExceptionHandlingMiddleware(
         }
         catch (FluentValidation.ValidationException ex)
         {
-            await HandleExceptionAsync(context, ex, correlationId, 422, "Unprocessable Content");
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.BadRequest, "Validation errors");
         }
         catch (NotFoundException ex)
         {
-            await HandleExceptionAsync(context, ex, correlationId, 404);
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.NotFound);
         }
         catch (DomainException ex)
         {
-            await HandleExceptionAsync(context, ex, correlationId, 400);
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.Conflict, "Conflict error");
         }
         catch (Exception ex)
         {
-            await HandleExceptionAsync(context, ex, correlationId, 500, "An error occurred");
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.InternalServerError, "An error occurred");
         }
     }
 

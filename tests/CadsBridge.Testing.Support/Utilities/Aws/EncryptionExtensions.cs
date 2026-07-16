@@ -7,6 +7,7 @@ public static class EncryptionExtensions
 {
     public static async Task<MemoryStream> Encrypt(this string content, string password, string salt, CancellationToken cancellationToken)
     {
+        //return new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var unencryptedStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         var cryptoTransform = new AesCryptoTransform();
         var encryptedStream = new MemoryStream();

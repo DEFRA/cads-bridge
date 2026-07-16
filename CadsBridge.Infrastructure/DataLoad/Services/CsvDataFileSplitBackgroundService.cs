@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -12,9 +13,9 @@ namespace CadsBridge.Infrastructure.DataLoad.Services;
 public class CsvDataFileSplitBackgroundService(
     Channel<CsvDataFileSplitJob> channel,
     ILogger<CsvDataFileSplitBackgroundService> logger,
-    ISplitJobProgressStore progressStore,
-    IFileImportStatusStore fileImportStatusStore,
-    ICsvDataFileSplitterService csvDataFileSplitterService,
+    IServiceScopeFactory scopeFactory,
+    //    IFileImportStore fileImportStore,
+    //   ICsvDataFileSplitterService csvDataFileSplitterService,
     DataLoadConfiguration config) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -30,12 +31,14 @@ public class CsvDataFileSplitBackgroundService(
                 return;
             }
 
-            if (!request.FileImportStatusId.HasValue)
+            if (!request.FileImportId.HasValue)
             {
-                logger.LogError("FileImportStatusId is required for split job {Key}", request.SourceKey);
-                progressStore.MarkFailed(request.JobId, request.SourceKey, "FileImportStatusId is required for split job");
+                logger.LogError("FileImportId is required for split job {Key}", request.SourceKey);
                 continue;
             }
+            using var scope = scopeFactory.CreateScope();
+            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+            var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
 
             await semaphore.WaitAsync(stoppingToken);
 
@@ -44,25 +47,21 @@ public class CsvDataFileSplitBackgroundService(
                 {
                     try
                     {
-                        progressStore.MarkInProgress(request.JobId, request.SourceKey);
-                        var result = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
+                        var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
-                        if (result)
+                        if (foundRows > 0)
                         {
-                            progressStore.MarkSucceeded(request.JobId, request.SourceKey);
-                            await fileImportStatusStore.MarkSucceeded(request.FileImportStatusId.Value, stoppingToken);
+                            await fileImportStore.UpdateAsync(request.FileImportId.Value, Core.ApiClients.FileImportStatus.Completed, request.TotalRowsToProcess, foundRows, stoppingToken);
                         }
                         else
                         {
-                            progressStore.MarkFailed(request.JobId, request.SourceKey, "Unknown error during split");
-                            await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                        progressStore.MarkFailed(request.JobId, request.SourceKey, ex.Message);
-                        await fileImportStatusStore.MarkFailed(request.FileImportStatusId.Value, stoppingToken);
+                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, stoppingToken);
                     }
                     finally
                     {

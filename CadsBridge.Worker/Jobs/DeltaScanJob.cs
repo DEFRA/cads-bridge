@@ -1,7 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Core.Locking;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Worker.Jobs;
 

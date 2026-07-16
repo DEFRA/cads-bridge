@@ -47,7 +47,7 @@ public class S3FileMetaDataService<TClient>(
 
         // Parse and validate
         var parts = _csvParser.ParseCsvLine(trailerLine, expectedCount: 4);
-        return ParseTrailerLine(parts.ToArray(), s3Key);
+        return ParseTrailerLine([.. parts], s3Key);
     }
 
     private async Task<long> GetFileSize(string s3Key, CancellationToken cancellationToken)

@@ -1,8 +1,17 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.SQS;
+using Amazon.SQS.Model;
+using CadsBridge.Application.Messaging.Clients;
+using CadsBridge.Application.Messaging.Consumers;
+using CadsBridge.Application.Messaging.Messages;
+using CadsBridge.Application.Messaging.Observers;
+using CadsBridge.Infrastructure.Messaging.Consumers;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
+using CadsBridge.Testing.Support.Constants;
+using CadsBridge.Testing.Support.TestDoubles.Observers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -11,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using System.Globalization;
 using System.Net;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
@@ -21,6 +31,7 @@ public abstract class WebAppFactoryBase<TStart>(
     where TStart : class
 {
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
+    public Mock<IAmazonSQS> AmazonSQSMock { get; private set; } = new();
 
     public readonly List<Action<IServiceCollection>> _serviceOverrides = [];
 
@@ -28,6 +39,10 @@ public abstract class WebAppFactoryBase<TStart>(
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        var culture = new CultureInfo("en-GB");
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+
         builder.UseSetting(WebHostDefaults.ApplicationKey, typeof(TStart).Assembly.FullName);
         builder.UseContentRoot(AppContext.BaseDirectory);
         builder.UseEnvironment("Test");
@@ -52,12 +67,12 @@ public abstract class WebAppFactoryBase<TStart>(
         builder.ConfigureTestServices(services =>
         {
             OverrideAmazonS3(services);
+            OverrideAmazonSqs(services);
+            ConfigureMessageConsumers(services);
         });
 
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton(AmazonS3Mock.Object);
-
             if (disableHostedServices)
                 services.RemoveAll<IHostedService>();
 
@@ -99,12 +114,18 @@ public abstract class WebAppFactoryBase<TStart>(
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
         Environment.SetEnvironmentVariable("AWS__ServiceURL", "http://cads-bridge-localstack-emulator:4566");
-        Environment.SetEnvironmentVariable("Storage__Internal__BucketName", "cads-bridge-internal-bucket");
-        Environment.SetEnvironmentVariable("Storage__External__BucketName", "cads-bridge-external-bucket");
+
+        Environment.SetEnvironmentVariable("Storage__Internal__BucketName", TestS3Constants.TestCadsBridgeInternalBucketName);
+        Environment.SetEnvironmentVariable("Storage__External__BucketName", TestS3Constants.TestCadsBridgeExternalBucketName);
 
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__HealthcheckEnabled", "true");
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__BaseUrl", "http://localhost:5555");
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__BasicApiKey", "XYZ");
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__UseFakeClient", "false");
+
+        Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__QueueUrl", TestSqsConstants.TestQueueUrl);
+        Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", TestSqsConstants.TestQueueDlqUrl);
+        Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled", "true");
 
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_KEY", "test");
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_SECRET", "test");
@@ -112,8 +133,11 @@ public abstract class WebAppFactoryBase<TStart>(
 
     private void ResetInfrastructureMocks()
     {
-        AmazonS3Mock.Reset();
+        AmazonS3Mock!.Reset();
         ApplyDefaultS3MockSetup();
+
+        AmazonSQSMock!.Reset();
+        ApplyDefaultSqsMockSetup();
     }
 
     private void OverrideAmazonS3(IServiceCollection services)
@@ -130,9 +154,13 @@ public abstract class WebAppFactoryBase<TStart>(
         {
             var factory = new S3ClientFactory();
 
-            factory.RegisterMockClient<InternalStorageClient>(
-                "cads-internal-bucket",
+            factory.RegisterMockClient<ExternalStorageClient>(
+                TestS3Constants.TestCadsBridgeExternalBucketName,
                 AmazonS3Mock.Object);
+            factory.RegisterMockClient<InternalStorageClient>(
+                TestS3Constants.TestCadsBridgeInternalBucketName,
+                AmazonS3Mock.Object);
+
             return factory;
         });
     }
@@ -146,5 +174,44 @@ public abstract class WebAppFactoryBase<TStart>(
         AmazonS3Mock
             .Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ListObjectsV2Response { HttpStatusCode = HttpStatusCode.OK });
+    }
+
+    private void OverrideAmazonSqs(IServiceCollection services)
+    {
+        services.RemoveAll<IAmazonSQS>();
+
+        ApplyDefaultSqsMockSetup();
+
+        services.AddSingleton(AmazonSQSMock.Object);
+    }
+
+    private void ApplyDefaultSqsMockSetup()
+    {
+        AmazonSQSMock
+            .Setup(x => x.GetQueueAttributesAsync(
+                It.IsAny<string>(),
+                It.IsAny<List<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetQueueAttributesResponse
+            {
+                HttpStatusCode = HttpStatusCode.OK
+            });
+
+        AmazonSQSMock
+            .Setup(x => x.GetQueueAttributesAsync(
+                It.IsAny<GetQueueAttributesRequest>(),
+                It.IsAny<CancellationToken>()))
+            .Throws(new NotImplementedException("Use the (string, List<string>) overload"));
+    }
+
+    private static void ConfigureMessageConsumers(IServiceCollection services)
+    {
+        services.RemoveAll<CadsBridgeFifoQueueListener>();
+        services.RemoveAll<TestQueuePollerObserver<MessageType>>();
+        services.RemoveAll<IQueuePoller<CadsBridgeFifoQueueClient>>();
+
+        services.AddScoped<IQueuePoller<CadsBridgeFifoQueueClient>, CadsBridgeFifoQueuePoller>();
+        services.AddScoped<TestQueuePollerObserver<MessageType>>();
+        services.AddScoped<IQueuePollerObserver<MessageType>>(sp => sp.GetRequiredService<TestQueuePollerObserver<MessageType>>());
     }
 }

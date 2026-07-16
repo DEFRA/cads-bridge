@@ -1,15 +1,9 @@
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 
-public abstract class TestFixtureBase<TStart, TFactory>
+public abstract class TestFixtureBase<TStart, TFactory>(TFactory factory)
     where TStart : class
     where TFactory : WebAppFactoryBase<TStart>
 {
-    public readonly HttpClient HttpClient;
-    public readonly TFactory Factory;
-
-    protected TestFixtureBase(TFactory factory, bool useFakeAuth = false)
-    {
-        Factory = factory;
-        HttpClient = factory.CreateClient();
-    }
+    public readonly HttpClient HttpClient = factory.CreateClient();
+    public readonly TFactory Factory = factory;
 }

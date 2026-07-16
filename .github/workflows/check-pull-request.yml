@@ -60,6 +60,34 @@ jobs:
           recreate: true
           path: code-coverage-results.md
 
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    needs: pr-validator
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: true
+      TESTCONTAINERS_CHECKS_DISABLE: true
+    steps:
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '10.0.x'
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          path: working-dir
+      - name: Create certs folder
+        run: mkdir -p ./working-dir/certs
+      - name: Generate HTTPS dev cert
+        run: dotnet dev-certs https -ep ./working-dir/certs/https-dev-cert.pfx -p testpassword
+      - name: Build cads_bridge image
+        run: docker build -t cads_bridge:latest -f ./working-dir/Dockerfile ./working-dir
+      - name: Pull localstack and mongo images
+        run: |
+          docker pull localstack/localstack:3.0.2
+          docker pull mongo:6.0.13
+      - name: Run integration tests
+        run: dotnet test ./working-dir/CadsBridge.sln --filter Dependence=testcontainers -p:BuildInParallel=false
+
   sonarcloud-scan:
     name: CDP SonarCloud Scan
     uses: ./.github/workflows/sonarcloud.yml

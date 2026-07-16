@@ -1,10 +1,5 @@
-using Amazon.S3;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
-using CadsBridge.Infrastructure.Storage.Abstractions;
-using CadsBridge.Infrastructure.Storage.Clients;
-using CadsBridge.Infrastructure.Storage.Factories;
-using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -14,14 +9,18 @@ using Moq;
 
 namespace CadsBridge.Tests.Component.TestFixtures;
 
-public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrides = null, bool disableHostedServices = true)
-    : WebAppFactoryBase<Program>(configOverrides, disableHostedServices)
+public class CadsBridgeWebAppFactory(
+    IDictionary<string, string?>? configOverrides = null,
+    bool disableHostedServices = true)
+    : WebAppFactoryBase<Program>(
+        configOverrides,
+        disableHostedServices)
 {
     public CadsBridgeWebAppFactory() : this(null) { }
 
     public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
     public Mock<IS3FileMetaDataService> S3FileMetaDataServiceMock { get; } = CreateDefaultS3FileMetaDataServiceMock();
-    public Mock<IFileImportStatusStore> FileImportStatusStoreMock { get; } = CreateDefaultFileImportStatusStoreMock();
+    public Mock<IFileImportStore> FileImportStoreMock { get; } = CreateDefaultFileImportStoreMock();
 
     private readonly List<Action<IServiceCollection>> _testServiceOverrides = [];
 
@@ -33,16 +32,16 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
         return mock;
     }
 
-    private static Mock<IFileImportStatusStore> CreateDefaultFileImportStatusStoreMock()
+    private static Mock<IFileImportStore> CreateDefaultFileImportStoreMock()
     {
-        var mock = new Mock<IFileImportStatusStore>();
-        mock.Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        var mock = new Mock<IFileImportStore>();
+        mock.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1L);
-        mock.Setup(x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        mock.Setup(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        mock.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         return mock;
     }
@@ -57,7 +56,6 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
             services.AddSingleton(DataSeedFileLoaderMock.Object);
 
             OverrideFileImportStatusStore(services);
-            OverrideAmazonS3(services);
 
             foreach (var overrideAction in _testServiceOverrides)
             {
@@ -77,28 +75,7 @@ public class CadsBridgeWebAppFactory(IDictionary<string, string?>? configOverrid
     {
         services.RemoveAll<IS3FileMetaDataService>();
         services.AddSingleton(S3FileMetaDataServiceMock.Object);
-        services.RemoveAll<IFileImportStatusStore>();
-        services.AddSingleton(FileImportStatusStoreMock.Object);
-    }
-
-    private void OverrideAmazonS3(IServiceCollection services)
-    {
-        services.RemoveAll<IAmazonS3>();
-        services.AddSingleton(AmazonS3Mock.Object);
-
-        services.RemoveAll<IS3ClientFactory>();
-        services.AddSingleton<IS3ClientFactory>(_ =>
-        {
-            var factory = new S3ClientFactory();
-
-            factory.RegisterMockClient<ExternalStorageClient>(
-                TestS3Constants.TestCadsBridgeExternalBucketName,
-                AmazonS3Mock.Object);
-            factory.RegisterMockClient<InternalStorageClient>(
-                TestS3Constants.TestCadsBridgeInternalBucketName,
-                AmazonS3Mock.Object);
-
-            return factory;
-        });
+        services.RemoveAll<IFileImportStore>();
+        services.AddSingleton(FileImportStoreMock.Object);
     }
 }
