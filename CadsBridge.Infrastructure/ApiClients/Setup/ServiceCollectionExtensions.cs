@@ -62,7 +62,7 @@ public static class ServiceCollectionExtensions
                         sp.GetRequiredService<IHttpClientFactory>(),
                         clientName,
                         sp.GetRequiredService<ILogger<ApiClientHealthCheck>>()),
-                    failureStatus: HealthStatus.Unhealthy,
+                    failureStatus: null,
                     tags: ["api-client"]
                 ));
             }
