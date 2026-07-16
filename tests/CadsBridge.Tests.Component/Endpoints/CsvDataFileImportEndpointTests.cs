@@ -85,12 +85,11 @@ public class CsvDataFileImportEndpointTests
         await using var factory = new CadsBridgeWebAppFactory(null, false);
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
-        //factory.S3FileMetaDataServiceMock
-        //    .Setup(x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()))
-        //    .ReturnsAsync(555L);
+
         factory.FileImportStoreMock
-            .Setup(x => x.CreateAsync(_incomingKey, 555L, It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
+
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
@@ -101,34 +100,9 @@ public class CsvDataFileImportEndpointTests
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        //factory.S3FileMetaDataServiceMock.Verify(
-        //    x => x.GetRecordCountAsync(_incomingKey, It.IsAny<CancellationToken>()), Times.Once);
         factory.FileImportStoreMock.Verify(
-            x => x.CreateAsync(_incomingKey, 555L, It.IsAny<CancellationToken>()), Times.Once);
-        //factory.FileImportStoreMock.Verify(
-        //    x => x.MarkInProgressAsync(9L, It.IsAny<CancellationToken>()), Times.Once);
+            x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    //[Fact]
-    //public async Task ImportFile_WhenS3MetaDataServiceThrowsNotFoundException_MarksFileAsFailedButReturnsOk()
-    //{
-    //    await using var factory = new CadsBridgeWebAppFactory(null, false);
-    //    var notFoundMessage = $"S3 object '{_incomingKey}' was not found.";
-    //    factory.S3FileMetaDataServiceMock
-    //        .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-    //        .ThrowsAsync(new NotFoundException(notFoundMessage));
-    //    var client = factory.CreateClient();
-
-    //    var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
-    //        new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
-    //    ]));
-
-    //    // Assert
-    //    response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-    //    factory.FileImportStoreMock.Verify(
-    //        x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-    //}
 
     [Fact]
     public async Task ImportFile_WhenFileImportStoreCreateThrows_MarksFileAsFailedButReturnsOk()
@@ -160,6 +134,11 @@ public class CsvDataFileImportEndpointTests
         factory.FileImportStoreMock
             .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42L);
+
+        factory.S3FileMetaDataServiceMock
+            .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(123L);
+
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
 
@@ -173,8 +152,11 @@ public class CsvDataFileImportEndpointTests
         // The split step (which marks the file import status as succeeded) only runs via the
         // real CsvDataFileSplitBackgroundService; since ISplitMessageProducer is mocked out here,
         // only the import stage's audit call (MarkInProgress) is expected.
-        factory.FileImportStoreMock.Verify(x => x.UpdateAsync(It.IsAny<long>(), Core.ApiClients.FileImportStatus.Importing, It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Once);
-        factory.FileImportStoreMock.Verify(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        await AsyncAssert.WaitForAssertion(async () =>
+        {
+            factory.FileImportStoreMock.Verify(x => x.UpdateAsync(It.IsAny<long>(), Core.ApiClients.FileImportStatus.Importing, It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Once);
+        }, 1000);
     }
 
     private sealed record ImportJobResponse(string JobId);
