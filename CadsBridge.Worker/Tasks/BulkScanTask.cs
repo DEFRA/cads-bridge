@@ -11,6 +11,10 @@ public class BulkScanTask(
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         // Get the list of files in the external bucket
+        if(logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Starting bulk scan task...");
+        }
         var result = await fileDiscoveryService.GetFileNames(cancellationToken);
 
         // Validate if processed already

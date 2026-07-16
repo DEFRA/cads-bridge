@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using System.Diagnostics.CodeAnalysis;
+using CadsBridge.Worker.Tasks;
 
 namespace CadsBridge.Worker.Setup;
 
@@ -64,5 +65,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<BulkScanJob>();
         services.AddScoped<DeltaScanJob>();
+    }
+
+    private static void AddTasks(this IServiceCollection services)
+    {
+        services.AddScoped<BulkScanTask>();
     }
 }
