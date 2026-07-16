@@ -79,8 +79,8 @@ jobs:
         run: mkdir -p ./working-dir/certs
       - name: Generate HTTPS dev cert
         run: dotnet dev-certs https -ep ./working-dir/certs/https-dev-cert.pfx -p testpassword
-      - name: Build cads_cds image
-        run: docker build -t cads_cds:latest -f ./working-dir/Dockerfile ./working-dir
+      - name: Build cads_bridge image
+        run: docker build -t cads_bridge:latest -f ./working-dir/Dockerfile ./working-dir
       - name: Pull localstack and mongo images
         run: |
           docker pull localstack/localstack:3.0.2
