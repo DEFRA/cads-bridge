@@ -61,13 +61,12 @@ public abstract class BaseSqsQueuePoller<TClient>(
             try { await _pollingTask; }
             catch (TaskCanceledException) { }
         }
-
-        _cts.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
         await StopAsync(CancellationToken.None);
+        _cts.Dispose();
         GC.SuppressFinalize(this);
     }
 
