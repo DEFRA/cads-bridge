@@ -49,6 +49,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("IMB_S3_ACCESS_KEY", "test")
             .WithEnvironment("IMB_S3_SECRET_KEY", "test")
             .WithEnvironment("DataLoad__Salt", "test-salt")
+            .WithEnvironment("DataLoad__SplitValue", "5")
             .WithEnvironment("LOCALSTACK_ENDPOINT", LocalStackFixture.NetworkServiceUrl)
             .WithEnvironment("AWS_REGION", LocalStackFixture.AwsRegion)
             .WithEnvironment("AWS_DEFAULT_REGION", LocalStackFixture.AwsRegion)

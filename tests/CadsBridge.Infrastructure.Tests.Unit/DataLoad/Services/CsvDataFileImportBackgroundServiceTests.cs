@@ -203,7 +203,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
     private static CsvDataFileImportJob CreateJob(int jobNo = 1, string? sourceKey = null)
         => new(
             JobId: $"job-{jobNo}",
-            SourceKey: sourceKey ?? $"incoming/file-{jobNo}.csv");
+            SourceKey: sourceKey ?? $"incoming/CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-{jobNo}.csv");
 
     public async ValueTask DisposeAsync()
     {
