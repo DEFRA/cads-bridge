@@ -18,6 +18,7 @@ public class FileImportStatusApiServiceComponentTests
     {
         [$"ApiClients:{ClientName}:BaseUrl"] = "http://cds-api",
         [$"ApiClients:{ClientName}:HealthcheckEnabled"] = "false",
+        [$"ApiClients:{ClientName}:UseFakeClient"] = "false",
         [$"ApiClients:{ClientName}:ResiliencePolicy:Retries"] = "1",
         [$"ApiClients:{ClientName}:ResiliencePolicy:BaseDelaySeconds"] = "0",
         [$"ApiClients:{ClientName}:ResiliencePolicy:UseJitter"] = "false"

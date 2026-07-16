@@ -121,7 +121,7 @@ public abstract class WebAppFactoryBase<TStart>(
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__HealthcheckEnabled", "true");
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__BaseUrl", "http://localhost:5555");
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__BasicApiKey", "XYZ");
-        Environment.SetEnvironmentVariable("ApiClients__CdsApi__UseFakeClient", "true");
+        Environment.SetEnvironmentVariable("ApiClients__CdsApi__UseFakeClient", "false");
 
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__QueueUrl", TestSqsConstants.TestQueueUrl);
         Environment.SetEnvironmentVariable("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", TestSqsConstants.TestQueueDlqUrl);
