@@ -1,5 +1,4 @@
 using Amazon.S3.Model;
-using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Endpoints.Requests;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
@@ -8,7 +7,6 @@ using CadsBridge.Testing.Support.Utilities.Aws;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using System.Net;
-using System.Net.Http.Json;
 
 namespace CadsBridge.Tests.Integration.EndPoints;
 
@@ -22,15 +20,9 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
     [Fact]
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
     {
-        var jobId = await TriggerImportJob(apiContainerFixture);
-        jobId.Should().NotBeNullOrEmpty();
+        var response = await TriggerImportJob(apiContainerFixture);
 
-        var status = await GetImportJobStatus(apiContainerFixture, jobId);
-
-        status!.JobId.Should().Be(jobId);
-        status.TotalFiles.Should().Be(0);
-        status.CompletedFiles.Should().Be(0);
-        status.Files.Should().BeEmpty();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -66,11 +58,13 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
         }, TestContext.Current.CancellationToken);
 
         // Act
-        var jobId = await TriggerImportJob(apiContainerFixture, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(apiContainerFixture, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(incomingObjectKey)
         ]));
 
         // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
         await AsyncAssert.WaitForAssertion(async () =>
         {
             var listObjectsV2Response = await apiContainerFixture.LocalStackFixture.S3Client.ListObjectsV2Async(
@@ -94,22 +88,13 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
 
     private sealed record ImportJobResponse(string JobId);
 
-    private static async Task<string> TriggerImportJob(ApiContainerFixture fixture, CsvDataFileImportRequest? request = null)
+    private static async Task<HttpResponseMessage> TriggerImportJob(ApiContainerFixture fixture, CsvDataFileImportRequest? request = null)
     {
         var requestContent = request != null ? HttpContentUtility.CreateApplicationJsonAsStringContent(request) : EmptyImportRequest;
+
         var response = await fixture.HttpClient!.PostAsync("import", requestContent, TestContext.Current.CancellationToken);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<ImportJobResponse>(cancellationToken: TestContext.Current.CancellationToken);
-        return result!.JobId;
-    }
-
-    private static async Task<JobProgress?> GetImportJobStatus(ApiContainerFixture fixture, string jobId)
-    {
-        var response = await fixture.HttpClient!.GetAsync($"import/{jobId}/progress", TestContext.Current.CancellationToken);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        return await response.Content.ReadFromJsonAsync<JobProgress>(TestContext.Current.CancellationToken);
+        return response;
     }
 
     private static StringContent? EmptyImportRequest =>

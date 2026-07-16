@@ -37,22 +37,15 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<CsvDataFileSplitBackgroundService>();
 
         services.AddTransient<IS3CopyService, S3CopyService>();
-
         services.AddTransient<ICsvDataFileSplitterService, CsvDataFileSplitterService>();
         services.AddTransient<ICsvDataFileSplitterStrategyFactory, CsvDataFileSplitterFactory>();
         services.AddTransient<ICsvDataFileSplitterStrategy, CsvDataFileSplitterStrategyNone>();
         services.AddTransient<ICsvDataFileSplitterStrategy, CsvDataFileSplitterStrategyByLines>();
         services.AddTransient<ICsvDataFileSplitterStrategy, CsvDataFileSplitterStrategyBySize>();
-
         services.AddTransient<ICsvParser, CsvParser>();
-        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService<ExternalStorageClient>>();
-
+        services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService<InternalStorageClient>>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
-
-        services.AddSingleton<IImportJobProgressStore, InMemoryImportJobProgressStore>();
-        services.AddSingleton<ISplitJobProgressStore, InMemorySplitJobProgressStore>();
-
-        services.AddTransient<IFileImportStatusStore, FileImportStatusStore>();
+        services.AddTransient<IFileImportStore, FileImportStore>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

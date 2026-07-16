@@ -30,7 +30,6 @@ public class SplitMessageProducerTests
     public async Task SendAsync_writes_message_to_channel()
     {
         var job = new CsvDataFileSplitJob(
-            JobId: "job-1",
             SourceKey: "key");
 
         await _sut.SendAsync(job, CancellationToken.None);

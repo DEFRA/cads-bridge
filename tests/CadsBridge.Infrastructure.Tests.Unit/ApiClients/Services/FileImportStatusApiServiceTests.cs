@@ -1,3 +1,4 @@
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
@@ -14,15 +15,15 @@ namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Services;
 public class FileImportStatusApiServiceTests
 {
     private readonly Mock<IHttpClientFactory> _httpClientFactory = new();
-    private readonly Mock<ILogger<FileImportStatusApiService>> _logger = new();
+    private readonly Mock<ILogger<FileImportApiService>> _logger = new();
 
-    private FileImportStatusApiService CreateSut(HttpMessageHandler handler)
+    private FileImportApiService CreateSut(HttpMessageHandler handler)
     {
         // Enable all log levels so the IsEnabled-guarded logging branches are exercised.
         _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://test-api") };
         _httpClientFactory.Setup(x => x.CreateClient(nameof(ApiClientNames.CdsApi))).Returns(client);
-        return new FileImportStatusApiService(_httpClientFactory.Object, _logger.Object);
+        return new FileImportApiService(_httpClientFactory.Object, _logger.Object);
     }
 
     public class GetByFileNameTests : FileImportStatusApiServiceTests
@@ -30,7 +31,7 @@ public class FileImportStatusApiServiceTests
         [Fact]
         public async Task GetByFileName_ReturnsDto_WhenResponseIsSuccessful()
         {
-            var dto = new FileImportStatusDto { Id = 1, FileName = "file.csv", TotalRowsToProcess = 100 };
+            var dto = new FileImportDto { Id = 1, FileName = "file.csv", TotalRowsToProcess = 100 };
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(dto)
@@ -48,7 +49,7 @@ public class FileImportStatusApiServiceTests
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new FileImportStatusDto())
+                Content = JsonContent.Create(new FileImportDto())
             });
 
             await CreateSut(handler).GetByFileName("my file.csv", TestContext.Current.CancellationToken);
@@ -90,7 +91,7 @@ public class FileImportStatusApiServiceTests
         [Fact]
         public async Task Create_ReturnsId_WhenResponseIsSuccessful()
         {
-            var dto = new FileImportStatusDto { Id = 42, FileName = "file.csv", TotalRowsToProcess = 10 };
+            var dto = new FileImportDto { Id = 42, FileName = "file.csv", TotalRowsToProcess = 10 };
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(dto)
@@ -106,7 +107,7 @@ public class FileImportStatusApiServiceTests
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new FileImportStatusDto { Id = 1 })
+                Content = JsonContent.Create(new FileImportDto { Id = 1 })
             });
 
             await CreateSut(handler).Create("file.csv", 123, TestContext.Current.CancellationToken);
@@ -225,7 +226,7 @@ public class FileImportStatusApiServiceTests
         [Theory]
         [InlineData(FileImportStatus.Importing, "importing")]
         [InlineData(FileImportStatus.Completed, "complete")]
-        [InlineData(FileImportStatus.Failed, "failed")]
+        [InlineData(FileImportStatus.Failed, "fail")]
         public async Task MarkStatus_PostsToExpectedUrl(FileImportStatus status, string segment)
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK));

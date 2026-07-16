@@ -1,3 +1,4 @@
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
@@ -10,10 +11,10 @@ using System.Text.Json;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
-public class FileImportStatusApiService(
+public class FileImportApiService(
     IHttpClientFactory httpClientFactory,
-    ILogger<FileImportStatusApiService> logger)
-    : IFileImportStatusApiService
+    ILogger<FileImportApiService> logger)
+    : IFileImportApiService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(ApiClientNames.CdsApi));
     private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
@@ -25,14 +26,14 @@ public class FileImportStatusApiService(
         {
             { FileImportStatus.Importing, "importing" },
             { FileImportStatus.Completed, "complete" },
-            { FileImportStatus.Failed, "failed" }
-        };
+            { FileImportStatus.Failed, "fail" }
+       };
 
-    public async Task<FileImportStatusDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
+    public async Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {
         var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
         var context = $"Getting file import status for '{objectKey}'";
-        return await GetRequestToApiAsync<FileImportStatusDto>(endpoint, context, cancellationToken);
+        return await GetRequestToApiAsync<FileImportDto>(endpoint, context, cancellationToken);
     }
 
     public async Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
@@ -46,7 +47,7 @@ public class FileImportStatusApiService(
 
         var response = await PostRequestToApiAsync(BaseApiUrl, body, context, cancellationToken);
 
-        var dto = await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
+        var dto = await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
         return dto.Id;
     }
 
@@ -55,7 +56,7 @@ public class FileImportStatusApiService(
         var context = $"Updating file import for id: '{id}'";
         var endPoint = $"{BaseApiUrl}/{id}";
         var response = await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
-        await ReadJsonOrThrowAsync<FileImportStatusDto>(response, context, cancellationToken);
+        await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
     }
 
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)

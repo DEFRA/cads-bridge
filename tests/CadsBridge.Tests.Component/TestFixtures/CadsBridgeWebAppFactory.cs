@@ -20,7 +20,7 @@ public class CadsBridgeWebAppFactory(
 
     public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
     public Mock<IS3FileMetaDataService> S3FileMetaDataServiceMock { get; } = CreateDefaultS3FileMetaDataServiceMock();
-    public Mock<IFileImportStatusStore> FileImportStatusStoreMock { get; } = CreateDefaultFileImportStatusStoreMock();
+    public Mock<IFileImportStore> FileImportStoreMock { get; } = CreateDefaultFileImportStoreMock();
 
     private readonly List<Action<IServiceCollection>> _testServiceOverrides = [];
 
@@ -32,16 +32,16 @@ public class CadsBridgeWebAppFactory(
         return mock;
     }
 
-    private static Mock<IFileImportStatusStore> CreateDefaultFileImportStatusStoreMock()
+    private static Mock<IFileImportStore> CreateDefaultFileImportStoreMock()
     {
-        var mock = new Mock<IFileImportStatusStore>();
-        mock.Setup(x => x.Initiate(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        var mock = new Mock<IFileImportStore>();
+        mock.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1L);
-        mock.Setup(x => x.MarkInProgress(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        mock.Setup(x => x.MarkSucceeded(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        mock.Setup(x => x.MarkFailed(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         return mock;
     }
@@ -75,7 +75,7 @@ public class CadsBridgeWebAppFactory(
     {
         services.RemoveAll<IS3FileMetaDataService>();
         services.AddSingleton(S3FileMetaDataServiceMock.Object);
-        services.RemoveAll<IFileImportStatusStore>();
-        services.AddSingleton(FileImportStatusStoreMock.Object);
+        services.RemoveAll<IFileImportStore>();
+        services.AddSingleton(FileImportStoreMock.Object);
     }
 }

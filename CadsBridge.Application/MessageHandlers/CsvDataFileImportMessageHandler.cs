@@ -31,10 +31,7 @@ public class CsvDataFileImportMessageHandler(
         try
         {
             await _channel.Writer.WriteAsync(
-                new CsvDataFileImportJob(
-                    JobId: Guid.NewGuid().ToString("N"),
-                    SourceKey: messagePayload.ObjectKey
-                ), cancellationToken);
+                new CsvDataFileImportJob(messagePayload.ObjectKey), cancellationToken);
         }
         catch (ChannelClosedException ex)
         {

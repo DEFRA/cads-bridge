@@ -16,7 +16,7 @@ public class CsvDataFileSplitterStrategyNone(
 {
     public SplitType SplitType => SplitType.None;
 
-    public async Task Process(CsvDataFileSplitJob job, CancellationToken cancellationToken)
+    public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         if (logger.IsEnabled(LogLevel.Information))
             logger.LogInformation("Copying {Key} without splitting", job.SourceKey);
@@ -35,5 +35,6 @@ public class CsvDataFileSplitterStrategyNone(
             job.SourceKey.FormatSplitFileTargetKey(),
             memoryStream,
             cancellationToken: cancellationToken);
+        return memoryStream.Length;
     }
 }

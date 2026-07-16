@@ -1,6 +1,8 @@
+using CadsBridge.Core.ApiClients;
+
 namespace CadsBridge.Infrastructure.ApiClients.DTOs;
 
-public record FileImportStatusDto
+public record FileImportDto
 {
     public long Id { get; set; }
     public string FileName { get; set; } = string.Empty;

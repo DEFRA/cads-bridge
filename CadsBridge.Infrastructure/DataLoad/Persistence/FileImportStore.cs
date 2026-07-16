@@ -1,23 +1,18 @@
 using CadsBridge.Application.DataLoad.Persistence;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
-using CadsBridge.Infrastructure.ApiClients.DTOs;
+using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
-public class FileImportStatusStore : IFileImportStatusStore
+public class FileImportStore(IFileImportApiService fileImportStatusApiService, ILogger<FileImportStore> logger) : IFileImportStore
 {
-    private readonly IFileImportStatusApiService _fileImportStatusApiService;
-    private readonly ILogger<FileImportStatusStore> _logger;
+    private readonly IFileImportApiService _fileImportStatusApiService = fileImportStatusApiService;
+    private readonly ILogger<FileImportStore> _logger = logger;
 
-    public FileImportStatusStore(IFileImportStatusApiService fileImportStatusApiService, ILogger<FileImportStatusStore> logger)
-    {
-        _fileImportStatusApiService = fileImportStatusApiService;
-        _logger = logger;
-    }
-
-    public async Task<long> Initiate(string fileName, long totalRowsToProcess, CancellationToken cancellationToken = default)
+    public async Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -33,6 +28,18 @@ public class FileImportStatusStore : IFileImportStatusStore
         }
     }
 
+    public Task UpdateAsync(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsFound = 0, CancellationToken cancellationToken = default)
+    {
+        var request = new UpdateFileImportRequest
+        {
+            Status = status,
+            TotalRowsToProcess = totalRowsToProcess,
+            RowsFound = rowsFound
+        };
+
+        return _fileImportStatusApiService.Update(fileImportId, request, cancellationToken);
+    }
+
     private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
     {
         var fileImportStatus = await _fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
@@ -46,17 +53,17 @@ public class FileImportStatusStore : IFileImportStatusStore
         return fileImportStatus.Id;
     }
 
-    public async Task MarkInProgress(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkInProgressAsync(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Importing, cancellationToken);
     }
 
-    public async Task MarkSucceeded(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkCompletedAsync(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Completed, cancellationToken);
     }
 
-    public async Task MarkFailed(long fileImportStatusId, CancellationToken cancellationToken = default)
+    public async Task MarkFailedAsync(long fileImportStatusId, CancellationToken cancellationToken = default)
     {
         await _fileImportStatusApiService.MarkStatus(fileImportStatusId, FileImportStatus.Failed, cancellationToken);
     }
