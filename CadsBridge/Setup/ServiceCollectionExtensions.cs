@@ -2,6 +2,7 @@ using CadsBridge.Application.Setup;
 using CadsBridge.Infrastructure.Configuration.Aws;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Setup;
+using CadsBridge.Worker.Setup;
 
 namespace CadsBridge.Setup;
 
@@ -24,6 +25,8 @@ public static class ServiceCollectionExtensions
         services.Configure<AwsConfig>(configuration.GetSection(AwsConfig.SectionName));
 
         services.AddInfrastructureLayer(configuration);
+
+        services.AddBackgroundServiceScheduling(configuration);
 
         services.AddApplicationLayer();
     }
