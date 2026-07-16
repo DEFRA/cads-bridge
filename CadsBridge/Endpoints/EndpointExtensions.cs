@@ -50,18 +50,18 @@ public static class EndpointsExtensions
         ILogger<Program> logger,
         CancellationToken cancellationToken)
     {
-        foreach (var importFile in request.Files)
+        foreach (var sourceKey in request.Files.Select(importFile => importFile.sourceKey))
         {
             try
             {
                 await channel.Writer.WriteAsync(new CsvDataFileImportJob(
-                    SourceKey: importFile.sourceKey
+                    SourceKey: sourceKey
                 ), cancellationToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to initiate import for {SourceKey}",
-                    importFile.sourceKey);
+                    sourceKey);
             }
         }
 

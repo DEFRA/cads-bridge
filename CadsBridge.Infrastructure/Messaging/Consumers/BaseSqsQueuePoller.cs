@@ -61,6 +61,8 @@ public abstract class BaseSqsQueuePoller<TClient>(
             try { await _pollingTask; }
             catch (TaskCanceledException) { }
         }
+
+        _cts.Dispose();
     }
 
     public async ValueTask DisposeAsync()
@@ -155,14 +157,14 @@ public abstract class BaseSqsQueuePoller<TClient>(
         var receiveCount = GetReceiveCount(rawMessage);
 
         Logger.LogWarning(
-            "RetryableException in Queue={Queue}, CorrelationId={CorrelationId}, GroupId={GroupId}, DedupId={DedupId}, MessageId={MessageId}, ReceiveCount={ReceiveCount}, Exception={Exception}",
+            ex,
+            "RetryableException in Queue={Queue}, CorrelationId={CorrelationId}, GroupId={GroupId}, DedupId={DedupId}, MessageId={MessageId}, ReceiveCount={ReceiveCount}",
             QueueUrl,
             CorrelationIdContext.Value,
             unwrapped.MessageGroupId,
             unwrapped.MessageDeduplicationId,
             rawMessage.MessageId,
-            receiveCount,
-            ex);
+            receiveCount);
 
         Observer?.OnMessageFailed(rawMessage.MessageId, DateTime.UtcNow, ex, rawMessage);
     }
@@ -174,13 +176,13 @@ public abstract class BaseSqsQueuePoller<TClient>(
         CancellationToken cancellationToken)
     {
         Logger.LogError(
-            "NonRetryableException in Queue={Queue}, CorrelationId={CorrelationId}, GroupId={GroupId}, DedupId={DedupId}, MessageId={MessageId}, Exception={Exception}",
+            ex,
+            "NonRetryableException in Queue={Queue}, CorrelationId={CorrelationId}, GroupId={GroupId}, DedupId={DedupId}, MessageId={MessageId}",
             QueueUrl,
             CorrelationIdContext.Value,
             unwrapped.MessageGroupId,
             unwrapped.MessageDeduplicationId,
-            rawMessage.MessageId,
-            ex);
+            rawMessage.MessageId);
 
         await MoveToDlqAndNotifyObserver(rawMessage, ex, cancellationToken);
     }
@@ -192,13 +194,13 @@ public abstract class BaseSqsQueuePoller<TClient>(
         CancellationToken cancellationToken)
     {
         Logger.LogError(
-            "UnhandledException in Queue={Queue}, CorrelationId={CorrelationId}, GroupId={GroupId}, DedupId={DedupId}, MessageId={MessageId}, Exception={Exception}",
+            ex,
+            "UnhandledException in Queue={Queue}, CorrelationId={CorrelationId}, GroupId={GroupId}, DedupId={DedupId}, MessageId={MessageId}",
             QueueUrl,
             CorrelationIdContext.Value,
             unwrapped.MessageGroupId,
             unwrapped.MessageDeduplicationId,
-            rawMessage.MessageId,
-            ex);
+            rawMessage.MessageId);
 
         await MoveToDlqAndNotifyObserver(rawMessage, ex, cancellationToken);
     }
