@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IS3FileMetaDataService, S3FileMetaDataService<InternalStorageClient>>();
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
         services.AddTransient<IFileImportStore, FileImportStore>();
+        services.AddTransient<IFileDiscoveryService, S3FileDiscoveryService<ExternalStorageClient>>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

@@ -2,11 +2,15 @@ using CadsBridge.Core.Locking;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using System.Diagnostics.CodeAnalysis;
+using CadsBridge.Worker.Tasks;
 
 namespace CadsBridge.Worker.Jobs;
 
 [ExcludeFromCodeCoverage] // Exclude until actual implementation is added
-public class BulkScanJob(IDistributedLock distributedLock, ILogger<BulkScanJob> logger) : IJob
+public class BulkScanJob(
+    IBulkScanTask bulkScanTask,
+    IDistributedLock distributedLock,
+    ILogger<BulkScanJob> logger) : IJob
 {
     private const string LockName = nameof(BulkScanJob);
 
@@ -27,7 +31,13 @@ public class BulkScanJob(IDistributedLock distributedLock, ILogger<BulkScanJob> 
             {
                 logger.LogInformation("Bulk scan job started");
             }
-            // ... job work ...
+
+            await bulkScanTask.RunAsync(context.CancellationToken);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Bulk scan job completed");
+            }
         }
         finally
         {
