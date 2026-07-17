@@ -1,12 +1,10 @@
 using CadsBridge.Core.Locking;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Worker.Tasks;
 
 namespace CadsBridge.Worker.Jobs;
 
-[ExcludeFromCodeCoverage] // Exclude until actual implementation is added
 public class BulkScanJob(
     IBulkScanTask bulkScanTask,
     IDistributedLock distributedLock,
