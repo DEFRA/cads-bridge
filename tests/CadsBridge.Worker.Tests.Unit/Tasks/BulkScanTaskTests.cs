@@ -1,4 +1,5 @@
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Testing.Support.Utilities.Logging;
 using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -8,7 +9,7 @@ namespace CadsBridge.Worker.Tests.Unit.Tasks;
 public class BulkScanTaskTests
 {
     private readonly Mock<IFileDiscoveryService> _fileDiscoveryServiceMock = new();
-    private readonly Mock<ILogger<BulkScanTask>> _loggerMock = new();
+    private readonly Mock<ILogger<BulkScanTask>> _loggerMock = new Mock<ILogger<BulkScanTask>>().EnableAllLogLevels();
 
     private BulkScanTask CreateSut() =>
         new(_fileDiscoveryServiceMock.Object, _loggerMock.Object);

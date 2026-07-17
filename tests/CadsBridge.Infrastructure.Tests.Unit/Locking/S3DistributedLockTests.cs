@@ -7,6 +7,7 @@ using CadsBridge.Infrastructure.Locking;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
+using CadsBridge.Testing.Support.Utilities.Logging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -38,12 +39,8 @@ public class S3DistributedLockTests
         new(_factory.Object, options ?? new S3DistributedLockOptions(), _timeProvider,
             logger ?? Mock.Of<ILogger<S3DistributedLock>>());
 
-    private static Mock<ILogger<S3DistributedLock>> EnabledLogger()
-    {
-        var logger = new Mock<ILogger<S3DistributedLock>>();
-        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
-        return logger;
-    }
+    private static Mock<ILogger<S3DistributedLock>> EnabledLogger() =>
+        new Mock<ILogger<S3DistributedLock>>().EnableAllLogLevels();
 
     [Fact]
     public async Task TryAcquireAsync_ShouldReturnTrue_WhenLockCreatedAtomically()

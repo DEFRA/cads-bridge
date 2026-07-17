@@ -4,6 +4,7 @@ using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.Services;
 using CadsBridge.Testing.Support.Utilities.Http;
+using CadsBridge.Testing.Support.Utilities.Logging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,7 +21,7 @@ public class FileImportStatusApiServiceTests
     private FileImportApiService CreateSut(HttpMessageHandler handler)
     {
         // Enable all log levels so the IsEnabled-guarded logging branches are exercised.
-        _logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        _logger.EnableAllLogLevels();
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://test-api") };
         _httpClientFactory.Setup(x => x.CreateClient(nameof(ApiClientNames.CdsApi))).Returns(client);
         return new FileImportApiService(_httpClientFactory.Object, _logger.Object);
