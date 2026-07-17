@@ -117,4 +117,3 @@ public class BulkScanJobComponentTests
         _distributedLockMock.Verify(x => x.ReleaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
-
