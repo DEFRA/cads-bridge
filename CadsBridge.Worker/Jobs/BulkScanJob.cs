@@ -8,7 +8,7 @@ namespace CadsBridge.Worker.Jobs;
 
 [ExcludeFromCodeCoverage] // Exclude until actual implementation is added
 public class BulkScanJob(
-    BulkScanTask bulkScanTask,
+    IBulkScanTask bulkScanTask,
     IDistributedLock distributedLock,
     ILogger<BulkScanJob> logger) : IJob
 {

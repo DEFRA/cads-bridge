@@ -69,9 +69,8 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddTasks(this IServiceCollection services)
+    private static void AddTasks(this IServiceCollection services)
     {
-        services.AddScoped<BulkScanTask>();
-        return services;
+        services.AddScoped<IBulkScanTask, BulkScanTask>();
     }
 }
