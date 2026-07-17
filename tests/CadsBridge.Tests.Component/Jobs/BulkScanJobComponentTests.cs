@@ -1,4 +1,5 @@
 using CadsBridge.Core.Locking;
+using CadsBridge.Testing.Support.Utilities.Logging;
 using CadsBridge.Worker.Jobs;
 using CadsBridge.Worker.Tasks;
 using FluentAssertions;
@@ -12,7 +13,7 @@ public class BulkScanJobComponentTests
 {
     private readonly Mock<IBulkScanTask> _bulkScanTaskMock = new();
     private readonly Mock<IDistributedLock> _distributedLockMock = new();
-    private readonly Mock<ILogger<BulkScanJob>> _loggerMock = new();
+    private readonly Mock<ILogger<BulkScanJob>> _loggerMock = new Mock<ILogger<BulkScanJob>>().EnableAllLogLevels();
     private readonly Mock<IJobExecutionContext> _contextMock = new();
 
     public BulkScanJobComponentTests()
