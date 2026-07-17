@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Jobs;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
+using CadsBridge.Testing.Support.Utilities.Logging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,8 +21,7 @@ public class SplitMessageProducerTests
 
         var config = new DataLoadConfiguration { SplitType = SplitType.ByLines, SplitValue = 100 };
 
-        var logger = new Mock<ILogger<SplitMessageProducer>>();
-        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        var logger = new Mock<ILogger<SplitMessageProducer>>().EnableAllLogLevels();
 
         _sut = new SplitMessageProducer(_channel, config, logger.Object);
     }

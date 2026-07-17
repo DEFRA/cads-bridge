@@ -112,8 +112,11 @@ public class CsvDataFileImportEndpointTests
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        factory.FileImportStoreMock.Verify(
-            x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
+        await AsyncAssert.WaitForAssertion(async () =>
+        {
+            factory.FileImportStoreMock.Verify(
+                x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
+        }, 1000);
     }
 
     [Fact]
