@@ -37,7 +37,9 @@ public class CadsBridgeWebAppFactory(
         var mock = new Mock<IFileImportStore>();
         mock.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1L);
-        mock.Setup(x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mock.Setup(x => x.MarkSplitAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         mock.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);

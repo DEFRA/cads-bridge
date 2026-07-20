@@ -40,7 +40,11 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultFileImportId);
-        _fileImportStore.Setup(x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _fileImportStore.Setup(x => x.MarkSplitAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+           .Returns(Task.CompletedTask);
+        _fileImportStore.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);

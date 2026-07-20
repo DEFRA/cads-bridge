@@ -24,7 +24,7 @@ public class FileImportApiService(
     private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
         new()
         {
-            { FileImportStatus.Importing, "importing" },
+            { FileImportStatus.Transferred, "importing" },
             { FileImportStatus.Completed, "complete" },
             { FileImportStatus.Failed, "fail" }
        };
