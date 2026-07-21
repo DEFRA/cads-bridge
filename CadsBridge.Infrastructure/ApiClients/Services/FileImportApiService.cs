@@ -24,9 +24,10 @@ public class FileImportApiService(
     private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
         new()
         {
-            { FileImportStatus.Importing, "importing" },
-            { FileImportStatus.Completed, "complete" },
-            { FileImportStatus.Failed, "fail" }
+            { FileImportStatus.Transferred, "transferred" },
+            { FileImportStatus.Split, "split" },
+            { FileImportStatus.Completed, "completed" },
+            { FileImportStatus.Failed, "failed" }
        };
 
     public async Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)

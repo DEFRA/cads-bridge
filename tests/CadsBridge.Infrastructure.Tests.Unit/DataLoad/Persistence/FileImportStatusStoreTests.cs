@@ -79,16 +79,25 @@ public class FileImportStatusStoreTests
     public class MarkStatusTests : FileImportStatusStoreTests
     {
         [Fact]
-        public async Task MarkInProgress_CallsApiService_WithImportingStatus()
+        public async Task MarkTransferred_CallsApiService_WithTransferredStatus()
         {
-            await CreateSut().MarkInProgressAsync(5L, TestContext.Current.CancellationToken);
+            await CreateSut().MarkTransferredAsync(5L, TestContext.Current.CancellationToken);
 
             _apiService.Verify(x =>
-                x.MarkStatus(5L, FileImportStatus.Importing, It.IsAny<CancellationToken>()), Times.Once);
+                x.MarkStatus(5L, FileImportStatus.Transferred, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
-        public async Task MarkSucceeded_CallsApiService_WithCompletedStatus()
+        public async Task MarkSplit_CallsApiService_WithSplitStatus()
+        {
+            await CreateSut().MarkSplitAsync(5L, TestContext.Current.CancellationToken);
+
+            _apiService.Verify(x =>
+                x.MarkStatus(5L, FileImportStatus.Split, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task MarkCompleted_CallsApiService_WithCompletedStatus()
         {
             await CreateSut().MarkCompletedAsync(5L, TestContext.Current.CancellationToken);
 

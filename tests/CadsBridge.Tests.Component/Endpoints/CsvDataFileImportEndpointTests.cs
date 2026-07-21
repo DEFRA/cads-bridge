@@ -1,6 +1,7 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Endpoints.Requests;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Utilities.Assertions;
@@ -93,14 +94,21 @@ public class CsvDataFileImportEndpointTests
     [Fact]
     public async Task ImportFile_WithOneFile_CallsS3MetaDataServiceAndFileImportStatusStore_WithExpectedArguments()
     {
-        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
 
         var fileSplitterMock = new Mock<ISplitMessageProducer>();
         factory.OverrideSingleton(fileSplitterMock.Object);
 
+        factory.S3FileMetaDataServiceMock
+            .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1L);
+
         factory.FileImportStoreMock
             .Setup(x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
+
+        factory.FileImportStoreMock
+           .Setup(x => x.UpdateAsync(9L, FileImportStatus.Transferred, 1, 1, cancellationToken: It.IsAny<CancellationToken>()));
 
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
         var client = factory.CreateClient();
@@ -116,6 +124,8 @@ public class CsvDataFileImportEndpointTests
         {
             factory.FileImportStoreMock.Verify(
                 x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
+            factory.FileImportStoreMock.Verify(
+                x => x.UpdateAsync(9L, FileImportStatus.Transferred, 1, 0, It.IsAny<CancellationToken>()), Times.Once);
         }, 1000);
     }
 
@@ -137,11 +147,11 @@ public class CsvDataFileImportEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         factory.FileImportStoreMock.Verify(
-            x => x.MarkInProgressAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+            x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task ImportFile_WhenCopySucceeds_MarksFileImportStatusInProgress()
+    public async Task ImportFile_WhenCopySucceeds_MarksFileImportStatusTransferred()
     {
         await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
 
@@ -172,7 +182,7 @@ public class CsvDataFileImportEndpointTests
 
         await AsyncAssert.WaitForAssertion(async () =>
         {
-            factory.FileImportStoreMock.Verify(x => x.UpdateAsync(It.IsAny<long>(), Core.ApiClients.FileImportStatus.Importing, It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Once);
+            factory.FileImportStoreMock.Verify(x => x.UpdateAsync(It.IsAny<long>(), Core.ApiClients.FileImportStatus.Transferred, It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Once);
         }, 1000);
     }
 

@@ -35,10 +35,7 @@ public class S3CopyService(
         var delayBaseMs = 500;
 
         var externalS3Info = s3ClientFactory.GetClientInfo<ExternalStorageClient>();
-        var externalS3 = externalS3Info.Client;
-
         var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
-        var internalS3 = internalS3Info.Client;
         long rowCount;
 
         while (true)
@@ -69,7 +66,7 @@ public class S3CopyService(
                         internalS3Info.BucketName,
                         attempt);
 
-                var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, externalS3, internalS3, cancellationToken);
+                var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
 
                 // Retrieve row count from the decrypted file and update the file import status accordingly.
                 rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
@@ -104,10 +101,11 @@ public class S3CopyService(
         CsvDataFileImportJob request,
         S3ClientFactory.ClientInfo externalS3Info,
         S3ClientFactory.ClientInfo internalS3Info,
-        IAmazonS3 externalS3,
-        IAmazonS3 internalS3,
         CancellationToken cancellationToken)
     {
+        var externalS3 = externalS3Info.Client;
+        var internalS3 = internalS3Info.Client;
+
         using var getResponse = await externalS3.GetObjectAsync(externalS3Info.BucketName, request.SourceKey, cancellationToken);
         await using var encryptedStream = getResponse.ResponseStream;
 

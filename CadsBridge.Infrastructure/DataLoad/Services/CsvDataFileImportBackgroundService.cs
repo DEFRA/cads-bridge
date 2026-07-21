@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,7 +57,7 @@ public class CsvDataFileImportBackgroundService(
 
                         if (totalRowsToProcess > 0)
                         {
-                            await fileImportStore.UpdateAsync(fileImportId, Core.ApiClients.FileImportStatus.Importing, totalRowsToProcess, cancellationToken: stoppingToken);
+                            await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
 
                             await splitMessageProducer.SendAsync(
                                 new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess),

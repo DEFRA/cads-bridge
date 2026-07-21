@@ -53,9 +53,14 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
         return fileImportStatus.Id;
     }
 
-    public async Task MarkInProgressAsync(long fileImportId, CancellationToken cancellationToken = default)
+    public async Task MarkTransferredAsync(long fileImportId, CancellationToken cancellationToken = default)
     {
-        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Importing, cancellationToken);
+        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Transferred, cancellationToken);
+    }
+
+    public async Task MarkSplitAsync(long fileImportId, CancellationToken cancellationToken = default)
+    {
+        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Split, cancellationToken);
     }
 
     public async Task MarkCompletedAsync(long fileImportId, CancellationToken cancellationToken = default)

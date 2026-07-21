@@ -8,7 +8,9 @@ public interface IFileImportStore
 
     Task UpdateAsync(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsFound = 0, CancellationToken cancellationToken = default);
 
-    Task MarkInProgressAsync(long fileImportId, CancellationToken cancellationToken = default);
+    Task MarkTransferredAsync(long fileImportId, CancellationToken cancellationToken = default);
+
+    Task MarkSplitAsync(long fileImportId, CancellationToken cancellationToken = default);
 
     Task MarkCompletedAsync(long fileImportId, CancellationToken cancellationToken = default);
 
