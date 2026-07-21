@@ -81,27 +81,52 @@ public class FileImportApiService(
 
     private async Task<T> GetRequestToApiAsync<T>(string requestUri, string context, CancellationToken cancellationToken)
     {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", requestUri, context);
+        }
+
         var response = await SendAsync(ct => _httpClient.GetAsync(requestUri, ct), context, cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("API call succeeded: {Context}", context);
+        }
+
         return await ReadJsonOrThrowAsync<T>(response, context, cancellationToken);
     }
 
     private async Task<HttpResponseMessage> PostRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
     {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Initiating Post API call '{requestUri}': '{Context}'", requestUri, context);
+        }
+
         var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("API call succeeded: {Context}", context);
         }
+
         return response;
     }
 
     private async Task<HttpResponseMessage> PutRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
     {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Initiating Put API call '{requestUri}': '{Context}'", requestUri, context);
+        }
+
         var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("API call succeeded: {Context}", context);
         }
+
         return response;
     }
 
@@ -112,11 +137,6 @@ public class FileImportApiService(
         string context,
         CancellationToken cancellationToken)
     {
-        if (logger.IsEnabled(LogLevel.Debug))
-        {
-            logger.LogDebug("Initiating API call: {Context}", context);
-        }
-
         try
         {
             var response = await send(cancellationToken);
