@@ -25,20 +25,20 @@ public class S3ClientFactory : IS3ClientFactory
         var instance = new T();
         var storageClientName = instance.ClientName;
 
-        if (!_clients.TryGetValue(storageClientName, out var client))
+        if (!_clients.TryGetValue(storageClientName, out var clientInfo))
             throw new KeyNotFoundException($"No S3 client registered for name '{storageClientName}'");
 
-        return client;
+        return clientInfo;
     }
 
     public string GetClientBucketName<T>() where T : IStorageClient, new() => GetClientInfo<T>().BucketName;
 
     public string GetClientBucketName(string clientName)
     {
-        if (!_clients.TryGetValue(clientName, out var client))
+        if (!_clients.TryGetValue(clientName, out var clientInfo))
             throw new KeyNotFoundException($"No S3 client registered for name '{clientName}'");
 
-        return client.BucketName;
+        return clientInfo.BucketName;
     }
 
     public IEnumerable<string> GetRegisteredClientNames() => _clients.Keys;
