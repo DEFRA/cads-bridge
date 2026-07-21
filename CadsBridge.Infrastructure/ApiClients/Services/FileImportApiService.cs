@@ -80,7 +80,7 @@ public class FileImportApiService(
     }
 
     private async Task<T> GetRequestToApiAsync<T>(string requestUri, string context, CancellationToken cancellationToken)
-    { 
+    {
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", requestUri, context);
