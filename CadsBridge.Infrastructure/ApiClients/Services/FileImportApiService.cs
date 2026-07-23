@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
@@ -170,7 +171,12 @@ public class FileImportApiService(
     {
         try
         {
-            var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            var result = await response.Content.ReadFromJsonAsync<T>(options, cancellationToken);
             if (result is null)
             {
                 if (logger.IsEnabled(LogLevel.Error))
