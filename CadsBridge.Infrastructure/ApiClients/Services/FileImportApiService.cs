@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
@@ -29,6 +30,30 @@ public class FileImportApiService(
             { FileImportStatus.Completed, "completed" },
             { FileImportStatus.Failed, "failed" }
        };
+
+    public async Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
+    {
+        var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
+        var context = $"Getting file import status for '{objectKey}' if it exists";
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
+        }
+
+        var response = await SendAsync(ct => _httpClient.GetAsync(endpoint, ct), context, cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("API call succeeded: {Context}", context);
+        }
+
+        if(response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        return await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
+    }
 
     public async Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {

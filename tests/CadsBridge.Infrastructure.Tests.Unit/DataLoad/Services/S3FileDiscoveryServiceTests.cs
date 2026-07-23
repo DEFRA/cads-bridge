@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -122,8 +123,8 @@ public class S3FileDiscoveryServiceTests
             var factory = new Mock<IS3ClientFactory>();
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(s3Client, Bucket));
-
-            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object);
+            var fileImportApiService = new Mock<IFileImportApiService>();
+            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService.Object);
         }
 
         private static ListObjectsV2Response MakePage(
