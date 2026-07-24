@@ -50,7 +50,8 @@ public static class EndpointsExtensions
         ILogger<Program> logger,
         CancellationToken cancellationToken)
     {
-        foreach (var sourceKey in request.Files.Select(importFile => importFile.sourceKey))
+        var sourceKeys = request.Files.Select(importFile => importFile.sourceKey).ToList();
+        foreach (var sourceKey in sourceKeys)
         {
             try
             {
@@ -65,7 +66,7 @@ public static class EndpointsExtensions
             }
         }
 
-        return Results.Ok();
+        return Results.Ok(new { SourceKeysImporting = sourceKeys });
     }
 
     private static async Task<IResult> Split([FromBody] CsvDataFileSplitRequest request, Channel<CsvDataFileSplitJob> channel)
