@@ -38,7 +38,7 @@ public class CsvDataFileImportBackgroundService(
             var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
             try
             {
-                fileImportId = await fileImportStore.CreateAsync(request.SourceKey, cancellationToken: stoppingToken);
+                fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
             }
             catch (Exception ex)
             {

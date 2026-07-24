@@ -103,8 +103,9 @@ public class CsvDataFileImportEndpointTests
             .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1L);
 
+        var sourceKey = Path.GetFileName(_incomingKey);
         factory.FileImportStoreMock
-            .Setup(x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateAsync(sourceKey, 0, cancellationToken: It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
 
         factory.FileImportStoreMock
@@ -123,7 +124,7 @@ public class CsvDataFileImportEndpointTests
         await AsyncAssert.WaitForAssertion(async () =>
         {
             factory.FileImportStoreMock.Verify(
-                x => x.CreateAsync(_incomingKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
+                x => x.CreateAsync(sourceKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
             factory.FileImportStoreMock.Verify(
                 x => x.UpdateAsync(9L, FileImportStatus.Transferred, 1, 0, It.IsAny<CancellationToken>()), Times.Once);
         }, 1000);
