@@ -54,7 +54,7 @@ public class FileImportApiService(
         if (dto.Id == 0)
         {
             // This is a temporary workaround for a bug in the API where it returns 0 for the ID on creation. We will attempt to retrieve the record by file name to get the correct ID.
-            dto = await GetByFileName(objectKey, cancellationToken) ?? throw new NonRetryableException($"Failed to create file import for '{objectKey}'.");
+            dto = await GetByFileName(objectKey, cancellationToken) ?? throw new NonRetryableException($"Failed to retrieve file import for '{objectKey}'.");
         }
         return dto.Id;
     }
