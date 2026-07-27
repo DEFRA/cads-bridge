@@ -32,7 +32,7 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
     {
         var request = new UpdateFileImportRequest
         {
-            Status = status,
+            ImportStatus = status,
             TotalRowsToProcess = totalRowsToProcess,
             RowsFound = rowsFound
         };

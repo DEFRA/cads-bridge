@@ -4,7 +4,6 @@ namespace CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
 
 public class UpdateFileImportRequest
 {
-    public FileImportStatus Status { get; set; }
     public long TotalRowsToProcess { get; set; }
     public long RowsFound { get; set; }
     public FileImportStatus ImportStatus { get; set; }
