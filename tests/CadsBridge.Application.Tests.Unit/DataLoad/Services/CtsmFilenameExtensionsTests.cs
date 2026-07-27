@@ -34,4 +34,16 @@ public class CtsmFilenameExtensionsTests
         ctsmFilename.TableName.Should().Be("CT_REGISTERED_MOVEMENTS");
         ctsmFilename.Timestamp.Should().Be("2026-02-22-074603");
     }
+
+    [Fact]
+    public void Ensure_Password_Correct_When_Using_Old_File_Format()
+    {
+        var ctsmFilename = "CTSM_UKV_PROD_BULK_######_CT_REGISTERED_ANIMALS_2026-02-22-074603.csv";
+        var expectedResult = "2026-02-22_ANIMALS_REGISTERED_CT_######_BULK_PROD_UKV_CTSM";
+
+        var parts = CtsmFilenameParser.Parse(ctsmFilename);
+        var generatedResult = parts!.DerivePassword();
+
+        generatedResult.Should().Be(expectedResult);
+    }
 }

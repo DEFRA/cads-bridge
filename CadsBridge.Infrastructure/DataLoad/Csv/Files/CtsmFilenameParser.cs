@@ -5,7 +5,7 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Files;
 public static partial class CtsmFilenameParser
 {
     // Pattern 1: CTSM_<app>_<env>_<type>_<batchId>_<partno>_<tablename>_<timestamp>.csv
-    [GeneratedRegex(@"^CTSM_(?<app>[A-Za-z]+)_(?<env>[A-Za-z]+)_(?<type>[A-Za-z]+)_(?<batchId>[A-Za-z0-9#]+)_(?<partno>[A-Za-z0-9]+)_(?<tablename>[A-Za-z0-9_]+)_(?<timestamp>\d{4}-\d{2}-\d{2}-\d{6})", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^CTSM_(?<app>[A-Za-z]+)_(?<env>[A-Za-z]+)_(?<type>[A-Za-z]+)_(?<batchId>[A-Za-z0-9#]+)_(?<partno>[0-9]+)_(?<tablename>[A-Za-z0-9_]+)_(?<timestamp>\d{4}-\d{2}-\d{2}-\d{6})", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex Pattern1();
 
     // Pattern 2: CTSM_<app>_<env>_<type>_<batchId>_<tablename>_<timestamp>.csv
