@@ -64,8 +64,8 @@ public class FileImportApiService(
     {
         var context = $"Updating file import for id: '{id}'";
         var endPoint = $"{BaseApiUrl}/{id}";
-        var response = await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
-        await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
+
+        await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
     }
 
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
