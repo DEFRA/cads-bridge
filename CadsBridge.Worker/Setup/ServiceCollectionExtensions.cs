@@ -1,10 +1,10 @@
 using CadsBridge.Worker.Configuration;
 using CadsBridge.Worker.Jobs;
+using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using System.Diagnostics.CodeAnalysis;
-using CadsBridge.Worker.Tasks;
 
 namespace CadsBridge.Worker.Setup;
 

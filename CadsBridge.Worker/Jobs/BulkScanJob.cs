@@ -1,7 +1,7 @@
 using CadsBridge.Core.Locking;
+using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using CadsBridge.Worker.Tasks;
 
 namespace CadsBridge.Worker.Jobs;
 

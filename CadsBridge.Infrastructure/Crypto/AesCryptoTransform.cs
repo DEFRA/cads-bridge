@@ -5,7 +5,7 @@ namespace CadsBridge.Infrastructure.Crypto;
 
 public class AesCryptoTransform : IAesCryptoTransform
 {
-    private const int PbeKeySpecIterationsDefault = 100000;
+    private const int PbeKeySpecIterationsDefault = 32;
     private const int PbeKeySpecKeyLenDefault = 256;
     private const int BufferSize = 64 * 1024;
     private const int ProgressReportInterval = 1;
