@@ -4,6 +4,7 @@ using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
+using CadsBridge.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
@@ -74,6 +75,12 @@ public class FileImportApiService(
         var response = await PostRequestToApiAsync(BaseApiUrl, body, context, cancellationToken);
 
         var dto = await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
+
+        if (dto.Id == 0)
+        {
+            // This is a temporary workaround for a bug in the API where it returns 0 for the ID on creation. We will attempt to retrieve the record by file name to get the correct ID.
+            dto = await GetByFileName(objectKey, cancellationToken) ?? throw new NonRetryableException($"Failed to retrieve file import for '{objectKey}'.");
+        }
         return dto.Id;
     }
 
@@ -81,8 +88,8 @@ public class FileImportApiService(
     {
         var context = $"Updating file import for id: '{id}'";
         var endPoint = $"{BaseApiUrl}/{id}";
-        var response = await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
-        await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
+
+        await PutRequestToApiAsync(endPoint, request, context, cancellationToken);
     }
 
     public async Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
@@ -128,7 +135,7 @@ public class FileImportApiService(
             logger.LogInformation("Initiating Post API call '{requestUri}': '{Context}'", requestUri, context);
         }
 
-        var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+        var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, options: JsonDefaults.DefaultOptionsWithStringEnumConversion, ct), context, cancellationToken);
 
         if (logger.IsEnabled(LogLevel.Information))
         {
@@ -145,7 +152,7 @@ public class FileImportApiService(
             logger.LogInformation("Initiating Put API call '{requestUri}': '{Context}'", requestUri, context);
         }
 
-        var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, ct), context, cancellationToken);
+        var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, options: JsonDefaults.DefaultOptionsWithStringEnumConversion, ct), context, cancellationToken);
 
         if (logger.IsEnabled(LogLevel.Information))
         {
@@ -195,7 +202,12 @@ public class FileImportApiService(
     {
         try
         {
-            var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            var result = await response.Content.ReadFromJsonAsync<T>(options, cancellationToken);
             if (result is null)
             {
                 if (logger.IsEnabled(LogLevel.Error))

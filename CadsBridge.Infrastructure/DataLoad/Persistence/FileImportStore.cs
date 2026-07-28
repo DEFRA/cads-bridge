@@ -28,16 +28,16 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
         }
     }
 
-    public Task UpdateAsync(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsFound = 0, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsFound = 0, CancellationToken cancellationToken = default)
     {
         var request = new UpdateFileImportRequest
         {
-            Status = status,
+            ImportStatus = status,
             TotalRowsToProcess = totalRowsToProcess,
             RowsFound = rowsFound
         };
 
-        return _fileImportStatusApiService.Update(fileImportId, request, cancellationToken);
+        await _fileImportStatusApiService.Update(fileImportId, request, cancellationToken);
     }
 
     private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)

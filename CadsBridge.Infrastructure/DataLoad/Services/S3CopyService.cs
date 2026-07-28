@@ -113,7 +113,7 @@ public class S3CopyService(
 
         // Determine file size to decide whether to use multipart upload or single upload
         var fileSize = await GetRemoteFileSizeAsync(externalS3, externalS3Info.BucketName, request.SourceKey, cancellationToken);
-        var password = CtsmFilenameParser.Parse(Path.GetFileName(request.SourceKey))!.DerivePassword();
+        var password = CtsmFilenameParser.Parse(request.SourceKeyFileName)!.DerivePassword();
 
         // if file is small enough to avoid multipart overhead, otherwise use streaming with multipart upload
         if (fileSize < MaxSingleFileSize)

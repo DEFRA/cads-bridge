@@ -1,6 +1,3 @@
-using System.Net;
-using System.Text;
-using System.Text.Json;
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Infrastructure.Locking;
@@ -11,6 +8,9 @@ using CadsBridge.Testing.Support.Utilities.Logging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Net;
+using System.Text;
+using System.Text.Json;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Locking;
 

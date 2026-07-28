@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace CadsBridge.Core.ApiClients;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FileImportStatus : short
 {
     None = 0,

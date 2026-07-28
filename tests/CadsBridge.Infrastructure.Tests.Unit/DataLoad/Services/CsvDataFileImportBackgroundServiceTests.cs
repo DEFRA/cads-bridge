@@ -5,10 +5,10 @@ using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -72,8 +72,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         var job = CreateJob();
         await Write(job);
-
-        await _fileImportStore.AsyncVerify(x => x.CreateAsync(job.SourceKey, 0, It.IsAny<CancellationToken>()), Times.Once);
+        var sourceKey = job.SourceKeyFileName;
+        await _fileImportStore.AsyncVerify(x => x.CreateAsync(sourceKey, 0, It.IsAny<CancellationToken>()), Times.Once);
         await _copy.AsyncVerify(x => x.ExecAsync(job, It.IsAny<CancellationToken>()), Times.Once);
     }
 
