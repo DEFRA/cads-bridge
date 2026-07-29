@@ -307,6 +307,44 @@ public class FileImportStatusApiServiceTests
             handler.Requests.Should().BeEmpty();
         }
     }
+    public class MarkFailedTests : FileImportStatusApiServiceTests
+    {
+        [Fact]
+        public async Task MarkFailed_PostsToExpectedUrl()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK));
+
+            await CreateSut(handler).MarkFailed(7, "import failed", TestContext.Current.CancellationToken);
+
+            handler.Requests.Should().ContainSingle();
+            var request = handler.Requests[0];
+            request.Method.Should().Be(HttpMethod.Post);
+            request.RequestUri!.PathAndQuery
+                .Should().Be("/api/v1/systemadmin/fileimports/7/failed");
+        }
+
+        [Fact]
+        public async Task MarkFailed_ThrowsRetryable_OnTransientFailure()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable);
+
+            var act = async () => await CreateSut(handler)
+                .MarkFailed(7, "import failed", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<RetryableException>();
+        }
+
+        [Fact]
+        public async Task MarkFailed_ThrowsNonRetryable_OnPermanentFailure()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest);
+
+            var act = async () => await CreateSut(handler)
+                .MarkFailed(7, "import failed", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>();
+        }
+    }
 
     public class MarkResetTests : FileImportStatusApiServiceTests
     {

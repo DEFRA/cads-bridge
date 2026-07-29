@@ -22,7 +22,7 @@ public class FileImportApiService(
     private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
     private const string GetByFileNameEndpoint = "search";
     private const string MarkResetEndpoint = "reset";
-    private const string MarkFailedEndpoint = "reset";
+    private const string MarkFailedEndpoint = "failed";
 
     private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
         new()
