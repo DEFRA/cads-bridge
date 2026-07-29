@@ -1,8 +1,10 @@
+using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
+using CadsBridge.Testing.Support.Utilities.Logging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -12,8 +14,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Persistence;
 public class FileImportStatusStoreTests
 {
     private readonly Mock<IFileImportApiService> _apiService = new();
-    private readonly Mock<ILogger<FileImportStore>> _logger = new();
-
+    private readonly Mock<ILogger<FileImportStore>> _logger = new Mock<ILogger<FileImportStore>>().EnableAllLogLevels();
     private FileImportStore CreateSut() => new(_apiService.Object, _logger.Object);
 
     public class InitiateTests : FileImportStatusStoreTests
