@@ -54,7 +54,7 @@ public class CsvDataFileSplitBackgroundService(
                         }
                         else
                         {
-                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed for {request.SourceKey}: No rows to process", stoppingToken);
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
                         }
                     }
                     catch (Exception ex)
