@@ -65,13 +65,13 @@ public class CsvDataFileImportBackgroundService(
                         }
                         else
                         {
-                            await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed for {request.SourceKey}: No rows to process", stoppingToken);
+                            await fileImportStore.MarkFailedAsync(fileImportId, "Import failed: No rows to process", stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed for {request.SourceKey}: {ex.Message}", stoppingToken);
+                        await fileImportStore.MarkFailedAsync(fileImportId, "Import failed: {ex.Message}", stoppingToken);
                     }
                     finally
                     {
