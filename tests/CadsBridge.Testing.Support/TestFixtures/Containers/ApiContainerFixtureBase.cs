@@ -88,6 +88,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
         await Safe(() => LocalStackFixture.DisposeAsync());
         try { HttpClient?.Dispose(); } catch (Exception ex) { error ??= ex; }
         await Safe(() => ApiContainer?.DisposeAsync() ?? default);
+        await Safe(() => DockerNetworkHelper.DeleteNetwork(_networkName));
 
         GC.SuppressFinalize(this);
         if (error is not null) throw error;
