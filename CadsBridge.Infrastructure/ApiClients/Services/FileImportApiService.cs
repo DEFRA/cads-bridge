@@ -22,6 +22,7 @@ public class FileImportApiService(
     private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
     private const string GetByFileNameEndpoint = "search";
     private const string MarkResetEndpoint = "reset";
+    private const string MarkFailedEndpoint = "failed";
 
     private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
         new()
@@ -31,6 +32,37 @@ public class FileImportApiService(
             { FileImportStatus.Completed, "completed" },
             { FileImportStatus.Failed, "failed" }
        };
+
+    public async Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
+    {
+        var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
+        var context = $"Getting file import status for '{objectKey}' if it exists";
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
+        }
+
+        try
+        {
+            var response = await SendAsync(ct => _httpClient.GetAsync(endpoint, ct), context, cancellationToken);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("API call succeeded: {Context}", context);
+            }
+
+            return await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
+        }
+        catch (NonRetryableException ex)
+        {
+            if (ex.Message.Contains("404 Not Found"))
+            {
+                return null;
+            }
+            throw;
+        }
+
+    }
 
     public async Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {
@@ -78,6 +110,13 @@ public class FileImportApiService(
         var endPoint = $"{BaseApiUrl}/{id}/{statusSegment}";
         var context = $"Marking status of file import with id {id} as {status}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
+    }
+
+    public async Task MarkFailed(long id, string reason, CancellationToken cancellationToken)
+    {
+        var endPoint = $"{BaseApiUrl}/{id}/{MarkFailedEndpoint}";
+        var context = $"Marking file import with id {id} as failed";
+        await PostRequestToApiAsync(endPoint, reason, context, cancellationToken);
     }
 
     public async Task MarkReset(long id, CancellationToken cancellationToken)

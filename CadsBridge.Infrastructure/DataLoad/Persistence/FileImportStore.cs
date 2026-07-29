@@ -9,20 +9,17 @@ namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
 public class FileImportStore(IFileImportApiService fileImportStatusApiService, ILogger<FileImportStore> logger) : IFileImportStore
 {
-    private readonly IFileImportApiService _fileImportStatusApiService = fileImportStatusApiService;
-    private readonly ILogger<FileImportStore> _logger = logger;
-
     public async Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
+            return await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
         }
         catch (ConflictException ex)
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
+            if (logger.IsEnabled(LogLevel.Warning))
             {
-                _logger.LogWarning(ex, "File import already exists, resetting existing record: {FileName}", fileName);
+                logger.LogWarning(ex, "File import already exists, resetting existing record: {FileName}", fileName);
             }
             return await MarkFileReset(fileName, cancellationToken);
         }
@@ -37,39 +34,49 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
             RowsFound = rowsFound
         };
 
-        await _fileImportStatusApiService.Update(fileImportId, request, cancellationToken);
+        await fileImportStatusApiService.Update(fileImportId, request, cancellationToken);
     }
 
     private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
     {
-        var fileImportStatus = await _fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
+        var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
         if (fileImportStatus is null)
         {
             throw new NotFoundException(
                 $"File import status for '{fileName}' was not found when attempting to reset it after a conflict.");
         }
-
-        await _fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
+        if (fileImportStatus.ImportStatus == FileImportStatus.Completed)
+        {
+            throw new InvalidOperationException(
+                $"File import status for '{fileName}' is already marked as completed and cannot be reset.");
+        }
+        if (fileImportStatus.ImportStatus == FileImportStatus.Failed && fileImportStatus.FailedAttempts >= 3)
+        {
+            throw new InvalidOperationException(
+                $"File import status for '{fileName}' has failed too many times and cannot be reset.");
+        }
+        await fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
         return fileImportStatus.Id;
     }
 
     public async Task MarkTransferredAsync(long fileImportId, CancellationToken cancellationToken = default)
     {
-        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Transferred, cancellationToken);
+        await fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Transferred, cancellationToken);
     }
 
     public async Task MarkSplitAsync(long fileImportId, CancellationToken cancellationToken = default)
     {
-        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Split, cancellationToken);
+        await fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Split, cancellationToken);
     }
 
     public async Task MarkCompletedAsync(long fileImportId, CancellationToken cancellationToken = default)
     {
-        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Completed, cancellationToken);
+        await fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Completed, cancellationToken);
     }
 
-    public async Task MarkFailedAsync(long fileImportId, CancellationToken cancellationToken = default)
+    public async Task MarkFailedAsync(long fileImportId, string? reason = null, CancellationToken cancellationToken = default)
     {
-        await _fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Failed, cancellationToken);
+        reason ??= "import failed";
+        await fileImportStatusApiService.MarkFailed(fileImportId, reason, cancellationToken);
     }
 }

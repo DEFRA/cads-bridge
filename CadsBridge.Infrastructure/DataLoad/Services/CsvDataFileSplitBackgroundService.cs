@@ -54,13 +54,13 @@ public class CsvDataFileSplitBackgroundService(
                         }
                         else
                         {
-                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, stoppingToken);
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, stoppingToken);
+                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
                     }
                     finally
                     {

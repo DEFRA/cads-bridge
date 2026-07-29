@@ -1,4 +1,5 @@
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Infrastructure.DataLoad.Csv.Files;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Worker.Tasks;
@@ -17,8 +18,51 @@ public class BulkScanTask(
         }
         var result = await fileDiscoveryService.GetFileNames(cancellationToken);
 
-        // Validate if processed already
+        if (result.Count == 0)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("No files found in the external bucket.");
+            }
+            return;
+        }
+
+        // Filter for valid bulk file names
+        var validFilesKeys = result.Where(GetValidBulkFileNames).ToList();
+        if (validFilesKeys.Count == 0)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("No valid bulk import filenames found in the external bucket.");
+            }
+            return;
+        }
+
+        // Validate if processed or complete already, if so ignore
+        var keysToIgnore = new List<string>();
+        foreach (var fileName in validFilesKeys)
+        {
+            if (!await fileDiscoveryService.IsFileValid(fileName, cancellationToken))
+            {
+                keysToIgnore.Add(fileName);
+            }
+        }
+
+        if (keysToIgnore.Count > 0)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Ignoring {Count} files that have already been processed or failed too many times: {Files}", keysToIgnore.Count, string.Join(", ", keysToIgnore));
+            }
+            validFilesKeys.RemoveAll(keysToIgnore.Contains);
+        }
 
         // Send unprocessed keys to the queue
+    }
+
+    private bool GetValidBulkFileNames(string fileName)
+    {
+        return CtsmFilenameParser.TryParse(fileName, out var parsed) &&
+               parsed!.Type.Equals("BULK", StringComparison.OrdinalIgnoreCase);
     }
 }

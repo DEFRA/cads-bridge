@@ -1,5 +1,8 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Core.ApiClients;
+using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -104,6 +107,44 @@ public class S3FileDiscoveryServiceTests
             capturedRequest.Should().NotBeNull();
             capturedRequest!.BucketName.Should().Be(Bucket);
         }
+        [Fact]
+        public async Task IsFileValid_ReturnsTrueWhenNotFound()
+        {
+            var fileApiService = new Mock<IFileImportApiService>();
+            fileApiService.Setup(x => x.GetByFileNameIfExists(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((FileImportDto?)null);
+
+            var sut = CreateSut(fileApiService.Object);
+            var result = await sut.IsFileValid("test-file", TestContext.Current.CancellationToken);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task IsFileValid_ReturnsTrueWhenFoundAndFailedLessThan3Times()
+        {
+            var fileApiService = new Mock<IFileImportApiService>();
+            fileApiService.Setup(x => x.GetByFileNameIfExists(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileImportDto(2) { ImportStatus = FileImportStatus.Failed });
+
+            var sut = CreateSut(fileApiService.Object);
+            var result = await sut.IsFileValid("test-file", TestContext.Current.CancellationToken);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task IsFileValid_ReturnsFalseWhenFoundAndFailedMoreThan2Times()
+        {
+            var fileApiService = new Mock<IFileImportApiService>();
+            fileApiService.Setup(x => x.GetByFileNameIfExists(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileImportDto(3) { ImportStatus = FileImportStatus.Failed });
+
+            var sut = CreateSut(fileApiService.Object);
+            var result = await sut.IsFileValid("test-file", TestContext.Current.CancellationToken);
+
+            result.Should().BeFalse();
+        }
 
         private static S3FileDiscoveryService<ExternalStorageClient> CreateSut(
             IEnumerable<ListObjectsV2Response> pages)
@@ -122,8 +163,16 @@ public class S3FileDiscoveryServiceTests
             var factory = new Mock<IS3ClientFactory>();
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(s3Client, Bucket));
+            var fileImportApiService = new Mock<IFileImportApiService>();
+            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService.Object);
+        }
 
-            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object);
+        private static S3FileDiscoveryService<ExternalStorageClient> CreateSut(IFileImportApiService fileImportApiService)
+        {
+            var factory = new Mock<IS3ClientFactory>();
+            factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
+                   .Returns(new S3ClientFactory.ClientInfo(Mock.Of<IAmazonS3>(), Bucket));
+            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService);
         }
 
         private static ListObjectsV2Response MakePage(

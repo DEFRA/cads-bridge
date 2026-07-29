@@ -87,6 +87,61 @@ public class FileImportStatusApiServiceTests
         }
     }
 
+    public class GetByFileNameIfExistsTests : FileImportStatusApiServiceTests
+    {
+        [Fact]
+        public async Task GetByFileNameIfExists_ReturnsDto_WhenResponseIsSuccessful()
+        {
+            var dto = new FileImportDto { Id = 1, FileName = "file.csv", TotalRowsToProcess = 100 };
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(dto)
+            });
+
+            var result = await CreateSut(handler).GetByFileNameIfExists("file.csv", TestContext.Current.CancellationToken);
+
+            result.Should().NotBeNull();
+            result.Id.Should().Be(1);
+            result.FileName.Should().Be("file.csv");
+        }
+
+        [Fact]
+        public async Task GetByFileNameIfExists_ReturnsNull_WhenResponseIsNotFound()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound));
+
+            var result = await CreateSut(handler).GetByFileNameIfExists("file.csv", TestContext.Current.CancellationToken);
+
+            result.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.InternalServerError)]
+        [InlineData(HttpStatusCode.RequestTimeout)]
+        public async Task GetByFileNameIfExists_ThrowsRetryable_OnTransientFailure(HttpStatusCode statusCode)
+        {
+            var handler = new StubHttpMessageHandler(statusCode);
+
+            var act = async () => await CreateSut(handler)
+                .GetByFileNameIfExists("file.csv", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<RetryableException>();
+        }
+
+        [Fact]
+        public async Task GetByFileNameIfExists_ThrowsNonRetryable_OnBadRequest()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest);
+
+            var act = async () => await CreateSut(handler)
+                .GetByFileNameIfExists("file.csv", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>();
+        }
+
+    }
+
+
     public class CreateTests : FileImportStatusApiServiceTests
     {
         [Fact]
@@ -279,6 +334,56 @@ public class FileImportStatusApiServiceTests
 
             await act.Should().ThrowAsync<DomainException>();
             handler.Requests.Should().BeEmpty();
+        }
+    }
+    public class MarkFailedTests : FileImportStatusApiServiceTests
+    {
+        [Fact]
+        public async Task MarkFailed_PostsToExpectedUrl()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK));
+
+            await CreateSut(handler).MarkFailed(7, "import failed", TestContext.Current.CancellationToken);
+
+            handler.Requests.Should().ContainSingle();
+            var request = handler.Requests[0];
+            request.Method.Should().Be(HttpMethod.Post);
+            request.RequestUri!.PathAndQuery
+                .Should().Be("/api/v1/systemadmin/fileimports/7/failed");
+        }
+
+        [Fact]
+        public async Task MarkFailed_SendsReasonAsJsonStringLiteralInBody()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+            await CreateSut(handler).MarkFailed(7, "file timed out", TestContext.Current.CancellationToken);
+
+            var body = await handler.Requests[0].Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+            body.Should().Be("\"file timed out\"");
+        }
+
+        [Fact]
+        public async Task MarkFailed_ThrowsRetryable_OnTransientFailure()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable);
+
+            var act = async () => await CreateSut(handler)
+                .MarkFailed(7, "import failed", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<RetryableException>();
+        }
+
+        [Fact]
+        public async Task MarkFailed_ThrowsNonRetryable_OnPermanentFailure()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest);
+
+            var act = async () => await CreateSut(handler)
+                .MarkFailed(7, "import failed", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>();
         }
     }
 

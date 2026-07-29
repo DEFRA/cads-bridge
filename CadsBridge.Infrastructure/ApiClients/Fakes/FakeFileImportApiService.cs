@@ -9,6 +9,11 @@ public class FakeFileImportApiService : IFileImportApiService
 {
     private readonly Random _random = new();
 
+    public Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
+    {
+        return objectKey == "not-found.csv" ? Task.FromResult<FileImportDto?>(null) : GetByFileName(objectKey, cancellationToken);
+    }
+
     public Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
     {
         var response = new FileImportDto
@@ -34,6 +39,11 @@ public class FakeFileImportApiService : IFileImportApiService
     }
 
     public Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task MarkFailed(long id, string reason, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

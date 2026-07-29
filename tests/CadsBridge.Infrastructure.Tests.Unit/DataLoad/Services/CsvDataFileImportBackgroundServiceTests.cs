@@ -46,7 +46,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
            .Returns(Task.CompletedTask);
         _fileImportStore.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var config = new DataLoadConfiguration { MaxParallelDownloads = 4 };
@@ -85,7 +85,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob();
         await Write(job);
 
-        _fileImportStore.Verify(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileImportStore.Verify(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -117,7 +117,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
         _splitProducer.Verify(x => x.SendAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -137,7 +137,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, $"Import failed: {ex.Message}", It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(
@@ -163,7 +163,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, $"Import failed: {ex.Message}", It.IsAny<CancellationToken>()), Times.Once);
 
         await _logger.AsyncVerify(
             x => x.Log(
