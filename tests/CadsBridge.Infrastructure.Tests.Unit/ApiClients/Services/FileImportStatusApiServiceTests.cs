@@ -46,6 +46,32 @@ public class FileImportStatusApiServiceTests
         }
 
         [Fact]
+        public async Task GetByFileNameIfExists_ReturnsDto_WhenResponseIsSuccessful()
+        {
+            var dto = new FileImportDto { Id = 1, FileName = "file.csv", TotalRowsToProcess = 100 };
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(dto)
+            });
+
+            var result = await CreateSut(handler).GetByFileNameIfExists("file.csv", TestContext.Current.CancellationToken);
+
+            result.Should().NotBeNull();
+            result.Id.Should().Be(1);
+            result.FileName.Should().Be("file.csv");
+        }
+
+        [Fact]
+        public async Task GetByFileNameIfExists_ReturnsNull_WhenResponseIsNotFound()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound));
+
+            var result = await CreateSut(handler).GetByFileNameIfExists("file.csv", TestContext.Current.CancellationToken);
+
+            result.Should().BeNull();
+        }
+
+        [Fact]
         public async Task GetByFileName_SendsRequest_ToExpectedUrl()
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)

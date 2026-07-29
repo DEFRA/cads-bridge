@@ -42,19 +42,26 @@ public class FileImportApiService(
             logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
         }
 
-        var response = await SendAsync(ct => _httpClient.GetAsync(endpoint, ct), context, cancellationToken);
-
-        if (logger.IsEnabled(LogLevel.Information))
+        try
         {
-            logger.LogInformation("API call succeeded: {Context}", context);
+            var response = await SendAsync(ct => _httpClient.GetAsync(endpoint, ct), context, cancellationToken);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("API call succeeded: {Context}", context);
+            }
+
+            return await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
+        }
+        catch (NonRetryableException ex)
+        {
+            if (ex.Message.Contains("404 Not Found"))
+            {
+                return null;
+            }
+            throw;
         }
 
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            return null;
-        }
-
-        return await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
     }
 
     public async Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
