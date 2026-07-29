@@ -22,6 +22,7 @@ public class FileImportApiService(
     private const string BaseApiUrl = "api/v1/systemadmin/fileimports";
     private const string GetByFileNameEndpoint = "search";
     private const string MarkResetEndpoint = "reset";
+    private const string MarkFailedEndpoint = "reset";
 
     private static readonly Dictionary<FileImportStatus, string> s_fileImportStatusUrlMap =
         new()
@@ -48,7 +49,7 @@ public class FileImportApiService(
             logger.LogInformation("API call succeeded: {Context}", context);
         }
 
-        if(response.StatusCode == HttpStatusCode.NotFound)
+        if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
         }
@@ -102,6 +103,13 @@ public class FileImportApiService(
         var endPoint = $"{BaseApiUrl}/{id}/{statusSegment}";
         var context = $"Marking status of file import with id {id} as {status}";
         await PostRequestToApiAsync<object?>(endPoint, null, context, cancellationToken);
+    }
+
+    public async Task MarkFailed(long id, string reason, CancellationToken cancellationToken)
+    {
+        var endPoint = $"{BaseApiUrl}/{id}/{MarkFailedEndpoint}";
+        var context = $"Marking file import with id {id} as failed";
+        await PostRequestToApiAsync<object?>(endPoint, new { reason }, context, cancellationToken);
     }
 
     public async Task MarkReset(long id, CancellationToken cancellationToken)

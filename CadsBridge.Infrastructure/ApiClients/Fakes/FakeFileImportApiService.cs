@@ -43,6 +43,11 @@ public class FakeFileImportApiService : IFileImportApiService
         return Task.CompletedTask;
     }
 
+    public Task MarkFailed(long id, string reason, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task MarkReset(long id, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;

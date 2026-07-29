@@ -11,5 +11,6 @@ public interface IFileImportApiService
     Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken);
     Task Update(long id, UpdateFileImportRequest request, CancellationToken cancellationToken);
     Task MarkStatus(long id, FileImportStatus status, CancellationToken cancellationToken);
+    Task MarkFailed(long id, string reason, CancellationToken cancellationToken);
     Task MarkReset(long id, CancellationToken cancellationToken);
 }

@@ -108,10 +108,11 @@ public class FileImportStatusStoreTests
         [Fact]
         public async Task MarkFailed_CallsApiService_WithFailedStatus()
         {
-            await CreateSut().MarkFailedAsync(5L, TestContext.Current.CancellationToken);
+            var reason = "Import failed for file.csv";
+            await CreateSut().MarkFailedAsync(5L, reason, TestContext.Current.CancellationToken);
 
             _apiService.Verify(x =>
-                x.MarkStatus(5L, FileImportStatus.Failed, It.IsAny<CancellationToken>()), Times.Once);
+                x.MarkFailed(5L, reason, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

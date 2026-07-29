@@ -14,5 +14,5 @@ public interface IFileImportStore
 
     Task MarkCompletedAsync(long fileImportId, CancellationToken cancellationToken = default);
 
-    Task MarkFailedAsync(long fileImportId, CancellationToken cancellationToken = default);
+    Task MarkFailedAsync(long fileImportId, string? reason = null, CancellationToken cancellationToken = default);
 }

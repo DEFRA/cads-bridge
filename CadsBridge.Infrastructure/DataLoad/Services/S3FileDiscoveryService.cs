@@ -21,20 +21,9 @@ public class S3FileDiscoveryService<TClient>(IS3ClientFactory s3ClientFactory, I
     public async Task<bool> IsFileValid(string fileName, CancellationToken cancellationToken)
     {
         var existingFile = await fileImportApiService.GetByFileNameIfExists(fileName, cancellationToken);
-        if (existingFile is null)
-        {
-            return true;
-        }
-
-        if (existingFile.ImportStatus == FileImportStatus.Failed)
-        {
-            // Need to reset the file import status to allow reprocessing
-            // and report it as valid for processing as exisitng file entry
-            // TODO: we need to check the amount of attempts made at reprocessing the and ignore if it has exceeded the max attempts allowed
-            await fileImportApiService.MarkReset(existingFile.Id, cancellationToken);
-            return true;
-        }
-        return false;
+        return existingFile is null ||
+               (existingFile.ImportStatus == FileImportStatus.Failed &&
+                existingFile.FailedAttempts < 3);
     }
 
     private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, [EnumeratorCancellation] CancellationToken cancellationToken)
