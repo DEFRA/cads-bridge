@@ -10,5 +10,5 @@ public record FileImportDto
     public long RowsFound { get; set; }
     public FileImportStatus ImportStatus { get; set; }
     public FileProcessingStatus ProcessingStatus { get; set; }
-    public int FailedAttempts { get; private set; }
+    public int FailedAttempts { get; }
 }
