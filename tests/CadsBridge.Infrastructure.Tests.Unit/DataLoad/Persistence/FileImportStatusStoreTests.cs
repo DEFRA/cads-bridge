@@ -48,6 +48,54 @@ public class FileImportStatusStoreTests
         }
 
         [Fact]
+        public async Task Initiate_ResetsExistingRecordAndReturnsItsId_WhenConflictAndStatusFailedLessThan3Times()
+        {
+            _apiService
+                .Setup(x => x.Create(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new ConflictException("file import already exists"));
+            _apiService
+                .Setup(x => x.GetByFileName("file.csv", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileImportDto(1) { Id = 55, FileName = "file.csv", ImportStatus = FileImportStatus.Failed });
+
+            var result = await CreateSut().CreateAsync("file.csv", 100L, TestContext.Current.CancellationToken);
+
+            result.Should().Be(55L);
+            _apiService.Verify(x => x.MarkReset(55L, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Initiate_ThrowsInvalidOperationException_WhenConflictButStatusFailed3TimesOrMore()
+        {
+            _apiService
+                .Setup(x => x.Create(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new ConflictException("file import already exists"));
+            _apiService
+                .Setup(x => x.GetByFileName("file.csv", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileImportDto(3) { Id = 55, FileName = "file.csv", ImportStatus = FileImportStatus.Failed });
+
+            var act = async () => await CreateSut().CreateAsync("file.csv", 100L, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            _apiService.Verify(x => x.MarkReset(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Initiate_ThrowsInvalidOperationException_WhenConflictButStatusCompleted()
+        {
+            _apiService
+                .Setup(x => x.Create(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new ConflictException("file import already exists"));
+            _apiService
+                .Setup(x => x.GetByFileName("file.csv", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileImportDto { Id = 55, FileName = "file.csv", ImportStatus = FileImportStatus.Completed });
+
+            var act = async () => await CreateSut().CreateAsync("file.csv", 100L, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            _apiService.Verify(x => x.MarkReset(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
         public async Task Initiate_ThrowsNotFound_WhenConflictButExistingRecordNotFound()
         {
             _apiService
