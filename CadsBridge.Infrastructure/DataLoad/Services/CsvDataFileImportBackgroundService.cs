@@ -71,7 +71,7 @@ public class CsvDataFileImportBackgroundService(
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(fileImportId, "Import failed: {ex.Message}", stoppingToken);
+                        await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}", stoppingToken);
                     }
                     finally
                     {

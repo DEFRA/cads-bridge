@@ -60,7 +60,7 @@ public class CsvDataFileSplitBackgroundService(
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, "Split failed: {ex.Message}", stoppingToken);
+                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
                     }
                     finally
                     {
