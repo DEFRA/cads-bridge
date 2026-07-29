@@ -353,6 +353,18 @@ public class FileImportStatusApiServiceTests
         }
 
         [Fact]
+        public async Task MarkFailed_SendsReasonAsJsonStringLiteralInBody()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+            await CreateSut(handler).MarkFailed(7, "file timed out", TestContext.Current.CancellationToken);
+
+            var body = await handler.Requests[0].Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+            body.Should().Be("\"file timed out\"");
+        }
+
+        [Fact]
         public async Task MarkFailed_ThrowsRetryable_OnTransientFailure()
         {
             var handler = new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable);

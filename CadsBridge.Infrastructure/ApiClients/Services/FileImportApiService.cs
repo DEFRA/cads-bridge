@@ -116,7 +116,7 @@ public class FileImportApiService(
     {
         var endPoint = $"{BaseApiUrl}/{id}/{MarkFailedEndpoint}";
         var context = $"Marking file import with id {id} as failed";
-        await PostRequestToApiAsync<object?>(endPoint, new { reason }, context, cancellationToken);
+        await PostRequestToApiAsync(endPoint, reason, context, cancellationToken);
     }
 
     public async Task MarkReset(long id, CancellationToken cancellationToken)
