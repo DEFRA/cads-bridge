@@ -21,7 +21,7 @@ public class S3FileDiscoveryService<TClient>(
     IFileImportApiService fileImportApiService,
     IMessageFactory messageFactory,
     IMessagePublisher<CadsBridgeFifoQueueClient> cadsBridgeFifoQueuePublisher,
-    StorageConfiguration  storageConfiguration
+    StorageConfiguration storageConfiguration
     ) : IFileDiscoveryService where TClient : IStorageClient, new()
 {
     S3ClientFactory.ClientInfo clientInfo = s3ClientFactory.GetClientInfo<TClient>();
