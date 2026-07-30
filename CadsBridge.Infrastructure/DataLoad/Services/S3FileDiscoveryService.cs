@@ -24,7 +24,7 @@ public class S3FileDiscoveryService<TClient>(
     StorageConfiguration storageConfiguration
     ) : IFileDiscoveryService where TClient : IStorageClient, new()
 {
-    S3ClientFactory.ClientInfo clientInfo = s3ClientFactory.GetClientInfo<TClient>();
+    readonly S3ClientFactory.ClientInfo clientInfo = s3ClientFactory.GetClientInfo<TClient>();
 
     public async Task<List<string>> GetFileNames(CancellationToken cancellationToken)
     {
