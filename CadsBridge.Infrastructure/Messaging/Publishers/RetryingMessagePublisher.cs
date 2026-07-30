@@ -10,7 +10,7 @@ public class RetryingMessagePublisher<TClient>(
     ResiliencePipeline pipeline)
     : IMessagePublisher<TClient> where TClient : IQueueClient, new()
 {
-    public string QueueUrl => inner.QueueUrl;
+    public string QueueUrl => inner.QueueUrl!;
 
     public Task PublishAsync<TMessage>(TMessage? message, FifoMessageMetadata metadata, CancellationToken cancellationToken = default)
         where TMessage : class
