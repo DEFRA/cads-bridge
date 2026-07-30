@@ -1,11 +1,15 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.Messaging.Clients;
+using CadsBridge.Application.Messaging.Publishers;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.DataLoad.Services;
+using CadsBridge.Infrastructure.Messaging.Factories;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
 using FluentAssertions;
 using Moq;
@@ -164,7 +168,12 @@ public class S3FileDiscoveryServiceTests
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(s3Client, Bucket));
             var fileImportApiService = new Mock<IFileImportApiService>();
-            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService.Object);
+            return new S3FileDiscoveryService<ExternalStorageClient>(
+                factory.Object,
+                fileImportApiService.Object,
+                Mock.Of<IMessageFactory>(),
+                Mock.Of<IMessagePublisher<CadsBridgeFifoQueueClient>>(),
+                new StorageConfiguration());
         }
 
         private static S3FileDiscoveryService<ExternalStorageClient> CreateSut(IFileImportApiService fileImportApiService)
@@ -172,7 +181,12 @@ public class S3FileDiscoveryServiceTests
             var factory = new Mock<IS3ClientFactory>();
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(Mock.Of<IAmazonS3>(), Bucket));
-            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService);
+            return new S3FileDiscoveryService<ExternalStorageClient>(
+                factory.Object,
+                fileImportApiService,
+                Mock.Of<IMessageFactory>(),
+                Mock.Of<IMessagePublisher<CadsBridgeFifoQueueClient>>(),
+                new StorageConfiguration());
         }
 
         private static ListObjectsV2Response MakePage(

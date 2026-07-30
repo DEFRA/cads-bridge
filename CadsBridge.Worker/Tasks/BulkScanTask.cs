@@ -58,6 +58,21 @@ public class BulkScanTask(
         }
 
         // Send unprocessed keys to the queue
+        if (validFilesKeys.Count == 0)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("No files remain to enqueue after filtering.");
+            }
+            return;
+        }
+
+        await fileDiscoveryService.EnQueueFileImportMessages(validFilesKeys, cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Enqueued {Count} file import messages.", validFilesKeys.Count);
+        }
     }
 
     private bool GetValidBulkFileNames(string fileName)

@@ -73,7 +73,7 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
             incomingObjectKey,
             OracleEnvironment,
             etag,
-            DateTime.UtcNow,
+            DateTimeOffset.UtcNow,
             correlationId);
 
         var metadata = new FifoMessageMetadata(
@@ -123,7 +123,7 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
         string objectKey,
         string oracleEnvironment,
         string etag,
-        DateTime discoveredAtUtc,
+        DateTimeOffset discoveredAtUtc,
         string correlationId) => new()
         {
             Bucket = bucket,
