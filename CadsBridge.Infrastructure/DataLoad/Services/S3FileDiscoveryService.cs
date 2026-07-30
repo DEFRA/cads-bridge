@@ -64,7 +64,7 @@ public class S3FileDiscoveryService<TClient>(
                 Bucket = bucketName,
                 CorrelationId = correlationId,
                 ObjectKey = fileName,
-                DiscoveredAtUtc = DateTimeOffset.UtcNow,
+                DiscoveredAtUtc = DateTime.UtcNow,
                 Etag = etag,
                 Id = DeterministicGuid.From(dedipId),
                 OracleEnvironment = oracleEnvironment

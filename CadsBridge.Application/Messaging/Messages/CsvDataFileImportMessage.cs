@@ -6,7 +6,7 @@ public class CsvDataFileImportMessage : MessageType
     public string ObjectKey { get; init; } = string.Empty; // e.g. cads/cts/bulk/import-file.csv
     public string OracleEnvironment { get; init; } = string.Empty;
     public string Etag { get; init; } = string.Empty;
-    public DateTimeOffset DiscoveredAtUtc { get; init; }
+    public DateTime DiscoveredAtUtc { get; init; }
     public string CorrelationId { get; init; } = string.Empty;
     public string Identifier => $"{Bucket}/{ObjectKey}";
 }
