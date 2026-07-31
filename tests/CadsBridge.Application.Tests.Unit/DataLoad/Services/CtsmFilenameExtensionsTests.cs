@@ -46,4 +46,15 @@ public class CtsmFilenameExtensionsTests
 
         generatedResult.Should().Be(expectedResult);
     }
+
+    [Theory]
+    [InlineData("CTSM_CADS_PREP_DELTA_00002_CT_ANIMAL_STATUSES_2026-07-30-141209.csv", "2026-07-30_STATUSES_ANIMAL_CT_00002_DELTA_PREP_CADS_CTSM")]
+    [InlineData("CTSM_CADS_PREP_DELTA_00002_001_CT_ANIMAL_STATUSES_2026-07-30-141209.csv", "2026-07-30_STATUSES_ANIMAL_CT_001_00002_DELTA_PREP_CADS_CTSM")]
+    public void Ensure_Password_Correct_When_Using_New_File_Format(string ctsmFilename, string expectedResult)
+    {
+        var parts = CtsmFilenameParser.Parse(ctsmFilename);
+        var generatedResult = parts!.DerivePassword();
+
+        generatedResult.Should().Be(expectedResult);
+    }
 }
