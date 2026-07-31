@@ -117,4 +117,3 @@ public class RetryingMessagePublisherTests
         attempts.Should().Be(3); // 1 initial attempt + 2 retries, all failing
     }
 }
-

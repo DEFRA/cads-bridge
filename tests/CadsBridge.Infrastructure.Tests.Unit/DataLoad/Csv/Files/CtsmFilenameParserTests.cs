@@ -82,4 +82,3 @@ public class CtsmFilenameParserTests
             .WithMessage("Invalid CTSM filename format: invalid-filename.csv");
     }
 }
-

@@ -107,5 +107,3 @@ public class CadsBridgeFifoQueueListenerTests
         await act.Should().NotThrowAsync();
     }
 }
-
-

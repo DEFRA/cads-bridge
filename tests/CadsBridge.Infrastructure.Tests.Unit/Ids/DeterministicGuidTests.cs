@@ -65,4 +65,3 @@ public class DeterministicGuidTests
         guid.Should().NotBe(Guid.Empty);
     }
 }
-
