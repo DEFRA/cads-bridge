@@ -19,7 +19,6 @@ namespace CadsBridge.Infrastructure.DataLoad.Services;
 public class S3FileDiscoveryService<TClient>(
     IS3ClientFactory s3ClientFactory,
     IFileImportApiService fileImportApiService,
-    IMessageFactory messageFactory,
     IMessagePublisher<CadsBridgeFifoQueueClient> cadsBridgeFifoQueuePublisher,
     StorageConfiguration storageConfiguration
     ) : IFileDiscoveryService where TClient : IStorageClient, new()
@@ -47,9 +46,6 @@ public class S3FileDiscoveryService<TClient>(
         var correlationId = CorrelationIdContext.Value
             ?? throw new InvalidOperationException("CorrelationId is not set in the current context.");
 
-        var queueUrl = cadsBridgeFifoQueuePublisher.QueueUrl
-            ?? throw new InvalidOperationException("FIFO queue URL is not configured.");
-
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
         var bucketName = clientInfo.BucketName;
 
@@ -75,9 +71,7 @@ public class S3FileDiscoveryService<TClient>(
                 FifoKeyGenerator.GenerateDeduplicationId(bucketName, fileName, etag, oracleEnvironment),
                 correlationId);
 
-            var queueItem = messageFactory.CreateFifoSqsMessage(queueUrl, message, fifoMetadata);
-
-            await cadsBridgeFifoQueuePublisher.PublishAsync(queueItem, fifoMetadata, cancellationToken);
+            await cadsBridgeFifoQueuePublisher.PublishAsync(message, fifoMetadata, cancellationToken);
         }
     }
 

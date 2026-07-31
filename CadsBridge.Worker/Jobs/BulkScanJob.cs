@@ -1,3 +1,4 @@
+using CadsBridge.Core.Correlation;
 using CadsBridge.Core.Locking;
 using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,11 @@ public class BulkScanJob(
 
     public async Task Execute(IJobExecutionContext context)
     {
+        // Background jobs run outside the HTTP pipeline, so no middleware sets the
+        // correlation ID.  Generate one per job execution so it flows through into
+        // every SQS message published by this run.
+        CorrelationIdContext.Value = Guid.NewGuid().ToString();
+
         if (!await distributedLock.TryAcquireAsync(LockName, context.CancellationToken))
         {
             if (logger.IsEnabled(LogLevel.Information))

@@ -42,6 +42,11 @@ public static class ServiceCollectionExtensions
                     }
                 }
             });
+
+            services.AddQuartzHostedService(options =>
+            {
+                options.WaitForJobsToComplete = true;
+            });
         }
 
         return services;
@@ -50,7 +55,7 @@ public static class ServiceCollectionExtensions
     private static void AddQuartzJob<T>(this IServiceCollectionQuartzConfigurator quartzConfigurator,
         ScheduledJobConfiguration jobConfiguration) where T : IJob
     {
-        if (jobConfiguration.Enabled && jobConfiguration.JobType == nameof(T) && jobConfiguration?.CronSchedule != null)
+        if (jobConfiguration.Enabled && jobConfiguration.JobType == typeof(T).Name && jobConfiguration?.CronSchedule != null)
         {
             quartzConfigurator.AddJob<T>(opts => opts.WithIdentity(jobConfiguration.JobType));
             quartzConfigurator.AddTrigger(opts => opts

@@ -6,7 +6,6 @@ using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.DataLoad.Services;
-using CadsBridge.Infrastructure.Messaging.Factories;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Configuration;
@@ -171,7 +170,6 @@ public class S3FileDiscoveryServiceTests
             return new S3FileDiscoveryService<ExternalStorageClient>(
                 factory.Object,
                 fileImportApiService.Object,
-                Mock.Of<IMessageFactory>(),
                 Mock.Of<IMessagePublisher<CadsBridgeFifoQueueClient>>(),
                 new StorageConfiguration());
         }
@@ -184,7 +182,6 @@ public class S3FileDiscoveryServiceTests
             return new S3FileDiscoveryService<ExternalStorageClient>(
                 factory.Object,
                 fileImportApiService,
-                Mock.Of<IMessageFactory>(),
                 Mock.Of<IMessagePublisher<CadsBridgeFifoQueueClient>>(),
                 new StorageConfiguration());
         }
