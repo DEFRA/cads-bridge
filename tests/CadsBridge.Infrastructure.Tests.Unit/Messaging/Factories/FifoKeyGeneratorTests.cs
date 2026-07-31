@@ -94,4 +94,12 @@ public class FifoKeyGeneratorTests
         id2.Should().NotBe(id1);
         id3.Should().NotBe(id1);
     }
+
+    [Fact]
+    public void GenerateMessageGroupId_ShouldUseWholeObjectKey_WhenNoSlashPresent()
+    {
+        var groupId = FifoKeyGenerator.GenerateMessageGroupId("import-file.dat", "PreProd");
+
+        groupId.Should().Be("import-file.dat:PreProd");
+    }
 }

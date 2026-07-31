@@ -42,10 +42,14 @@ public class BulkScanJobTests
     {
         // ── Arrange: start the container with the fake CDS API and the queue consumer
         //   disabled so BulkScanJob messages stay in the queue long enough for the test
-        //   to read them (otherwise the poller races to drain the queue first). ──
+        //   to read them (otherwise the poller races to drain the queue first). Quartz
+        //   jobs are disabled by default in appsettings.json, so BulkScanJob (index 0 in
+        //   the Quartz:Jobs array) must be explicitly re-enabled for this test via the
+        //   Quartz__Jobs__0__Enabled environment variable override. ──
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
             ["Messaging__DisableQueueConsumer"] = "true",
+            ["Quartz__Jobs__0__Enabled"] = "true",
         });
 
         await fixture.InitializeAsync();
