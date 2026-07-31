@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
@@ -18,6 +19,7 @@ namespace CadsBridge.Infrastructure.ApiClients.Fakes;
 /// to enqueue it for processing.
 /// </para>
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class FakeFileImportApiService : IFileImportApiService
 {
     private readonly Random _random = new();
