@@ -5,4 +5,5 @@ public record StorageConfigurationsDetailsWithCredentials
 {
     public string AccessKeySecretName { get; init; } = string.Empty;
     public string SecretKeySecretName { get; init; } = string.Empty;
+    public string EnvironmentName { get; init; } = string.Empty;
 }

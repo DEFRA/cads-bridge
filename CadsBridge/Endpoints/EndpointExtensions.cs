@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Endpoints.Requests;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Channels;
@@ -56,7 +57,8 @@ public static class EndpointsExtensions
             try
             {
                 await channel.Writer.WriteAsync(new CsvDataFileImportJob(
-                    SourceKey: sourceKey
+                    SourceKey: sourceKey,
+                    CorrelationId: CorrelationIdContext.Value
                 ), cancellationToken);
             }
             catch (Exception ex)
@@ -73,7 +75,7 @@ public static class EndpointsExtensions
     {
         foreach (var file in request.Files)
         {
-            await channel.Writer.WriteAsync(new CsvDataFileSplitJob(file.Key));
+            await channel.Writer.WriteAsync(new CsvDataFileSplitJob(file.Key, CorrelationId: CorrelationIdContext.Value));
         }
 
         return Results.Ok();

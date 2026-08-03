@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,6 +30,12 @@ public class CsvDataFileSplitBackgroundService(
                 logger.LogInformation("Cancellation requested, aborting split");
                 return;
             }
+
+            // Establish the correlation id for this unit of work based on what was used for file discovery
+            // This keeps it consistent across the various processes for this particular file import
+            CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
+                ? Guid.NewGuid().ToString()
+                : request.CorrelationId;
 
             if (!request.FileImportId.HasValue)
             {

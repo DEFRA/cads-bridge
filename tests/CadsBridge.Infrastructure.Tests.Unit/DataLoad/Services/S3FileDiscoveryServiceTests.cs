@@ -1,11 +1,17 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using CadsBridge.Application.Messaging.Clients;
+using CadsBridge.Application.Messaging.Messages;
+using CadsBridge.Application.Messaging.Models;
+using CadsBridge.Application.Messaging.Publishers;
 using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
 using FluentAssertions;
 using Moq;
@@ -164,7 +170,11 @@ public class S3FileDiscoveryServiceTests
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(s3Client, Bucket));
             var fileImportApiService = new Mock<IFileImportApiService>();
-            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService.Object);
+            return new S3FileDiscoveryService<ExternalStorageClient>(
+                factory.Object,
+                fileImportApiService.Object,
+                Mock.Of<IMessagePublisher<CadsBridgeFifoQueueClient>>(),
+                new StorageConfiguration());
         }
 
         private static S3FileDiscoveryService<ExternalStorageClient> CreateSut(IFileImportApiService fileImportApiService)
@@ -172,7 +182,11 @@ public class S3FileDiscoveryServiceTests
             var factory = new Mock<IS3ClientFactory>();
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(Mock.Of<IAmazonS3>(), Bucket));
-            return new S3FileDiscoveryService<ExternalStorageClient>(factory.Object, fileImportApiService);
+            return new S3FileDiscoveryService<ExternalStorageClient>(
+                factory.Object,
+                fileImportApiService,
+                Mock.Of<IMessagePublisher<CadsBridgeFifoQueueClient>>(),
+                new StorageConfiguration());
         }
 
         private static ListObjectsV2Response MakePage(
@@ -185,5 +199,98 @@ public class S3FileDiscoveryServiceTests
                 NextContinuationToken = nextToken,
                 S3Objects = keys.Select(k => new S3Object { Key = k }).ToList()
             };
+    }
+
+    public class EnQueueFileImportMessagesTests : IDisposable
+    {
+        private readonly Mock<IAmazonS3> _s3Mock = new();
+        private readonly Mock<IMessagePublisher<CadsBridgeFifoQueueClient>> _publisherMock = new();
+
+        public void Dispose() => CorrelationIdContext.Value = null;
+
+        private S3FileDiscoveryService<ExternalStorageClient> CreateSut(StorageConfiguration? storageConfiguration = null)
+        {
+            var factory = new Mock<IS3ClientFactory>();
+            factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
+                   .Returns(new S3ClientFactory.ClientInfo(_s3Mock.Object, Bucket));
+
+            return new S3FileDiscoveryService<ExternalStorageClient>(
+                factory.Object,
+                Mock.Of<IFileImportApiService>(),
+                _publisherMock.Object,
+                storageConfiguration ?? new StorageConfiguration());
+        }
+
+        [Fact]
+        public async Task EnQueueFileImportMessages_ShouldDoNothing_WhenFileNamesIsEmpty()
+        {
+            var sut = CreateSut();
+
+            await sut.EnQueueFileImportMessages([], TestContext.Current.CancellationToken);
+
+            _s3Mock.Verify(x => x.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _publisherMock.Verify(x => x.PublishAsync(It.IsAny<object>(), It.IsAny<FifoMessageMetadata>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task EnQueueFileImportMessages_ShouldPublishMessage_ForEachFileName()
+        {
+            _s3Mock
+                .Setup(x => x.GetObjectMetadataAsync(Bucket, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new GetObjectMetadataResponse { ETag = "\"etag-value\"" });
+
+            var sut = CreateSut();
+
+            await sut.EnQueueFileImportMessages(["file1.csv", "file2.csv"], TestContext.Current.CancellationToken);
+
+            _publisherMock.Verify(
+                x => x.PublishAsync(
+                    It.IsAny<CsvDataFileImportMessage>(),
+                    It.IsAny<FifoMessageMetadata>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task EnQueueFileImportMessages_ShouldPublishMessage_WithExpectedProperties()
+        {
+            const string fileName = "file1.csv";
+            var storageConfiguration = new StorageConfiguration
+            {
+                External = new StorageConfigurationsDetailsWithCredentials { EnvironmentName = "PreProd" }
+            };
+
+            _s3Mock
+                .Setup(x => x.GetObjectMetadataAsync(Bucket, fileName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new GetObjectMetadataResponse { ETag = "\"etag-value\"" });
+
+            CsvDataFileImportMessage? publishedMessage = null;
+            FifoMessageMetadata publishedMetadata = default;
+
+            _publisherMock
+                .Setup(x => x.PublishAsync(It.IsAny<CsvDataFileImportMessage>(), It.IsAny<FifoMessageMetadata>(), It.IsAny<CancellationToken>()))
+                .Callback<CsvDataFileImportMessage, FifoMessageMetadata, CancellationToken>((msg, meta, _) =>
+                {
+                    publishedMessage = msg;
+                    publishedMetadata = meta;
+                })
+                .Returns(Task.CompletedTask);
+
+            var sut = CreateSut(storageConfiguration);
+
+            await sut.EnQueueFileImportMessages([fileName], TestContext.Current.CancellationToken);
+
+            publishedMessage.Should().NotBeNull();
+            publishedMessage!.Bucket.Should().Be(Bucket);
+            publishedMessage.ObjectKey.Should().Be(fileName);
+            publishedMessage.Etag.Should().Be("\"etag-value\"");
+            publishedMessage.OracleEnvironment.Should().Be("PreProd");
+            publishedMessage.Id.Should().NotBe(Guid.Empty);
+
+            publishedMetadata.MessageGroupId.Should().Be($"{fileName}:PreProd");
+            publishedMetadata.MessageDeduplicationId.Should().NotBeNullOrWhiteSpace();
+
+            publishedMessage.CorrelationId.Should().Be(publishedMetadata.CorrelationId);
+        }
     }
 }

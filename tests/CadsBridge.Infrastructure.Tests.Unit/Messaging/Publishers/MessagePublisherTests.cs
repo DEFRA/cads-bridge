@@ -11,6 +11,7 @@ using CadsBridge.Testing.Support.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Messaging.Publishers;
 
@@ -61,7 +62,7 @@ public class MessagePublisherTests
         var action = () => sut.PublishAsync(message, metadata);
 
         await action.Should().ThrowAsync<ArgumentException>()
-            .WithMessage("Message payload was null (Parameter 'message')"); ;
+            .WithMessage("Message payload was null (Parameter 'message')");
     }
 
     [Theory]
@@ -136,11 +137,6 @@ public class MessagePublisherTests
         // Set up the correlation ID context
         CorrelationIdContext.Value = correlationId;
 
-        var expectedAttributes = new Dictionary<string, string>
-        {
-            ["CorrelationId"] = correlationId
-        };
-
         _messageFactoryMock
             .Setup(x => x.CreateFifoSqsMessage(TestSqsConstants.TestQueueUrl, message, metadata))
             .Returns(sendRequest);
@@ -156,5 +152,77 @@ public class MessagePublisherTests
 
         // Clean up
         CorrelationIdContext.Value = null;
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    public async Task PublishAsync_ShouldMarkExceptionAsTransient_WhenAmazonSqsExceptionHasRetryableStatusCode(HttpStatusCode statusCode)
+    {
+        var message = new { Content = "Test message" };
+        var sendRequest = new SendMessageRequest { QueueUrl = TestSqsConstants.TestQueueUrl, MessageBody = "serialized message" };
+        var metadata = new FifoMessageMetadata("Group", "Dedup", "MyCorrelationId");
+
+        var sut = CreateSut();
+
+        _messageFactoryMock
+            .Setup(x => x.CreateFifoSqsMessage(TestSqsConstants.TestQueueUrl, message, metadata, It.IsAny<string?>()))
+            .Returns(sendRequest);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(sendRequest, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonSQSException("service unavailable") { StatusCode = statusCode });
+
+        var act = () => sut.PublishAsync(message, metadata, TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<PublishFailedException>();
+        thrown.Which.IsTransient.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldMarkExceptionAsNonTransient_WhenAmazonSqsExceptionHasNonRetryableStatusCode()
+    {
+        var message = new { Content = "Test message" };
+        var sendRequest = new SendMessageRequest { QueueUrl = TestSqsConstants.TestQueueUrl, MessageBody = "serialized message" };
+        var metadata = new FifoMessageMetadata("Group", "Dedup", "MyCorrelationId");
+
+        var sut = CreateSut();
+
+        _messageFactoryMock
+            .Setup(x => x.CreateFifoSqsMessage(TestSqsConstants.TestQueueUrl, message, metadata, It.IsAny<string?>()))
+            .Returns(sendRequest);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(sendRequest, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonSQSException("bad request") { StatusCode = HttpStatusCode.BadRequest });
+
+        var act = () => sut.PublishAsync(message, metadata, TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<PublishFailedException>();
+        thrown.Which.IsTransient.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldMarkExceptionAsNonTransient_WhenExceptionIsNotAnAmazonSqsException()
+    {
+        var message = new { Content = "Test message" };
+        var sendRequest = new SendMessageRequest { QueueUrl = TestSqsConstants.TestQueueUrl, MessageBody = "serialized message" };
+        var metadata = new FifoMessageMetadata("Group", "Dedup", "MyCorrelationId");
+
+        var sut = CreateSut();
+
+        _messageFactoryMock
+            .Setup(x => x.CreateFifoSqsMessage(TestSqsConstants.TestQueueUrl, message, metadata, It.IsAny<string?>()))
+            .Returns(sendRequest);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(sendRequest, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var act = () => sut.PublishAsync(message, metadata, TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<PublishFailedException>();
+        thrown.Which.IsTransient.Should().BeFalse();
     }
 }

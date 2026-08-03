@@ -1,3 +1,4 @@
+using System.Net;
 using Amazon.SQS;
 using CadsBridge.Application.Messaging.Clients;
 using CadsBridge.Application.Messaging.Models;
@@ -38,7 +39,10 @@ public class CadsBridgeFifoQueuePublisher(
         }
         catch (Exception ex)
         {
-            throw new PublishFailedException($"Failed to publish message on {QueueUrl}.", false, ex);
+            var isTransient = ex is AmazonSQSException sqsEx &&
+                              sqsEx.StatusCode is >= HttpStatusCode.InternalServerError
+                                  or HttpStatusCode.TooManyRequests;
+            throw new PublishFailedException($"Failed to publish message on {QueueUrl}.", isTransient, ex);
         }
     }
 }
