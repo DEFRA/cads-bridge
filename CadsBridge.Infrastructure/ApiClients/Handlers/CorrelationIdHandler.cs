@@ -31,4 +31,3 @@ public class CorrelationIdHandler : DelegatingHandler
         return base.SendAsync(request, cancellationToken);
     }
 }
-
