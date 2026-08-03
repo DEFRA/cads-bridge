@@ -3,6 +3,7 @@ using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,6 +31,13 @@ public class CsvDataFileImportBackgroundService(
                 logger.LogInformation("Cancellation requested, aborting copy");
                 return;
             }
+
+            // Re-establish the correlation id for this unit of work. The AsyncLocal set by the
+            // queue poller does not flow across the in-memory channel boundary, so it is carried
+            // on the job and rehydrated here before any work (and its logging) runs.
+            CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
+                ? Guid.NewGuid().ToString()
+                : request.CorrelationId;
 
             long fileImportId;
             using var scope = serviceScopeFactory.CreateScope();
@@ -60,7 +68,7 @@ public class CsvDataFileImportBackgroundService(
                             await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
 
                             await splitMessageProducer.SendAsync(
-                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess),
+                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
                                 stoppingToken);
                         }
                         else

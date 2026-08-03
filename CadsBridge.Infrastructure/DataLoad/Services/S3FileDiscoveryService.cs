@@ -43,8 +43,6 @@ public class S3FileDiscoveryService<TClient>(
     {
         if (fileNames.Count == 0) return;
 
-        CorrelationIdContext.Value ??= Guid.NewGuid().ToString();
-
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
         var bucketName = clientInfo.BucketName;
 

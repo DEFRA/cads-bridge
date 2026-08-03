@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,6 +30,12 @@ public class CsvDataFileSplitBackgroundService(
                 logger.LogInformation("Cancellation requested, aborting split");
                 return;
             }
+
+            // Re-establish the correlation id for this unit of work. The AsyncLocal does not flow
+            // across the in-memory channel boundary, so it is carried on the job and rehydrated here.
+            CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
+                ? Guid.NewGuid().ToString()
+                : request.CorrelationId;
 
             if (!request.FileImportId.HasValue)
             {

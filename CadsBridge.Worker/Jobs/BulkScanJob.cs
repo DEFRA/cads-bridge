@@ -15,6 +15,11 @@ public class BulkScanJob(
 
     public async Task Execute(IJobExecutionContext context)
     {
+        // The correlation middleware does not run for Quartz jobs, so seed a correlation id at the
+        // start of the run. It flows through the scan/discovery async chain and is serialized onto
+        // the messages published to the queue.
+        CorrelationIdContext.Value ??= Guid.NewGuid().ToString();
+
         if (!await distributedLock.TryAcquireAsync(LockName, context.CancellationToken))
         {
             if (logger.IsEnabled(LogLevel.Information))
