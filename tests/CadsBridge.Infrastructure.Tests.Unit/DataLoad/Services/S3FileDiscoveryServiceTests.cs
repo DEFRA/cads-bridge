@@ -238,6 +238,18 @@ public class S3FileDiscoveryServiceTests
         }
 
         [Fact]
+        public async Task EnQueueFileImportMessages_ShouldThrowInvalidOperationException_WhenCorrelationIdNotSet()
+        {
+            CorrelationIdContext.Value = null;
+            var sut = CreateSut();
+
+            var act = async () => await sut.EnQueueFileImportMessages(["file1.csv"], TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("CorrelationId is not set in the current context.");
+        }
+
+        [Fact]
         public async Task EnQueueFileImportMessages_ShouldPublishMessage_ForEachFileName()
         {
             _s3Mock
