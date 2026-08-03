@@ -32,9 +32,8 @@ public class CsvDataFileImportBackgroundService(
                 return;
             }
 
-            // Re-establish the correlation id for this unit of work. The AsyncLocal set by the
-            // queue poller does not flow across the in-memory channel boundary, so it is carried
-            // on the job and rehydrated here before any work (and its logging) runs.
+            // Establish the correlation id for this unit of work based on what was used for file discovery
+            // This keeps it consistent across the various processes for this particular file import
             CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
                 ? Guid.NewGuid().ToString()
                 : request.CorrelationId;
