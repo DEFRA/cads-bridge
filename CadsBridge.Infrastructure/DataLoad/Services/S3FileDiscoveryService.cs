@@ -43,8 +43,7 @@ public class S3FileDiscoveryService<TClient>(
     {
         if (fileNames.Count == 0) return;
 
-        var correlationId = CorrelationIdContext.Value
-            ?? throw new InvalidOperationException("CorrelationId is not set in the current context.");
+        CorrelationIdContext.Value ??= Guid.NewGuid().ToString();
 
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
         var bucketName = clientInfo.BucketName;
@@ -58,7 +57,7 @@ public class S3FileDiscoveryService<TClient>(
             var message = new CsvDataFileImportMessage
             {
                 Bucket = bucketName,
-                CorrelationId = correlationId,
+                CorrelationId = CorrelationIdContext.Value,
                 ObjectKey = fileName,
                 DiscoveredAtUtc = DateTime.UtcNow,
                 Etag = etag,
@@ -69,7 +68,7 @@ public class S3FileDiscoveryService<TClient>(
             var fifoMetadata = new FifoMessageMetadata(
                 FifoKeyGenerator.GenerateMessageGroupId(fileName, oracleEnvironment),
                 FifoKeyGenerator.GenerateDeduplicationId(bucketName, fileName, etag, oracleEnvironment),
-                correlationId);
+                CorrelationIdContext.Value);
 
             await cadsBridgeFifoQueuePublisher.PublishAsync(message, fifoMetadata, cancellationToken);
         }
