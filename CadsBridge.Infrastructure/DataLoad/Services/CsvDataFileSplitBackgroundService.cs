@@ -31,8 +31,8 @@ public class CsvDataFileSplitBackgroundService(
                 return;
             }
 
-            // Re-establish the correlation id for this unit of work. The AsyncLocal does not flow
-            // across the in-memory channel boundary, so it is carried on the job and rehydrated here.
+            // Establish the correlation id for this unit of work based on what was used for file discovery
+            // This keeps it consistent across the various processes for this particular file import
             CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
                 ? Guid.NewGuid().ToString()
                 : request.CorrelationId;
