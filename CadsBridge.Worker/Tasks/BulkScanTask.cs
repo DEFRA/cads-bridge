@@ -78,7 +78,7 @@ public class BulkScanTask(
         return validFileKeys;
     }
 
-    private bool GetValidBulkFileNames(string fileName)
+    private static bool GetValidBulkFileNames(string fileName)
     {
         return CtsmFilenameParser.TryParse(fileName, out var parsed) &&
                parsed!.Type.Equals("BULK", StringComparison.OrdinalIgnoreCase);

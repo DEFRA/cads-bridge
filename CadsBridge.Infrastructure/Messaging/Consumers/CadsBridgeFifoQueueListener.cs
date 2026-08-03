@@ -24,11 +24,16 @@ public class CadsBridgeFifoQueueListener(
     {
         if (IsDisabled)
         {
-            logger.LogInformation("CadsBridgeFifoQueueListener is disabled via configuration.");
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("CadsBridgeFifoQueueListener is disabled via configuration.");
+            }
             return Task.CompletedTask;
         }
-
-        logger.LogInformation("CadsBridgeFifoQueueListener start requested.");
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("CadsBridgeFifoQueueListener start requested.");
+        }
         return queuePoller.StartAsync(cancellationToken);
     }
 
@@ -36,7 +41,10 @@ public class CadsBridgeFifoQueueListener(
     {
         if (IsDisabled) return;
 
-        logger.LogInformation("CadsBridgeFifoQueueListener stop requested.");
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("CadsBridgeFifoQueueListener stop requested.");
+        }
 
         try
         {

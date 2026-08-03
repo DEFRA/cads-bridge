@@ -12,27 +12,13 @@ namespace CadsBridge.Tests.Integration.Jobs;
 
 /// <summary>
 /// End-to-end integration test for <see cref="CadsBridge.Worker.Jobs.BulkScanJob"/>.
-///
-/// The BulkScanJob fires every second (Quartz cron "* * * * * ?").
-/// Five objects are uploaded to the external S3 bucket covering every filtering branch:
-///
-///   1. <c>invalid-filename.csv</c>            – fails CtsmFilenameParser → dropped at filename validation
-///   2. <c>CTSM_CADS_PROD_DELTA_*</c>          – type=DELTA, not BULK     → dropped by GetValidBulkFileNames
-///   3. <c>CTSM_CADS_PROD_BULK_ABC_0004_*</c>  – seeded Complete (4)      → IsFileValid=false → ignored
-///   4. <c>CTSM_CADS_PROD_BULK_ABC_0005_*</c>  – seeded Failed (5), 0 attempts → IsFileValid=true → enqueued
-///   5. <c>CTSM_CADS_PROD_BULK_NEW_0001_*</c>  – not in fake list (null)  → IsFileValid=true → enqueued
-///
 /// Expected outcome: exactly 2 SQS messages are enqueued (files 4 and 5).
 /// </summary>
 [Trait("Dependence", "testcontainers")]
 public class BulkScanJobTests
 {
-    // ── File names matching 0003_026 seed data rows (no .csv — S3 key == DB file_name) ──
-    // These must stay in sync with the hardcoded entries in FakeFileImportApiService.
     private const string CompleteFile = "CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345";
     private const string FailedFile = "CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345";
-
-    // ── Additional files to exercise the other filter branches ──
     private const string InvalidFilename = "invalid-filename.csv";
     private const string DeltaTypeFile = "CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
     private const string NewFile = "CTSM_CADS_PROD_BULK_NEW_0001_CT_ANIMALS_2026-07-31-120000";
@@ -42,10 +28,7 @@ public class BulkScanJobTests
     {
         // ── Arrange: start the container with the fake CDS API and the queue consumer
         //   disabled so BulkScanJob messages stay in the queue long enough for the test
-        //   to read them (otherwise the poller races to drain the queue first). Quartz
-        //   jobs are disabled by default in appsettings.json, so BulkScanJob (index 0 in
-        //   the Quartz:Jobs array) must be explicitly re-enabled for this test via the
-        //   Quartz__Jobs__0__Enabled environment variable override. ──
+        //   to read them
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
             ["Messaging__DisableQueueConsumer"] = "true",
@@ -61,7 +44,6 @@ public class BulkScanJobTests
         var ct = TestContext.Current.CancellationToken;
 
         // Upload all five test objects to the external bucket.
-        // Content is not inspected during the bulk scan — a single byte is sufficient.
         foreach (var key in new[] { InvalidFilename, DeltaTypeFile, CompleteFile, FailedFile, NewFile })
         {
             await s3.PutObjectAsync(new PutObjectRequest
@@ -73,10 +55,6 @@ public class BulkScanJobTests
         }
 
         // ── Assert: wait for the Quartz job to fire and enqueue the expected messages ──
-        // The job fires every second; we poll up to 30 times (×500 ms = ~15 s total) to
-        // give the container time to start up, run the first qualifying job cycle, and
-        // publish both messages.  Messages are accumulated across poll attempts so that
-        // a single slow response does not cause a false failure.
         var receivedMessages = new List<CsvDataFileImportMessage>();
 
         await AsyncAssert.WaitForAssertion(async () =>
