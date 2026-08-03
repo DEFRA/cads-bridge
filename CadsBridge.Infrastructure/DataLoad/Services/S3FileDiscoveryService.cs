@@ -43,15 +43,13 @@ public class S3FileDiscoveryService<TClient>(
     {
         if (fileNames.Count == 0) return;
 
-        var correlationId = CorrelationIdContext.Value
-                            ?? throw new InvalidOperationException("CorrelationId is not set in the current context.");
-        CorrelationIdContext.Value ??= Guid.NewGuid().ToString();
-
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
         var bucketName = clientInfo.BucketName;
 
         foreach (var fileName in fileNames)
         {
+            // Create a unique correlation id per message queued
+            var correlationId = Guid.NewGuid().ToString();
             var metaData = await clientInfo.Client.GetObjectMetadataAsync(bucketName, fileName, cancellationToken);
             var etag = metaData.ETag;
             var dedipId = FifoKeyGenerator.GenerateDeduplicationId(bucketName, fileName, etag, oracleEnvironment);

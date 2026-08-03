@@ -206,11 +206,6 @@ public class S3FileDiscoveryServiceTests
         private readonly Mock<IAmazonS3> _s3Mock = new();
         private readonly Mock<IMessagePublisher<CadsBridgeFifoQueueClient>> _publisherMock = new();
 
-        public EnQueueFileImportMessagesTests()
-        {
-            CorrelationIdContext.Value = "test-correlation-id";
-        }
-
         public void Dispose() => CorrelationIdContext.Value = null;
 
         private S3FileDiscoveryService<ExternalStorageClient> CreateSut(StorageConfiguration? storageConfiguration = null)
@@ -235,18 +230,6 @@ public class S3FileDiscoveryServiceTests
 
             _s3Mock.Verify(x => x.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
             _publisherMock.Verify(x => x.PublishAsync(It.IsAny<object>(), It.IsAny<FifoMessageMetadata>(), It.IsAny<CancellationToken>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task EnQueueFileImportMessages_ShouldThrowInvalidOperationException_WhenCorrelationIdNotSet()
-        {
-            CorrelationIdContext.Value = null;
-            var sut = CreateSut();
-
-            var act = async () => await sut.EnQueueFileImportMessages(["file1.csv"], TestContext.Current.CancellationToken);
-
-            await act.Should().ThrowAsync<InvalidOperationException>()
-                .WithMessage("CorrelationId is not set in the current context.");
         }
 
         [Fact]
@@ -301,13 +284,13 @@ public class S3FileDiscoveryServiceTests
             publishedMessage!.Bucket.Should().Be(Bucket);
             publishedMessage.ObjectKey.Should().Be(fileName);
             publishedMessage.Etag.Should().Be("\"etag-value\"");
-            publishedMessage.CorrelationId.Should().Be("test-correlation-id");
             publishedMessage.OracleEnvironment.Should().Be("PreProd");
             publishedMessage.Id.Should().NotBe(Guid.Empty);
 
-            publishedMetadata.CorrelationId.Should().Be("test-correlation-id");
             publishedMetadata.MessageGroupId.Should().Be($"{fileName}:PreProd");
             publishedMetadata.MessageDeduplicationId.Should().NotBeNullOrWhiteSpace();
+
+            publishedMessage.CorrelationId.Should().Be(publishedMetadata.CorrelationId);
         }
     }
 }

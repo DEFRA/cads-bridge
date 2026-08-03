@@ -1,5 +1,6 @@
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
+using CadsBridge.Infrastructure.ApiClients.Handlers;
 using CadsBridge.Infrastructure.ApiClients.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,9 @@ public static class ServiceCollectionExtensions
         if (apiClientsConfigs == null) return;
 
         services.AddSingleton(apiClientsConfigs);
+
+        // Registers the correlation id header handler used by all named API clients.
+        services.AddTransient<CorrelationIdHandler>();
 
         if (configuration.GetValue<bool>("ApiClients:CdsApi:UseFakeClient"))
         {
@@ -86,6 +90,7 @@ public static class ServiceCollectionExtensions
                 client.DefaultRequestHeaders.Add("x-api-key", clientConfig.XApiKey);
             }
         })
+        .AddHttpMessageHandler<CorrelationIdHandler>()
         .AddResilienceHandler(clientName, (builder, context) =>
         {
             var resilienceConfig = clientConfig.ResiliencePolicy;
