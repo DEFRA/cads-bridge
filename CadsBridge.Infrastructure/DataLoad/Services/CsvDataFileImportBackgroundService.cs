@@ -38,26 +38,27 @@ public class CsvDataFileImportBackgroundService(
                 ? Guid.NewGuid().ToString()
                 : request.CorrelationId;
 
-            long fileImportId;
-            using var scope = serviceScopeFactory.CreateScope();
-            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
-            var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
-            var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
-            try
-            {
-                fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
-                continue;
-            }
-
             await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
                 async () =>
                 {
+                    using var scope = serviceScopeFactory.CreateScope();
+                    var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+                    var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
+                    var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
+
+                    long fileImportId;
+                    try
+                    {
+                        fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
+                        return;
+                    }
+
                     try
                     {
                         var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, stoppingToken);
