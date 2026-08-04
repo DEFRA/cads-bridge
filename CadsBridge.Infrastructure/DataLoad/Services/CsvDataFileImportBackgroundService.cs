@@ -61,15 +61,26 @@ public class CsvDataFileImportBackgroundService(
                     try
                     {
                         var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
-                        await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
                         if (logger.IsEnabled(LogLevel.Information))
                         {
-                            logger.LogInformation(
-                                "File import {FileImportId} for {Key} transferred successfully with {RowCount} rows to process",
-                                fileImportId,
-                                request.SourceKey,
-                                totalRowsToProcess);
+                            if (totalRowsToProcess > 0)
+                            {
+                                logger.LogInformation(
+                                    "File import {FileImportId} for {Key} transferred successfully with {RowCount} rows to process",
+                                    fileImportId,
+                                    request.SourceKey,
+                                    totalRowsToProcess);
+                            }
+                            else
+                            {
+                                logger.LogInformation(
+                                    "File import {FileImportId} for {Key} transferred successfully. No row count provided",
+                                    fileImportId,
+                                    request.SourceKey);
+                            }
                         }
+                        await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
+
                         await splitMessageProducer.SendAsync(
                             new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
                             stoppingToken);
