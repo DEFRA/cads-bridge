@@ -60,7 +60,7 @@ public class CsvDataFileImportBackgroundService(
                 {
                     try
                     {
-                        var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, fileImportStore, splitMessageProducer, stoppingToken);
+                        var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, stoppingToken);
                         await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
 
                         await splitMessageProducer.SendAsync(
@@ -84,7 +84,7 @@ public class CsvDataFileImportBackgroundService(
         await Task.WhenAll(runningTasks);
     }
 
-    private async Task<long> ProcessRequest(IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId, IFileImportStore fileImportStore, ISplitMessageProducer splitMessageProducer, CancellationToken stoppingToken)
+    private async Task<long> ProcessRequest(IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId, CancellationToken stoppingToken)
     {
         var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
         if (logger.IsEnabled(LogLevel.Information))
