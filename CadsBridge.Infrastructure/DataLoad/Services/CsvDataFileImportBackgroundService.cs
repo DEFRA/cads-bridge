@@ -60,25 +60,7 @@ public class CsvDataFileImportBackgroundService(
                 {
                     try
                     {
-                        var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
-                        if (logger.IsEnabled(LogLevel.Information))
-                        {
-                            if (totalRowsToProcess > 0)
-                            {
-                                logger.LogInformation(
-                                    "File import {FileImportId} for {Key} transferred successfully with {RowCount} rows to process",
-                                    fileImportId,
-                                    request.SourceKey,
-                                    totalRowsToProcess);
-                            }
-                            else
-                            {
-                                logger.LogInformation(
-                                    "File import {FileImportId} for {Key} transferred successfully. No row count provided",
-                                    fileImportId,
-                                    request.SourceKey);
-                            }
-                        }
+                        var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, fileImportStore, splitMessageProducer, stoppingToken);
                         await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
 
                         await splitMessageProducer.SendAsync(
@@ -99,7 +81,30 @@ public class CsvDataFileImportBackgroundService(
 
             runningTasks.Add(task);
         }
-
         await Task.WhenAll(runningTasks);
     }
-}
+
+    private async Task<long> ProcessRequest(IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId, IFileImportStore fileImportStore, ISplitMessageProducer splitMessageProducer, CancellationToken stoppingToken)
+    {
+        var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            if (totalRowsToProcess > 0)
+            {
+                logger.LogInformation(
+                    "File import {FileImportId} for {Key} transferred successfully with {RowCount} rows to process",
+                    fileImportId,
+                    request.SourceKey,
+                    totalRowsToProcess);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "File import {FileImportId} for {Key} transferred successfully. No row count provided",
+                    fileImportId,
+                    request.SourceKey);
+            }
+        }
+        return totalRowsToProcess;
+   }
+ }
