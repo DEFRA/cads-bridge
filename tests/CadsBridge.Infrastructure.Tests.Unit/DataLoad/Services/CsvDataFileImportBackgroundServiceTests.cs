@@ -107,22 +107,6 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Marks_failed_when_copy_returns_false()
-    {
-        var job = CreateJob();
-
-        _copy.Setup(x => x.ExecAsync(job, It.IsAny<CancellationToken>()))
-             .ReturnsAsync(It.IsAny<long>());
-
-        await _sut.StartAsync(CancellationToken.None);
-        await Write(job);
-
-        await _fileImportStore.AsyncVerify(x => x.MarkFailedAsync(DefaultFileImportId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-
-        _splitProducer.Verify(x => x.SendAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
     public async Task Logs_exception_and_marks_failed_when_copy_throws()
     {
         var job = CreateJob();

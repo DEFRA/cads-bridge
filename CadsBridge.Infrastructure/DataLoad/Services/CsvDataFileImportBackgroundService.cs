@@ -61,19 +61,18 @@ public class CsvDataFileImportBackgroundService(
                     try
                     {
                         var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
-
-                        if (totalRowsToProcess > 0)
+                        await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
+                        if (logger.IsEnabled(LogLevel.Information))
                         {
-                            await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
-
-                            await splitMessageProducer.SendAsync(
-                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
-                                stoppingToken);
+                            logger.LogInformation(
+                                "File import {FileImportId} for {Key} transferred successfully with {RowCount} rows to process",
+                                fileImportId,
+                                request.SourceKey,
+                                totalRowsToProcess);
                         }
-                        else
-                        {
-                            await fileImportStore.MarkFailedAsync(fileImportId, "Import failed: No rows to process", stoppingToken);
-                        }
+                        await splitMessageProducer.SendAsync(
+                            new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
+                            stoppingToken);
                     }
                     catch (Exception ex)
                     {
