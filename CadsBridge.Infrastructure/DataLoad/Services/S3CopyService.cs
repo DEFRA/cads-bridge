@@ -59,12 +59,14 @@ public class S3CopyService(
                 }
 
                 if (logger.IsEnabled(LogLevel.Information))
+                {
                     logger.LogInformation(
                         "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
                         job.SourceKey,
                         externalS3Info.BucketName,
                         internalS3Info.BucketName,
                         attempt);
+                }
 
                 var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
 
@@ -72,12 +74,14 @@ public class S3CopyService(
                 rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
 
                 if (logger.IsEnabled(LogLevel.Information))
+                {
                     logger.LogInformation(
                         "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
                         externalS3Info.BucketName,
                         job.SourceKey,
                         internalS3Info.BucketName,
                         targetKey);
+                }
 
                 break;
             }

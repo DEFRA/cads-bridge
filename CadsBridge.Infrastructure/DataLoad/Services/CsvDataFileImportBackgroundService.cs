@@ -38,42 +38,35 @@ public class CsvDataFileImportBackgroundService(
                 ? Guid.NewGuid().ToString()
                 : request.CorrelationId;
 
-            long fileImportId;
-            using var scope = serviceScopeFactory.CreateScope();
-            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
-            var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
-            var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
-            try
-            {
-                fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
-                continue;
-            }
-
             await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
                 async () =>
                 {
+                    using var scope = serviceScopeFactory.CreateScope();
+                    var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+                    var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
+                    var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
+
+                    long fileImportId;
                     try
                     {
-                        var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
+                        fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
+                        return;
+                    }
 
-                        if (totalRowsToProcess > 0)
-                        {
-                            await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
+                    try
+                    {
+                        var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, stoppingToken);
+                        await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
 
-                            await splitMessageProducer.SendAsync(
-                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
-                                stoppingToken);
-                        }
-                        else
-                        {
-                            await fileImportStore.MarkFailedAsync(fileImportId, "Import failed: No rows to process", stoppingToken);
-                        }
+                        await splitMessageProducer.SendAsync(
+                            new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
+                            stoppingToken);
                     }
                     catch (Exception ex)
                     {
@@ -89,7 +82,30 @@ public class CsvDataFileImportBackgroundService(
 
             runningTasks.Add(task);
         }
-
         await Task.WhenAll(runningTasks);
+    }
+
+    private async Task<long> ProcessRequest(IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId, CancellationToken stoppingToken)
+    {
+        var totalRowsToProcess = await s3ExternalToInternalCopyService.ExecAsync(request, stoppingToken);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            if (totalRowsToProcess > 0)
+            {
+                logger.LogInformation(
+                    "File import {FileImportId} for {Key} transferred successfully with {RowCount} rows to process",
+                    fileImportId,
+                    request.SourceKey,
+                    totalRowsToProcess);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "File import {FileImportId} for {Key} transferred successfully. No row count provided",
+                    fileImportId,
+                    request.SourceKey);
+            }
+        }
+        return totalRowsToProcess;
     }
 }

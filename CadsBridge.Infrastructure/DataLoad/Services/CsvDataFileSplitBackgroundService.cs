@@ -42,15 +42,15 @@ public class CsvDataFileSplitBackgroundService(
                 logger.LogError("FileImportId is required for split job {Key}", request.SourceKey);
                 continue;
             }
-            using var scope = scopeFactory.CreateScope();
-            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
-            var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
-
             await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
                 async () =>
                 {
+                    using var scope = scopeFactory.CreateScope();
+                    var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+                    var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
+
                     try
                     {
                         var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
