@@ -1,4 +1,3 @@
-using System.Net;
 using Amazon.SQS;
 using CadsBridge.Application.Messaging.Clients;
 using CadsBridge.Application.Messaging.Models;
@@ -7,6 +6,7 @@ using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Messaging.Configuration;
 using CadsBridge.Infrastructure.Messaging.Factories;
 using Microsoft.Extensions.Options;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.Messaging.Publishers;
 

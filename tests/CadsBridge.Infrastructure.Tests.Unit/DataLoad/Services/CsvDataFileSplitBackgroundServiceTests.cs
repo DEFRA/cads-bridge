@@ -27,8 +27,6 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _splitter.Setup(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(1);
 
-        _fileImportStatusStore.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                              .Returns(Task.CompletedTask);
         _fileImportStatusStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
 
@@ -56,7 +54,6 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 
         _splitter.Verify(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
         _fileImportStatusStore.Verify(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _fileImportStatusStore.Verify(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

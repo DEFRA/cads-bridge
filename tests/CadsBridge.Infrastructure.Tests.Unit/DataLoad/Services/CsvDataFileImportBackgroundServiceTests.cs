@@ -15,7 +15,6 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 {
     private const long DefaultFileImportId = 1L;
-    private const long DefaultRecordCount = 0L;
 
     private readonly Channel<CsvDataFileImportJob> _channel = Channel.CreateUnbounded<CsvDataFileImportJob>();
     private readonly Mock<ILogger<CsvDataFileImportBackgroundService>> _logger = new();
@@ -40,12 +39,6 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
         _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultFileImportId);
-        _fileImportStore.Setup(x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        _fileImportStore.Setup(x => x.MarkSplitAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
-           .Returns(Task.CompletedTask);
-        _fileImportStore.Setup(x => x.MarkCompletedAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
         _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 

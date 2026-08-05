@@ -1,8 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Infrastructure.ApiClients.Fakes;
 
