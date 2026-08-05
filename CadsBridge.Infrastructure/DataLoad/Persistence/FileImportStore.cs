@@ -39,12 +39,8 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
 
     private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
     {
-        var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
-        if (fileImportStatus is null)
-        {
-            throw new NotFoundException(
+        var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken) ?? throw new NotFoundException(
                 $"File import status for '{fileName}' was not found when attempting to reset it after a conflict.");
-        }
         if (fileImportStatus.ImportStatus == FileImportStatus.Completed)
         {
             throw new InvalidOperationException(
