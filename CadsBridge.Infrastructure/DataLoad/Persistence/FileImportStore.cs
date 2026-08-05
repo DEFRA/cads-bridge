@@ -39,12 +39,8 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
 
     private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
     {
-        var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken);
-        if (fileImportStatus is null)
-        {
-            throw new NotFoundException(
+        var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken) ?? throw new NotFoundException(
                 $"File import status for '{fileName}' was not found when attempting to reset it after a conflict.");
-        }
         if (fileImportStatus.ImportStatus == FileImportStatus.Completed)
         {
             throw new InvalidOperationException(
@@ -57,21 +53,6 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
         }
         await fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
         return fileImportStatus.Id;
-    }
-
-    public async Task MarkTransferredAsync(long fileImportId, CancellationToken cancellationToken = default)
-    {
-        await fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Transferred, cancellationToken);
-    }
-
-    public async Task MarkSplitAsync(long fileImportId, CancellationToken cancellationToken = default)
-    {
-        await fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Split, cancellationToken);
-    }
-
-    public async Task MarkCompletedAsync(long fileImportId, CancellationToken cancellationToken = default)
-    {
-        await fileImportStatusApiService.MarkStatus(fileImportId, FileImportStatus.Completed, cancellationToken);
     }
 
     public async Task MarkFailedAsync(long fileImportId, string? reason = null, CancellationToken cancellationToken = default)

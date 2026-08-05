@@ -1,4 +1,3 @@
-using CadsBridge.Core.Correlation;
 using CadsBridge.Core.Locking;
 using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.Logging;

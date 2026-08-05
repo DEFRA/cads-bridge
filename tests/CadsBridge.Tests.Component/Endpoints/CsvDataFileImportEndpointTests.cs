@@ -148,7 +148,7 @@ public class CsvDataFileImportEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         factory.FileImportStoreMock.Verify(
-            x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+            x => x.UpdateAsync(It.IsAny<long>(), It.IsAny<FileImportStatus>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

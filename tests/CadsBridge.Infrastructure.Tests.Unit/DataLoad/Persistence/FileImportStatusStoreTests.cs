@@ -1,4 +1,3 @@
-using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
@@ -127,33 +126,6 @@ public class FileImportStatusStoreTests
 
     public class MarkStatusTests : FileImportStatusStoreTests
     {
-        [Fact]
-        public async Task MarkTransferred_CallsApiService_WithTransferredStatus()
-        {
-            await CreateSut().MarkTransferredAsync(5L, TestContext.Current.CancellationToken);
-
-            _apiService.Verify(x =>
-                x.MarkStatus(5L, FileImportStatus.Transferred, It.IsAny<CancellationToken>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task MarkSplit_CallsApiService_WithSplitStatus()
-        {
-            await CreateSut().MarkSplitAsync(5L, TestContext.Current.CancellationToken);
-
-            _apiService.Verify(x =>
-                x.MarkStatus(5L, FileImportStatus.Split, It.IsAny<CancellationToken>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task MarkCompleted_CallsApiService_WithCompletedStatus()
-        {
-            await CreateSut().MarkCompletedAsync(5L, TestContext.Current.CancellationToken);
-
-            _apiService.Verify(x =>
-                x.MarkStatus(5L, FileImportStatus.Completed, It.IsAny<CancellationToken>()), Times.Once);
-        }
-
         [Fact]
         public async Task MarkFailed_CallsApiService_WithFailedStatus()
         {
