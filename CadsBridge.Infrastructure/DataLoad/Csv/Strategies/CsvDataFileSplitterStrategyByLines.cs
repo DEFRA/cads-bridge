@@ -17,6 +17,9 @@ public class CsvDataFileSplitterStrategyByLines(
     ILogger<CsvDataFileSplitterStrategyByLines> logger) :
     ICsvDataFileSplitterStrategy
 {
+    private const char ColumnDelimiter = '|';
+    private const char TerminatorRowIndicator = 'T';
+
     public SplitType SplitType => SplitType.ByLines;
 
     public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
@@ -52,7 +55,7 @@ public class CsvDataFileSplitterStrategyByLines(
 
         // Process the column definitions to remove the first column
         // and apply lowercase to the remaining columns.
-        columns = columns.ProcessColumnDefinitions('|');
+        columns = columns.ProcessColumnDefinitions(ColumnDelimiter);
 
         var chunkNumber = 1;
         var lineCount = 0;
@@ -70,10 +73,14 @@ public class CsvDataFileSplitterStrategyByLines(
                 return 0;
             }
 
-            chunkBuilder.AppendLine(line);
-            lineCount++;
+            // Exclude terminator line from processing.
+            if (!line[0].Equals(TerminatorRowIndicator))
+            {
+                chunkBuilder.AppendLine(line);
+                lineCount++;
+            }
 
-            if (lineCount >= config.SplitValue)
+            if (lineCount >= config.SplitValue || line[0].Equals(TerminatorRowIndicator))
             {
                 await s3.UploadChunkAsync(
                     internalS3Info.BucketName,
