@@ -175,9 +175,9 @@ public class CsvDataFileSplitterServiceTests
 
         var request = new CsvDataFileSplitJob(SourceKey, null);
 
-        var rowCount = await sut.ExecuteAsync(request, CancellationToken.None);
+        var result = await sut.ExecuteAsync(request, CancellationToken.None);
 
-        rowCount.Should().Be(3);
+        result.Should().Be(3);
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
