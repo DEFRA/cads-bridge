@@ -107,7 +107,8 @@ public class CsvDataFileSplitterServiceTests
             "D|Alice|Smith",
             "D|Bob|Jones",
             "D|Charlie|Brown",
-            "D|Dana|White") + Environment.NewLine;
+            "D|Dana|White",
+            "T|ignored") + Environment.NewLine;
 
         var s3 = new FakeS3 { EncryptedContent = sourceContent };
         var sut = CreateSut(s3, SplitType.ByLines, 2);
@@ -131,6 +132,10 @@ public class CsvDataFileSplitterServiceTests
                 "record_type|first_name|last_name",
                 "D|Charlie|Brown",
                 "D|Dana|White",
+                string.Empty),
+            [ExpectedKey(3)] = string.Join(
+                Environment.NewLine,
+                "record_type|first_name|last_name",
                 string.Empty)
         });
     }
@@ -162,14 +167,17 @@ public class CsvDataFileSplitterServiceTests
             "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
             "D|1|One",
             "D|2|Two",
-            "D|3|Three") + Environment.NewLine;
+            "D|3|Three",
+            "T|ignored") + Environment.NewLine;
 
         var s3 = new FakeS3 { EncryptedContent = sourceContent };
         var sut = CreateSut(s3, SplitType.ByLines, 2);
 
         var request = new CsvDataFileSplitJob(SourceKey, null);
 
-        await sut.ExecuteAsync(request, CancellationToken.None);
+        var rowCount = await sut.ExecuteAsync(request, CancellationToken.None);
+
+        rowCount.Should().Be(3);
 
         s3.UploadedContent.Should().BeEquivalentTo(new Dictionary<string, string>
         {
