@@ -46,16 +46,7 @@ public class CsvDataFileSplitBackgroundService(
                     var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
                     var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
 
-                    // Establish the correlation id for this unit of work based on what was used for file discovery
-                    // This keeps it consistent across the various processes for this particular file import
-                    CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
-                        ? Guid.NewGuid().ToString()
-                        : request.CorrelationId;
-
-                    using (logger.BeginScope(new Dictionary<string, object?>
-                    {
-                        ["CorrelationId"] = CorrelationIdContext.Value
-                    }))
+                    using (CorrelationScope.Begin(request.CorrelationId))
                     {
                         try
                         {

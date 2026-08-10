@@ -42,16 +42,7 @@ public class CsvDataFileImportBackgroundService(
                     var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
                     var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
 
-                    // Establish the correlation id for this unit of work based on what was used for file discovery
-                    // This keeps it consistent across the various processes for this particular file import
-                    CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
-                        ? Guid.NewGuid().ToString()
-                        : request.CorrelationId;
-
-                    using (logger.BeginScope(new Dictionary<string, object?>
-                    {
-                        ["CorrelationId"] = CorrelationIdContext.Value
-                    }))
+                    using (CorrelationScope.Begin(request.CorrelationId))
                     {
                         long fileImportId;
                         try

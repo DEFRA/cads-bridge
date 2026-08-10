@@ -112,13 +112,9 @@ public abstract class BaseSqsQueuePoller<TClient>(
     {
         var unwrapped = message.Unwrap();
 
-        CorrelationIdContext.Value = string.IsNullOrWhiteSpace(unwrapped.CorrelationId)
-            ? Guid.NewGuid().ToString()
-            : unwrapped.CorrelationId;
-
+        using (CorrelationScope.Begin(unwrapped.CorrelationId))
         using (Logger.BeginScope(new Dictionary<string, object?>
         {
-            ["CorrelationId"] = CorrelationIdContext.Value,
             ["GroupId"] = unwrapped.MessageGroupId,
             ["DeduplicationId"] = unwrapped.MessageDeduplicationId
         }))

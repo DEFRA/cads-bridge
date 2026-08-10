@@ -4,7 +4,6 @@ using Amazon.S3.Transfer;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Application.Storage.Transfer;
-using CadsBridge.Core.Correlation;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
@@ -32,80 +31,74 @@ public class S3CopyService(
 
     public async Task<long> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default)
     {
-        using (logger.BeginScope(new Dictionary<string, object?>
-        {
-            ["CorrelationId"] = CorrelationIdContext.Value
-        }))
-        {
-            var attempt = 0;
-            var delayBaseMs = 500;
+        var attempt = 0;
+        var delayBaseMs = 500;
 
-            var externalS3Info = s3ClientFactory.GetClientInfo<ExternalStorageClient>();
-            var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
-            long rowCount;
+        var externalS3Info = s3ClientFactory.GetClientInfo<ExternalStorageClient>();
+        var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
+        long rowCount;
 
-            while (true)
+        while (true)
+        {
+            if (cancellationToken.IsCancellationRequested)
             {
-                if (cancellationToken.IsCancellationRequested)
+                if (logger.IsEnabled(LogLevel.Information))
                 {
-                    if (logger.IsEnabled(LogLevel.Information))
-                    {
-                        logger.LogInformation("Cancellation requested for {Key}, aborting copy", job.SourceKey);
-                    }
-                    return 0;
+                    logger.LogInformation("Cancellation requested for {Key}, aborting copy", job.SourceKey);
                 }
-
-                attempt++;
-
-                try
-                {
-                    if (attempt > _maxRetries)
-                    {
-                        throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {job.SourceKey}");
-                    }
-
-                    if (logger.IsEnabled(LogLevel.Information))
-                    {
-                        logger.LogInformation(
-                            "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
-                            job.SourceKey,
-                            externalS3Info.BucketName,
-                            internalS3Info.BucketName,
-                            attempt);
-                    }
-
-                    var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
-
-                    // Retrieve row count from the decrypted file and update the file import status accordingly.
-                    rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
-
-                    if (logger.IsEnabled(LogLevel.Information))
-                    {
-                        logger.LogInformation(
-                            "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
-                            externalS3Info.BucketName,
-                            job.SourceKey,
-                            internalS3Info.BucketName,
-                            targetKey);
-                    }
-
-                    break;
-                }
-                catch (Exception ex) when (attempt < _maxRetries)
-                {
-                    var delay = TimeSpan.FromMilliseconds(delayBaseMs * Math.Pow(2, attempt - 1));
-
-                    logger.LogWarning(
-                        ex,
-                        "Error copying {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
-                        job.SourceKey, attempt, _maxRetries, delay.TotalMilliseconds);
-
-                    await Task.Delay(delay, cancellationToken);
-                }
+                return 0;
             }
 
-            return rowCount;
+            attempt++;
+
+            try
+            {
+                if (attempt > _maxRetries)
+                {
+                    throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {job.SourceKey}");
+                }
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation(
+                        "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
+                        job.SourceKey,
+                        externalS3Info.BucketName,
+                        internalS3Info.BucketName,
+                        attempt);
+                }
+
+                var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
+
+                // Retrieve row count from the decrypted file and update the file import status accordingly.
+                rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation(
+                        "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
+                        externalS3Info.BucketName,
+                        job.SourceKey,
+                        internalS3Info.BucketName,
+                        targetKey);
+                }
+
+                break;
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                var delay = TimeSpan.FromMilliseconds(delayBaseMs * Math.Pow(2, attempt - 1));
+
+                logger.LogWarning(
+                    ex,
+                    "Error copying {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
+                    job.SourceKey, attempt, _maxRetries, delay.TotalMilliseconds);
+
+                await Task.Delay(delay, cancellationToken);
+            }
         }
+
+        return rowCount;
     }
 
     private async Task<string> DecryptAndCopyAsync(
