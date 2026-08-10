@@ -1,3 +1,4 @@
+using Amazon.SQS.Model;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
@@ -48,34 +49,40 @@ public class CsvDataFileImportBackgroundService(
                     var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
                     var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
 
-                    long fileImportId;
-                    try
+                    using (logger.BeginScope(new Dictionary<string, object?>
                     {
-                        fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
-                    }
-                    catch (Exception ex)
+                        ["CorrelationId"] = CorrelationIdContext.Value
+                    }))
                     {
-                        logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
-                        return;
-                    }
+                        long fileImportId;
+                        try
+                        {
+                            fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
+                            return;
+                        }
 
-                    try
-                    {
-                        var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, stoppingToken);
-                        await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
+                        try
+                        {
+                            var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, stoppingToken);
+                            await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
 
-                        await splitMessageProducer.SendAsync(
-                            new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
-                            stoppingToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}", stoppingToken);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
+                            await splitMessageProducer.SendAsync(
+                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
+                                stoppingToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
+                            await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}", stoppingToken);
+                        }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
                     }
                 },
                 stoppingToken);

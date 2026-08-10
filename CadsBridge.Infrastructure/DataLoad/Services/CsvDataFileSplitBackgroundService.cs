@@ -51,27 +51,33 @@ public class CsvDataFileSplitBackgroundService(
                     var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
                     var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
 
-                    try
+                    using (logger.BeginScope(new Dictionary<string, object?>
                     {
-                        var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
+                        ["CorrelationId"] = CorrelationIdContext.Value
+                    }))
+                    {
+                        try
+                        {
+                            var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
-                        if (foundRows > 0)
-                        {
-                            await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+                            if (foundRows > 0)
+                            {
+                                await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+                            }
+                            else
+                            {
+                                await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
+                            }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
+                            logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
+                        finally
+                        {
+                            semaphore.Release();
+                        }
                     }
                 },
                 stoppingToken);

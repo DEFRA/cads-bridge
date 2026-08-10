@@ -1,6 +1,7 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -22,32 +23,38 @@ public class S3FileMetaDataService<TClient>(
 
     public async Task<long> GetRecordCountAsync(string s3Key, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(s3Key);
-
-        // HEAD the object to get its size
-        var fileSize = await GetFileSize(s3Key, cancellationToken);
-
-        if (fileSize == 0)
+        using (_logger.BeginScope(new Dictionary<string, object?>
         {
-            throw new DomainException($"S3 object '{s3Key}' is empty; no trailer line present.");
-        }
-
-        // Extract the last line of the file
-        var trailerLine = await GetLastLine(s3Key, fileSize, cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(trailerLine))
+            ["CorrelationId"] = CorrelationIdContext.Value
+        }))
         {
-            throw new DomainException($"Could not locate a trailer line in '{s3Key}'.");
-        }
+            ArgumentException.ThrowIfNullOrWhiteSpace(s3Key);
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Trailer line read from '{Key}': {Line}", s3Key, trailerLine);
-        }
+            // HEAD the object to get its size
+            var fileSize = await GetFileSize(s3Key, cancellationToken);
 
-        // Parse and validate
-        var parts = _csvParser.ParseCsvLine(trailerLine, expectedCount: 4);
-        return ParseTrailerLine([.. parts], s3Key);
+            if (fileSize == 0)
+            {
+                throw new DomainException($"S3 object '{s3Key}' is empty; no trailer line present.");
+            }
+
+            // Extract the last line of the file
+            var trailerLine = await GetLastLine(s3Key, fileSize, cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(trailerLine))
+            {
+                throw new DomainException($"Could not locate a trailer line in '{s3Key}'.");
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Trailer line read from '{Key}': {Line}", s3Key, trailerLine);
+            }
+
+            // Parse and validate
+            var parts = _csvParser.ParseCsvLine(trailerLine, expectedCount: 4);
+            return ParseTrailerLine([.. parts], s3Key);
+        }
     }
 
     private async Task<long> GetFileSize(string s3Key, CancellationToken cancellationToken)

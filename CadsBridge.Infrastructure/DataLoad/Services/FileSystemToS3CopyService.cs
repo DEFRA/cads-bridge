@@ -1,6 +1,7 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.Correlation;
 using CadsBridge.Core.FileSystem;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -15,33 +16,39 @@ public class FileSystemToS3CopyService(
 {
     public async Task<bool> ExecuteAsync(DataSeedFileLoadJob request, CancellationToken cancellationToken)
     {
-        try
+        using (logger.BeginScope(new Dictionary<string, object?>
         {
-            var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
-            var internalS3 = internalS3Info.Client;
-            await using var file = fileSystemWrapper.OpenRead(request.FileName);
-
-            var putFile = new PutObjectRequest
+            ["CorrelationId"] = CorrelationIdContext.Value
+        }))
+        {
+            try
             {
-                BucketName = internalS3Info.BucketName,
-                Key = request.TargetKey,
-                InputStream = file,
-                ContentType = "text/plain"
-            };
+                var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
+                var internalS3 = internalS3Info.Client;
+                await using var file = fileSystemWrapper.OpenRead(request.FileName);
 
-            await internalS3.PutObjectAsync(putFile, cancellationToken);
+                var putFile = new PutObjectRequest
+                {
+                    BucketName = internalS3Info.BucketName,
+                    Key = request.TargetKey,
+                    InputStream = file,
+                    ContentType = "text/plain"
+                };
+
+                await internalS3.PutObjectAsync(putFile, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Failed to copy data seed file from {FileName} to {TargetKey}",
+                    request.FileName,
+                    request.TargetKey);
+
+                return false;
+            }
+
+            return true;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Failed to copy data seed file from {FileName} to {TargetKey}",
-                request.FileName,
-                request.TargetKey);
-
-            return false;
-        }
-
-        return true;
     }
 }

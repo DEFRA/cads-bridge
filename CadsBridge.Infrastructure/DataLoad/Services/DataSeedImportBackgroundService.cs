@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.Correlation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -27,30 +28,42 @@ public class DataSeedImportBackgroundService(
                 return;
             }
 
+            // Establish the correlation id for this unit of work based on what was used for file discovery
+            // This keeps it consistent across the various processes for this particular file import
+            CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
+                ? Guid.NewGuid().ToString()
+                : request.CorrelationId;
+
             await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(async () =>
             {
-                try
+                using (logger.BeginScope(new Dictionary<string, object?>
                 {
-                    var result = await fileSystemToS3CopyService.ExecuteAsync(request, stoppingToken);
-                    if (result)
+                    ["CorrelationId"] = CorrelationIdContext.Value
+                }))
+                {
+                    try
                     {
-                        if (logger.IsEnabled(LogLevel.Information))
-                            logger.LogInformation("Successfully imported data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
+                        var result = await fileSystemToS3CopyService.ExecuteAsync(request, stoppingToken);
+                        if (result)
+                        {
+                            if (logger.IsEnabled(LogLevel.Information))
+                                logger.LogInformation("Successfully imported data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
+                        }
+                        else
+                        {
+                            logger.LogError("Failed to import data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        logger.LogError("Failed to import data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
+                        logger.LogError(ex, "Failed to import data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
                     }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to import data seed file {FileName} to {TargetKey}", request.FileName, request.TargetKey);
-                }
-                finally
-                {
-                    semaphore.Release();
+                    finally
+                    {
+                        semaphore.Release();
+                    }
                 }
             }, stoppingToken);
             runningTasks.Add(task);

@@ -38,7 +38,8 @@ public static class EndpointsExtensions
             await channel.Writer.WriteAsync(new DataSeedFileLoadJob(
                 JobId: jobId,
                 FileName: file.FilePath,
-                TargetKey: $"data-seed/{file.FileName}"
+                TargetKey: $"data-seed/{file.FileName}",
+                CorrelationId: CorrelationIdContext.Value
             ));
         }
 
