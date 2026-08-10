@@ -63,7 +63,7 @@ public class S3FileMetaDataService<TClient>(
 
         try
         {
-            var meta = await clientInfo.Client!.GetObjectMetadataAsync(clientInfo.BucketName, s3Key, cancellationToken);
+            var meta = await clientInfo.Client.GetObjectMetadataAsync(clientInfo.BucketName, s3Key, cancellationToken);
             return meta.ContentLength;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -85,7 +85,7 @@ public class S3FileMetaDataService<TClient>(
         };
         try
         {
-            using var response = await clientInfo.Client!.GetObjectAsync(getRequest, cancellationToken);
+            using var response = await clientInfo.Client.GetObjectAsync(getRequest, cancellationToken);
             return ExtractLastLine(response.ResponseStream);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
