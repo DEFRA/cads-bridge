@@ -18,7 +18,7 @@ public class EnumAttributeExtensionsTests
     [Fact]
     public void GetAttribute_ShouldReturnAttribute_WhenPresent()
     {
-        var result = TestEnum.WithAttribute.GetAttribute<ObsoleteAttribute>();
+        var result = TestEnum.GetAttribute<ObsoleteAttribute>();
         result.Should().NotBeNull();
         result!.Message.Should().Be("TestMessage");
     }
@@ -26,7 +26,7 @@ public class EnumAttributeExtensionsTests
     [Fact]
     public void GetAttribute_ShouldReturnNull_WhenAttributeMissing()
     {
-        var result = TestEnum.WithoutAttribute.GetAttribute<ObsoleteAttribute>();
+        var result = TestEnum.GetAttribute<ObsoleteAttribute>();
         result.Should().BeNull();
     }
 

@@ -78,7 +78,7 @@ public class S3FileDiscoveryService<TClient>(
 
     private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, string? prefix = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if(prefix != null && !prefix.EndsWith("/"))
+        if (prefix != null && !prefix.EndsWith("/"))
         {
             prefix += "/";
         }
