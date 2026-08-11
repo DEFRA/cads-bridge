@@ -11,23 +11,23 @@ using System.Text.Json;
 namespace CadsBridge.Tests.Integration.Jobs;
 
 /// <summary>
-/// End-to-end integration test for <see cref="CadsBridge.Worker.Jobs.BulkScanJob"/>.
+/// End-to-end integration test for <see cref="CadsBridge.Worker.Jobs.DeltaScanJob"/>.
 /// Expected outcome: exactly 2 SQS messages are enqueued (files 4 and 5).
 /// </summary>
 [Trait("Dependence", "testcontainers")]
-public class BulkScanJobTests
+public class DeltaScanJobTests
 {
-    private const string CompleteFile = "bulk/CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345";
-    private const string FailedFile = "bulk/CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345";
+    private const string CompleteFile = "daily/CTSM_CADS_PROD_DELTA_ABC_0004_CT_PARTIES_2026-01-01-012345";
+    private const string FailedFile = "daily/CTSM_CADS_PROD_DELTA_ABC_0005_CT_PARTIES_2026-01-01-012345";
     private const string InvalidFilename = "invalid-filename.csv";
-    private const string DeltaTypeFile = "bulk/CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
-    private const string NewFile = "bulk/CTSM_CADS_PROD_BULK_NEW_0001_CT_ANIMALS_2026-07-31-120000";
+    private const string DeltaTypeFile = "daily/CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
+    private const string NewFile = "daily/CTSM_CADS_PROD_DELTA_NEW_0001_CT_ANIMALS_2026-07-31-120000";
 
     [Fact]
-    public async Task BulkScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
+    public async Task DeltaScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
     {
         // ── Arrange: start the container with the fake CDS API and the queue consumer
-        //   disabled so BulkScanJob messages stay in the queue long enough for the test
+        //   disabled so DeltaScanJob messages stay in the queue long enough for the test
         //   to read them
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
