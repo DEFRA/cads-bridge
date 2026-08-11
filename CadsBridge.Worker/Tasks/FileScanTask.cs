@@ -9,21 +9,23 @@ namespace CadsBridge.Worker.Tasks;
 public abstract class FileScanTask(
     ScanTaskType scanTaskType,
     IFileDiscoveryService fileDiscoveryService,
-    ILogger<FileScanTask> logger
+    ILogger logger
     ) : IFileScanTask
 {
     public async Task RunAsync(CancellationToken cancellationToken)
     {
+        // Retrieve the list of files from the external bucket based on the scan type prefix if provided
+        var scanTaskInfo = scanTaskType.GetAttribute<ScanTaskInfoAttribute>();
+        var scanTaskTypePrefix = scanTaskInfo?.Prefix;
+        var scanTaskTypeName = scanTaskInfo?.Name;
+
         // Get the list of files in the external bucket
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Starting {ScanType} scan task...", scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Name);
+            logger.LogDebug("Starting {ScanTaskTypeName} scan task ...", scanTaskTypeName);
         }
 
-        // Retrieve the list of files from the external bucket based on the scan type prefix if provided
-        var prefix = scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Prefix;
-
-        var result = await fileDiscoveryService.GetFileNames(prefix, cancellationToken);
+        var result = await fileDiscoveryService.GetFileNames(scanTaskTypePrefix, cancellationToken);
 
         if (result.Count == 0)
         {

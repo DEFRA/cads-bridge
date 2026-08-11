@@ -32,7 +32,7 @@ public class DeltaScanJobTests
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
             ["Messaging__DisableQueueConsumer"] = "true",
-            ["Quartz__Jobs__0__Enabled"] = "true",
+            ["Quartz__Jobs__1__Enabled"] = "true",
         });
 
         await fixture.InitializeAsync();

@@ -12,6 +12,7 @@ using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -77,6 +78,11 @@ public class S3FileDiscoveryService<TClient>(
 
     private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, string? prefix = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if(prefix != null && !prefix.EndsWith("/"))
+        {
+            prefix += "/";
+        }
+
         var request = new ListObjectsV2Request { BucketName = clientInfo.BucketName, Prefix = prefix };
 
         ListObjectsV2Response? response = null;
