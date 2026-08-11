@@ -112,37 +112,41 @@ public abstract class BaseSqsQueuePoller<TClient>(
     {
         var unwrapped = message.Unwrap();
 
-        CorrelationIdContext.Value = string.IsNullOrWhiteSpace(unwrapped.CorrelationId)
-            ? Guid.NewGuid().ToString()
-            : unwrapped.CorrelationId;
-
-        try
+        using (CorrelationScope.Begin(unwrapped.CorrelationId))
+        using (Logger.BeginScope(new Dictionary<string, object?>
         {
-            var result = await ProcessMessageAsync(unwrapped, cancellationToken).ConfigureAwait(false);
-
-            await Sqs.DeleteMessageAsync(QueueUrl, message.ReceiptHandle, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (Logger.IsEnabled(LogLevel.Information))
+            ["GroupId"] = unwrapped.MessageGroupId,
+            ["DeduplicationId"] = unwrapped.MessageDeduplicationId
+        }))
+        {
+            try
             {
-                Logger.LogInformation(
-                    "Handled message with CorrelationId: {CorrelationId}, GroupId={GroupId}, DedupId={DedupId}",
-                    CorrelationIdContext.Value, unwrapped.MessageGroupId, unwrapped.MessageDeduplicationId);
-            }
+                var result = await ProcessMessageAsync(unwrapped, cancellationToken).ConfigureAwait(false);
 
-            Observer?.OnMessageHandled(message.MessageId, DateTime.UtcNow, result, message);
-        }
-        catch (RetryableException ex)
-        {
-            HandleRetryableException(message, unwrapped, ex);
-        }
-        catch (NonRetryableException ex)
-        {
-            await HandleNonRetryableException(message, unwrapped, ex, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            await HandleUnexpectedException(message, unwrapped, ex, cancellationToken);
+                await Sqs.DeleteMessageAsync(QueueUrl, message.ReceiptHandle, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (Logger.IsEnabled(LogLevel.Information))
+                {
+                    Logger.LogInformation(
+                        "Handled message with CorrelationId: {CorrelationId}, GroupId={GroupId}, DedupId={DedupId}",
+                        CorrelationIdContext.Value, unwrapped.MessageGroupId, unwrapped.MessageDeduplicationId);
+                }
+
+                Observer?.OnMessageHandled(message.MessageId, DateTime.UtcNow, result, message);
+            }
+            catch (RetryableException ex)
+            {
+                HandleRetryableException(message, unwrapped, ex);
+            }
+            catch (NonRetryableException ex)
+            {
+                await HandleNonRetryableException(message, unwrapped, ex, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await HandleUnexpectedException(message, unwrapped, ex, cancellationToken);
+            }
         }
     }
 

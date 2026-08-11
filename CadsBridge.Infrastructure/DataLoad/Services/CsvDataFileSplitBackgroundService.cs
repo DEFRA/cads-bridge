@@ -31,17 +31,12 @@ public class CsvDataFileSplitBackgroundService(
                 return;
             }
 
-            // Establish the correlation id for this unit of work based on what was used for file discovery
-            // This keeps it consistent across the various processes for this particular file import
-            CorrelationIdContext.Value = string.IsNullOrWhiteSpace(request.CorrelationId)
-                ? Guid.NewGuid().ToString()
-                : request.CorrelationId;
-
             if (!request.FileImportId.HasValue)
             {
-                logger.LogError("FileImportId is required for split job {Key}", request.SourceKey);
+                logger.LogError("FileImportId is required for split job {Key}, CorrelationId {CorrelationId}", request.SourceKey, request.CorrelationId);
                 continue;
             }
+
             await semaphore.WaitAsync(stoppingToken);
 
             var task = Task.Run(
@@ -51,27 +46,30 @@ public class CsvDataFileSplitBackgroundService(
                     var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
                     var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
 
-                    try
+                    using (CorrelationScope.Begin(request.CorrelationId))
                     {
-                        var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
+                        try
+                        {
+                            var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
-                        if (foundRows > 0)
-                        {
-                            await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+                            if (foundRows > 0)
+                            {
+                                await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+                            }
+                            else
+                            {
+                                await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
+                            }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
+                            logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                        await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
+                        finally
+                        {
+                            semaphore.Release();
+                        }
                     }
                 },
                 stoppingToken);

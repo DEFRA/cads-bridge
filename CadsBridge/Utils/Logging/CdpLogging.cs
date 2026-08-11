@@ -1,3 +1,4 @@
+using CadsBridge.Core.Correlation;
 using Elastic.CommonSchema.Serilog;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
@@ -17,7 +18,8 @@ public static class CdpLogging
             .ReadFrom.Configuration(ctx.Configuration)
             .Enrich.WithEcsHttpContext(httpAccessor!)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("service.version", serviceVersion);
+            .Enrich.WithProperty("service.version", serviceVersion)
+            .Enrich.With<CorrelationIdEnricher>();
 
         if (traceIdHeader != null)
         {
