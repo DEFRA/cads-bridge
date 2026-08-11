@@ -1,7 +1,6 @@
-using System;
-using FluentAssertions;
 using CadsBridge.Application.Extensions;
-using Xunit;
+using FluentAssertions;
+using System.ComponentModel;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Extensions;
 
@@ -9,7 +8,7 @@ public class EnumAttributeExtensionsTests
 {
     private enum TestEnum
     {
-        [Obsolete("TestMessage")]
+        [Description("TestMessage")]
         WithAttribute = 1,
 
         WithoutAttribute = 2
@@ -18,15 +17,15 @@ public class EnumAttributeExtensionsTests
     [Fact]
     public void GetAttribute_ShouldReturnAttribute_WhenPresent()
     {
-        var result = TestEnum.GetAttribute<ObsoleteAttribute>();
+        var result = TestEnum.WithAttribute.GetAttribute<DescriptionAttribute>();
         result.Should().NotBeNull();
-        result!.Message.Should().Be("TestMessage");
+        result!.Description.Should().Be("TestMessage");
     }
 
     [Fact]
     public void GetAttribute_ShouldReturnNull_WhenAttributeMissing()
     {
-        var result = TestEnum.GetAttribute<ObsoleteAttribute>();
+        var result = TestEnum.WithoutAttribute.GetAttribute<DescriptionAttribute>();
         result.Should().BeNull();
     }
 
@@ -34,7 +33,7 @@ public class EnumAttributeExtensionsTests
     public void GetAttribute_ShouldReturnNull_WhenEnumValueUndefined()
     {
         var undefined = (TestEnum)999;
-        var result = undefined.GetAttribute<ObsoleteAttribute>();
+        var result = undefined.GetAttribute<DescriptionAttribute>();
         result.Should().BeNull();
     }
 
@@ -42,7 +41,7 @@ public class EnumAttributeExtensionsTests
     public void GetAttribute_ShouldThrowArgumentNullException_WhenValueIsNull()
     {
         Enum? nullable = null;
-        Action act = () => nullable!.GetAttribute<ObsoleteAttribute>();
+        Action act = () => nullable!.GetAttribute<DescriptionAttribute>();
         act.Should().Throw<ArgumentNullException>();
     }
 }
