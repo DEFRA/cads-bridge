@@ -1,10 +1,9 @@
-namespace CadsBridge.Core.Attributes
-{
-    [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
-    public sealed class ScanTaskInfoAttribute(string name, string prefix) : Attribute
-    {
-        public string Name { get; } = name;
+namespace CadsBridge.Core.Attributes;
 
-        public string Prefix { get; } = prefix;
-    }
+[AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
+public sealed class ScanTaskInfoAttribute(string name, string prefix) : Attribute
+{
+    public string Name { get; } = name;
+
+    public string Prefix { get; } = prefix;
 }

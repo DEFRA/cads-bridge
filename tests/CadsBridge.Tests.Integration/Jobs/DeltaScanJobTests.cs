@@ -19,7 +19,7 @@ public class DeltaScanJobTests
 {
     private const string CompleteFile = "daily/CTSM_CADS_PROD_DELTA_ABC_0004_CT_PARTIES_2026-01-01-012345";
     private const string FailedFile = "daily/CTSM_CADS_PROD_DELTA_ABC_0005_CT_PARTIES_2026-01-01-012345";
-    private const string InvalidFilename = "invalid-filename.csv";
+    private const string InvalidFilename = "daily/invalid-filename.csv";
     private const string DeltaTypeFile = "daily/CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
     private const string NewFile = "daily/CTSM_CADS_PROD_DELTA_NEW_0001_CT_ANIMALS_2026-07-31-120000";
 
