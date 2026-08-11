@@ -17,11 +17,11 @@ namespace CadsBridge.Tests.Integration.Jobs;
 [Trait("Dependence", "testcontainers")]
 public class DeltaScanJobTests
 {
-    private const string CompleteFile = "daily/CTSM_CADS_PROD_DELTA_ABC_0004_CT_PARTIES_2026-01-01-012345";
-    private const string FailedFile = "daily/CTSM_CADS_PROD_DELTA_ABC_0005_CT_PARTIES_2026-01-01-012345";
-    private const string InvalidFilename = "daily/invalid-filename.csv";
-    private const string DeltaTypeFile = "daily/CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
-    private const string NewFile = "daily/CTSM_CADS_PROD_DELTA_NEW_0001_CT_ANIMALS_2026-07-31-120000";
+    private const string CompleteFile = "CTSM_CADS_PROD_DELTA_ABC_0004_CT_PARTIES_2026-01-01-012345";
+    private const string FailedFile = "CTSM_CADS_PROD_DELTA_ABC_0005_CT_PARTIES_2026-01-01-012345";
+    private const string InvalidFilename = "invalid-filename.csv";
+    private const string BulkTypeFile = "CTSM_CADS_PROD_BULK_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
+    private const string NewFile = "CTSM_CADS_PROD_DELTA_NEW_0001_CT_ANIMALS_2026-07-31-120000";
 
     [Fact]
     public async Task DeltaScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
@@ -44,12 +44,12 @@ public class DeltaScanJobTests
         var ct = TestContext.Current.CancellationToken;
 
         // Upload all five test objects to the external bucket.
-        foreach (var key in new[] { InvalidFilename, DeltaTypeFile, CompleteFile, FailedFile, NewFile })
+        foreach (var key in new[] { InvalidFilename, BulkTypeFile, CompleteFile, FailedFile, NewFile })
         {
             await s3.PutObjectAsync(new PutObjectRequest
             {
                 BucketName = externalBucket,
-                Key = key,
+                Key = "daily/" + key,
                 ContentBody = "test"
             }, ct);
         }
@@ -100,7 +100,7 @@ public class DeltaScanJobTests
         enqueuedKeys.Should().NotContain(InvalidFilename,
             because: "an invalid CTSM filename must be dropped before any CDS API call");
 
-        enqueuedKeys.Should().NotContain(DeltaTypeFile,
+        enqueuedKeys.Should().NotContain(BulkTypeFile,
             because: "a non-BULK type file must be dropped by GetValidBulkFileNames");
 
         // ── Verify the bucket and correlation metadata are present ──

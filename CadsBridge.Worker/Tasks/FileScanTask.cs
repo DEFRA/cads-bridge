@@ -19,6 +19,11 @@ public abstract class FileScanTask(
         var scanTaskTypePrefix = scanTaskInfo?.Prefix;
         var scanTaskTypeName = scanTaskInfo?.Name;
 
+        if(!scanTaskTypePrefix.EndsWith("/"))
+        {
+            scanTaskTypePrefix += "/";
+        }
+
         // Get the list of files in the external bucket
         if (logger.IsEnabled(LogLevel.Debug))
         {
