@@ -19,7 +19,7 @@ public abstract class FileScanTask(
         var scanTaskTypePrefix = scanTaskInfo?.Prefix;
         var scanTaskTypeName = scanTaskInfo?.Name;
 
-        if(!scanTaskTypePrefix.EndsWith("/"))
+        if(scanTaskTypePrefix != null && !scanTaskTypePrefix.EndsWith("/"))
         {
             scanTaskTypePrefix += "/";
         }
