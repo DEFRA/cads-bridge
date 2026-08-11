@@ -1,7 +1,7 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
-using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
 using CadsBridge.Infrastructure.Storage.Abstractions;

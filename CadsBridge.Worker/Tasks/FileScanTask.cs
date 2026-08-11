@@ -1,22 +1,29 @@
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 using CadsBridge.Infrastructure.DataLoad.Csv.Files;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Worker.Tasks;
 
-public class BulkScanTask(
+public abstract class FileScanTask(
+    ScanTaskType scanTaskType,
     IFileDiscoveryService fileDiscoveryService,
-    ILogger<BulkScanTask> logger
-    ) : IBulkScanTask
+    ILogger<FileScanTask> logger
+    ) : IFileScanTask
 {
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         // Get the list of files in the external bucket
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Starting bulk scan task...");
+            logger.LogDebug("Starting {ScanType} scan task...", scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Name);
         }
-        var result = await fileDiscoveryService.GetFileNames(cancellationToken);
+
+        // Retrieve the list of files from the external bucket based on the scan type prefix if provided
+        var prefix = scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Prefix;
+
+        var result = await fileDiscoveryService.GetFileNames(prefix, cancellationToken);
 
         if (result.Count == 0)
         {
@@ -50,7 +57,7 @@ public class BulkScanTask(
 
     private async Task<List<string>> GetKeysToEnqueue(List<string> result, CancellationToken cancellationToken)
     {
-        var validFileKeys = result.Where(GetValidBulkFileNames).ToList();
+        var validFileKeys = result.Where(fileName => ValidateFileName(scanTaskType, fileName)).ToList();
         if (validFileKeys.Count == 0)
         {
             return validFileKeys;
@@ -78,9 +85,11 @@ public class BulkScanTask(
         return validFileKeys;
     }
 
-    private static bool GetValidBulkFileNames(string fileName)
+    private static bool ValidateFileName(ScanTaskType scanTaskType, string fileName)
     {
+        var name = scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Name;
+
         return CtsmFilenameParser.TryParse(fileName, out var parsed) &&
-               parsed!.Type.Equals("BULK", StringComparison.OrdinalIgnoreCase);
+            parsed!.Type.Equals(name, StringComparison.OrdinalIgnoreCase);
     }
 }

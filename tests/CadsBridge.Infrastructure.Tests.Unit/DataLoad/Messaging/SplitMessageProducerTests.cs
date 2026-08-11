@@ -1,5 +1,5 @@
 using CadsBridge.Application.DataLoad.Jobs;
-using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using CadsBridge.Testing.Support.Utilities.Logging;

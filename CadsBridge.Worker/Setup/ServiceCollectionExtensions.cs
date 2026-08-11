@@ -74,8 +74,10 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static void AddTasks(this IServiceCollection services)
+    private static IServiceCollection AddTasks(this IServiceCollection services)
     {
-        services.AddScoped<IBulkScanTask, BulkScanTask>();
+        services.AddScoped<IBulkFileScanTask, BulkFileScanTask>();
+        services.AddScoped<IDeltaFileScanTask, DeltaFileScanTask>();
+        return services;
     }
 }

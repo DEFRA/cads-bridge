@@ -22,11 +22,13 @@ public class S3FileDiscoveryService<TClient>(
     StorageConfiguration storageConfiguration
     ) : IFileDiscoveryService where TClient : IStorageClient, new()
 {
-    readonly S3ClientFactory.ClientInfo clientInfo = s3ClientFactory.GetClientInfo<TClient>();
+    private const int MaxFailedAttempts = 3;
 
-    public async Task<List<string>> GetFileNames(CancellationToken cancellationToken)
+    private readonly S3ClientFactory.ClientInfo _clientInfo = s3ClientFactory.GetClientInfo<TClient>();
+
+    public async Task<List<string>> GetFileNames(string? prefix = null, CancellationToken cancellationToken = default)
     {
-        var result = await ListObjectKeys(clientInfo, cancellationToken).ToListAsync(cancellationToken);
+        var result = await ListObjectKeys(_clientInfo, prefix, cancellationToken).ToListAsync(cancellationToken);
         return result;
     }
 
@@ -35,7 +37,7 @@ public class S3FileDiscoveryService<TClient>(
         var existingFile = await fileImportApiService.GetByFileNameIfExists(fileName, cancellationToken);
         return existingFile is null ||
                (existingFile.ImportStatus == FileImportStatus.Failed &&
-                existingFile.FailedAttempts < 3);
+                existingFile.FailedAttempts < MaxFailedAttempts);
     }
 
     public async Task EnQueueFileImportMessages(IReadOnlyList<string> fileNames, CancellationToken cancellationToken)
@@ -43,13 +45,13 @@ public class S3FileDiscoveryService<TClient>(
         if (fileNames.Count == 0) return;
 
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
-        var bucketName = clientInfo.BucketName;
+        var bucketName = _clientInfo.BucketName;
 
         foreach (var fileName in fileNames)
         {
             // Create a unique correlation id per message queued
             var correlationId = Guid.NewGuid().ToString();
-            var metaData = await clientInfo.Client.GetObjectMetadataAsync(bucketName, fileName, cancellationToken);
+            var metaData = await _clientInfo.Client.GetObjectMetadataAsync(bucketName, fileName, cancellationToken);
             var etag = metaData.ETag;
             var dedipId = FifoKeyGenerator.GenerateDeduplicationId(bucketName, fileName, etag, oracleEnvironment);
 
@@ -73,9 +75,10 @@ public class S3FileDiscoveryService<TClient>(
         }
     }
 
-    private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, string? prefix = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var request = new ListObjectsV2Request { BucketName = clientInfo.BucketName };
+        var request = new ListObjectsV2Request { BucketName = clientInfo.BucketName, Prefix = prefix };
+
         ListObjectsV2Response? response = null;
         do
         {
