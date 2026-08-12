@@ -13,10 +13,9 @@ public static class ServiceCollectionExtensions
 {
     public static void AddBackgroundServiceScheduling(this IServiceCollection services, IConfiguration configuration)
     {
-        services
-            .AddQuartzJobs(configuration)
-            .AddJobs()
-            .AddTasks();
+        services.AddQuartzJobs(configuration);
+        services.AddJobs();
+        services.AddTasks();
     }
 
     private static IServiceCollection AddQuartzJobs(this IServiceCollection services, IConfiguration configuration)
@@ -67,15 +66,15 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static IServiceCollection AddJobs(this IServiceCollection services)
+    private static void AddJobs(this IServiceCollection services)
     {
         services.AddScoped<BulkScanJob>();
         services.AddScoped<DeltaScanJob>();
-        return services;
     }
 
     private static void AddTasks(this IServiceCollection services)
     {
-        services.AddScoped<IBulkScanTask, BulkScanTask>();
+        services.AddScoped<IBulkFileScanTask, BulkFileScanTask>();
+        services.AddScoped<IDeltaFileScanTask, DeltaFileScanTask>();
     }
 }

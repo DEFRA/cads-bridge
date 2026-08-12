@@ -31,10 +31,16 @@ public class FakeFileImportApiService : IFileImportApiService
         new(StringComparer.OrdinalIgnoreCase)
         {
             // ImportStatus 4 = Completed  → IsFileValid returns false  → not re-enqueued
-            ["CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345"] = (FileImportStatus.Completed, 0),
+            ["CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345.csv"] = (FileImportStatus.Completed, 0),
 
             // ImportStatus 5 = Failed, 0 prior attempts → IsFileValid returns true → re-enqueued
-            ["CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345"] = (FileImportStatus.Failed, 0),
+            ["CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345.csv"] = (FileImportStatus.Failed, 0),
+
+            // ImportStatus 4 = Completed  → IsFileValid returns false  → not re-enqueued
+            ["CTSM_CADS_PROD_DELTA_ABC_0004_CT_PARTIES_2026-01-01-012345.csv"] = (FileImportStatus.Completed, 0),
+
+            // ImportStatus 5 = Failed, 0 prior attempts → IsFileValid returns true → re-enqueued
+            ["CTSM_CADS_PROD_DELTA_ABC_0005_CT_PARTIES_2026-01-01-012345.csv"] = (FileImportStatus.Failed, 0)
         };
 
     public Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)

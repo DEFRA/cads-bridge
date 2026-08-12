@@ -11,7 +11,7 @@ namespace CadsBridge.Tests.Component.Jobs;
 
 public class BulkScanJobComponentTests
 {
-    private readonly Mock<IBulkScanTask> _bulkScanTaskMock = new();
+    private readonly Mock<IBulkFileScanTask> _bulkScanTaskMock = new();
     private readonly Mock<IDistributedLock> _distributedLockMock = new();
     private readonly Mock<ILogger<BulkScanJob>> _loggerMock = new Mock<ILogger<BulkScanJob>>().EnableAllLogLevels();
     private readonly Mock<IJobExecutionContext> _contextMock = new();

@@ -6,7 +6,7 @@ using Quartz;
 namespace CadsBridge.Worker.Jobs;
 
 public class BulkScanJob(
-    IBulkScanTask bulkScanTask,
+    IBulkFileScanTask bulkScanTask,
     IDistributedLock distributedLock,
     ILogger<BulkScanJob> logger) : IJob
 {

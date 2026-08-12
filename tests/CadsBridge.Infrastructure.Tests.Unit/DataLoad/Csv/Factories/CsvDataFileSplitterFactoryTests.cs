@@ -1,5 +1,5 @@
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
-using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;

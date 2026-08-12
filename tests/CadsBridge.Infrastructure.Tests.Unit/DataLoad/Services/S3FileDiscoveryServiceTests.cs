@@ -15,6 +15,7 @@ using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
 using FluentAssertions;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -27,12 +28,12 @@ public class S3FileDiscoveryServiceTests
         [Fact]
         public async Task GetFileNames_ReturnsEmpty_WhenBucketIsEmpty()
         {
-            var sut = CreateSut(new[]
-            {
+            var sut = CreateSut(
+            [
                 MakePage(isTruncated: false)
-            });
+            ]);
 
-            var result = await sut.GetFileNames(TestContext.Current.CancellationToken);
+            var result = await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
             result.Should().BeEmpty();
         }
@@ -40,12 +41,12 @@ public class S3FileDiscoveryServiceTests
         [Fact]
         public async Task GetFileNames_ReturnsAllKeys_WhenSinglePage()
         {
-            var sut = CreateSut(new[]
-            {
+            var sut = CreateSut(
+            [
                 MakePage(isTruncated: false, keys: ["file1.csv", "file2.csv", "file3.csv"])
-            });
+            ]);
 
-            var result = await sut.GetFileNames(TestContext.Current.CancellationToken);
+            var result = await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
             result.Should().BeEquivalentTo("file1.csv", "file2.csv", "file3.csv");
         }
@@ -67,7 +68,7 @@ public class S3FileDiscoveryServiceTests
 
             var sut = CreateSut(s3.Object);
 
-            var result = await sut.GetFileNames(TestContext.Current.CancellationToken);
+            var result = await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
             result.Should().BeEquivalentTo("page1-file1.csv", "page1-file2.csv", "page2-file1.csv");
         }
@@ -90,7 +91,7 @@ public class S3FileDiscoveryServiceTests
                 });
 
             var sut = CreateSut(s3.Object);
-            await sut.GetFileNames(TestContext.Current.CancellationToken);
+            await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
             capturedTokens.Should().HaveCount(2);
             capturedTokens[0].Should().BeNull();
@@ -108,7 +109,7 @@ public class S3FileDiscoveryServiceTests
               .ReturnsAsync(MakePage(isTruncated: false));
 
             var sut = CreateSut(s3.Object);
-            await sut.GetFileNames(TestContext.Current.CancellationToken);
+            await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
             capturedRequest.Should().NotBeNull();
             capturedRequest!.BucketName.Should().Be(Bucket);
@@ -195,9 +196,10 @@ public class S3FileDiscoveryServiceTests
             params string[] keys) =>
             new()
             {
+                HttpStatusCode = HttpStatusCode.OK,
                 IsTruncated = isTruncated,
                 NextContinuationToken = nextToken,
-                S3Objects = keys.Select(k => new S3Object { Key = k }).ToList()
+                S3Objects = [.. keys.Select(k => new S3Object { Key = k })]
             };
     }
 
@@ -206,7 +208,11 @@ public class S3FileDiscoveryServiceTests
         private readonly Mock<IAmazonS3> _s3Mock = new();
         private readonly Mock<IMessagePublisher<CadsBridgeFifoQueueClient>> _publisherMock = new();
 
-        public void Dispose() => CorrelationIdContext.Value = null;
+        public void Dispose()
+        {
+            CorrelationIdContext.Value = null;
+            GC.SuppressFinalize(this);
+        }
 
         private S3FileDiscoveryService<ExternalStorageClient> CreateSut(StorageConfiguration? storageConfiguration = null)
         {

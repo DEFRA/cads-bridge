@@ -1,4 +1,4 @@
-namespace CadsBridge.Core.DataLoad.Jobs
+namespace CadsBridge.Core.DataLoad
 {
     public enum SplitType
     {

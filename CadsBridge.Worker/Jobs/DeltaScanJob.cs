@@ -1,12 +1,14 @@
 using CadsBridge.Core.Locking;
+using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Worker.Jobs;
 
-[ExcludeFromCodeCoverage] // Exclude until actual implementation is added
-public class DeltaScanJob(IDistributedLock distributedLock, ILogger<DeltaScanJob> logger) : IJob
+public class DeltaScanJob(
+    IDeltaFileScanTask deltaScanTask,
+    IDistributedLock distributedLock,
+    ILogger<DeltaScanJob> logger) : IJob
 {
     private const string LockName = nameof(DeltaScanJob);
 
@@ -27,7 +29,13 @@ public class DeltaScanJob(IDistributedLock distributedLock, ILogger<DeltaScanJob
             {
                 logger.LogInformation("Delta scan job started");
             }
-            // ... job work ...
+
+            await deltaScanTask.RunAsync(context.CancellationToken);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Delta scan job completed");
+            }
         }
         finally
         {

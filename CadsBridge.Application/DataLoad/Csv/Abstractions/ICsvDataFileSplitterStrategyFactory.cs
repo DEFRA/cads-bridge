@@ -1,4 +1,4 @@
-using CadsBridge.Core.DataLoad.Jobs;
+using CadsBridge.Core.DataLoad;
 
 namespace CadsBridge.Application.DataLoad.Csv.Abstractions;
 

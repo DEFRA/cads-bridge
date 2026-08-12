@@ -1,22 +1,31 @@
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 using CadsBridge.Infrastructure.DataLoad.Csv.Files;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Worker.Tasks;
 
-public class BulkScanTask(
+public abstract class FileScanTask(
+    ScanTaskType scanTaskType,
     IFileDiscoveryService fileDiscoveryService,
-    ILogger<BulkScanTask> logger
-    ) : IBulkScanTask
+    ILogger<FileScanTask> logger
+    ) : IFileScanTask
 {
     public async Task RunAsync(CancellationToken cancellationToken)
     {
+        // Retrieve the list of files from the external bucket based on the scan type prefix if provided
+        var scanTaskInfo = scanTaskType.GetAttribute<ScanTaskInfoAttribute>();
+        var scanTaskTypePrefix = scanTaskInfo?.Prefix;
+        var scanTaskTypeName = scanTaskInfo?.Name;
+
         // Get the list of files in the external bucket
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Starting bulk scan task...");
+            logger.LogDebug("Starting {ScanTaskTypeName} scan task ...", scanTaskTypeName);
         }
-        var result = await fileDiscoveryService.GetFileNames(cancellationToken);
+
+        var result = await fileDiscoveryService.GetFileNames(scanTaskTypePrefix, cancellationToken);
 
         if (result.Count == 0)
         {
@@ -48,39 +57,31 @@ public class BulkScanTask(
         }
     }
 
-    private async Task<List<string>> GetKeysToEnqueue(List<string> result, CancellationToken cancellationToken)
+    private async Task<List<string>> GetKeysToEnqueue(List<string> objectKeys, CancellationToken cancellationToken)
     {
-        var validFileKeys = result.Where(GetValidBulkFileNames).ToList();
-        if (validFileKeys.Count == 0)
-        {
-            return validFileKeys;
-        }
+        var keysToProcess = new List<string>();
 
-        // Validate if processed or complete already, if so ignore
-        var keysToIgnore = new List<string>();
-        foreach (var fileName in validFileKeys)
+        var validObjectKeys = objectKeys.Where(fk => ValidateFileKey(scanTaskType, fk)).ToList();
+
+        foreach (var objectKey in validObjectKeys)
         {
-            if (!await fileDiscoveryService.IsFileValid(fileName, cancellationToken))
+            var fileName = Path.GetFileName(objectKey);
+            if (await fileDiscoveryService.IsFileValid(fileName, cancellationToken))
             {
-                keysToIgnore.Add(fileName);
+                keysToProcess.Add(objectKey);
             }
         }
 
-        if (keysToIgnore.Count > 0)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Ignoring {Count} files that have already been processed or failed too many times: {Files}", keysToIgnore.Count, string.Join(", ", keysToIgnore));
-            }
-            validFileKeys.RemoveAll(keysToIgnore.Contains);
-        }
-
-        return validFileKeys;
+        return keysToProcess;
     }
 
-    private static bool GetValidBulkFileNames(string fileName)
+    private static bool ValidateFileKey(ScanTaskType scanTaskType, string objectKey)
     {
+        var name = scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Name;
+
+        var fileName = Path.GetFileName(objectKey);
+
         return CtsmFilenameParser.TryParse(fileName, out var parsed) &&
-               parsed!.Type.Equals("BULK", StringComparison.OrdinalIgnoreCase);
+            parsed!.Type.Equals(name, StringComparison.OrdinalIgnoreCase);
     }
 }

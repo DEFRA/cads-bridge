@@ -11,7 +11,6 @@ using CadsBridge.Infrastructure.Messaging.Factories;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
-using System.Runtime.CompilerServices;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -22,12 +21,14 @@ public class S3FileDiscoveryService<TClient>(
     StorageConfiguration storageConfiguration
     ) : IFileDiscoveryService where TClient : IStorageClient, new()
 {
-    readonly S3ClientFactory.ClientInfo clientInfo = s3ClientFactory.GetClientInfo<TClient>();
+    private const int MaxFailedAttempts = 3;
 
-    public async Task<List<string>> GetFileNames(CancellationToken cancellationToken)
+    private readonly S3ClientFactory.ClientInfo _clientInfo = s3ClientFactory.GetClientInfo<TClient>();
+
+    public async Task<List<string>> GetFileNames(string? prefix = null, CancellationToken cancellationToken = default)
     {
-        var result = await ListObjectKeys(clientInfo, cancellationToken).ToListAsync(cancellationToken);
-        return result;
+        var result = await ListObjectKeys(_clientInfo, prefix, cancellationToken);
+        return [.. result];
     }
 
     public async Task<bool> IsFileValid(string fileName, CancellationToken cancellationToken)
@@ -35,29 +36,29 @@ public class S3FileDiscoveryService<TClient>(
         var existingFile = await fileImportApiService.GetByFileNameIfExists(fileName, cancellationToken);
         return existingFile is null ||
                (existingFile.ImportStatus == FileImportStatus.Failed &&
-                existingFile.FailedAttempts < 3);
+                existingFile.FailedAttempts < MaxFailedAttempts);
     }
 
-    public async Task EnQueueFileImportMessages(IReadOnlyList<string> fileNames, CancellationToken cancellationToken)
+    public async Task EnQueueFileImportMessages(IReadOnlyList<string> objectKeys, CancellationToken cancellationToken)
     {
-        if (fileNames.Count == 0) return;
+        if (objectKeys.Count == 0) return;
 
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
-        var bucketName = clientInfo.BucketName;
+        var bucketName = _clientInfo.BucketName;
 
-        foreach (var fileName in fileNames)
+        foreach (var objectKey in objectKeys)
         {
             // Create a unique correlation id per message queued
             var correlationId = Guid.NewGuid().ToString();
-            var metaData = await clientInfo.Client.GetObjectMetadataAsync(bucketName, fileName, cancellationToken);
+            var metaData = await _clientInfo.Client.GetObjectMetadataAsync(bucketName, objectKey, cancellationToken);
             var etag = metaData.ETag;
-            var dedipId = FifoKeyGenerator.GenerateDeduplicationId(bucketName, fileName, etag, oracleEnvironment);
+            var dedipId = FifoKeyGenerator.GenerateDeduplicationId(bucketName, objectKey, etag, oracleEnvironment);
 
             var message = new CsvDataFileImportMessage
             {
                 Bucket = bucketName,
                 CorrelationId = correlationId,
-                ObjectKey = fileName,
+                ObjectKey = objectKey,
                 DiscoveredAtUtc = DateTime.UtcNow,
                 Etag = etag,
                 Id = DeterministicGuid.From(dedipId),
@@ -65,26 +66,48 @@ public class S3FileDiscoveryService<TClient>(
             };
 
             var fifoMetadata = new FifoMessageMetadata(
-                FifoKeyGenerator.GenerateMessageGroupId(fileName, oracleEnvironment),
-                FifoKeyGenerator.GenerateDeduplicationId(bucketName, fileName, etag, oracleEnvironment),
+                FifoKeyGenerator.GenerateMessageGroupId(objectKey, oracleEnvironment),
+                FifoKeyGenerator.GenerateDeduplicationId(bucketName, objectKey, etag, oracleEnvironment),
                 correlationId);
 
             await cadsBridgeFifoQueuePublisher.PublishAsync(message, fifoMetadata, cancellationToken);
         }
     }
 
-    private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private static async Task<IEnumerable<string>> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, string? prefix, CancellationToken cancellationToken = default)
     {
-        var request = new ListObjectsV2Request { BucketName = clientInfo.BucketName };
+        var keys = new List<string>();
+
+        if (!string.IsNullOrEmpty(prefix))
+        {
+            prefix = prefix.EndsWith('/') ? prefix : prefix + "/";
+        }
+
+        var request = new ListObjectsV2Request
+        {
+            BucketName = clientInfo.BucketName,
+            Prefix = prefix
+        };
+
         ListObjectsV2Response? response = null;
         do
         {
             response = await clientInfo.Client.ListObjectsV2Async(request, cancellationToken: cancellationToken);
-            request.ContinuationToken = response.NextContinuationToken;
-            foreach (var key in response.S3Objects.Select(o => o.Key))
+
+            if (response.HttpStatusCode != System.Net.HttpStatusCode.OK)
             {
-                yield return key;
+                throw new InvalidOperationException(
+                    $"Failed to list objects in bucket {clientInfo.BucketName} with prefix '{prefix}'. StatusCode: {response.HttpStatusCode}");
             }
-        } while (response.IsTruncated == true);
+
+            if (response.S3Objects is { Count: > 0 })
+            {
+                keys.AddRange(response.S3Objects.Select(o => o.Key));
+            }
+
+            request.ContinuationToken = response.NextContinuationToken;
+        } while (response.IsTruncated.GetValueOrDefault());
+
+        return keys;
     }
 }
