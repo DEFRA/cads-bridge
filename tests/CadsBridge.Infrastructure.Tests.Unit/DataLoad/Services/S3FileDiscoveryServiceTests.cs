@@ -208,7 +208,11 @@ public class S3FileDiscoveryServiceTests
         private readonly Mock<IAmazonS3> _s3Mock = new();
         private readonly Mock<IMessagePublisher<CadsBridgeFifoQueueClient>> _publisherMock = new();
 
-        public void Dispose() => CorrelationIdContext.Value = null;
+        public void Dispose()
+        {
+            CorrelationIdContext.Value = null;
+            GC.SuppressFinalize(this);
+        }
 
         private S3FileDiscoveryService<ExternalStorageClient> CreateSut(StorageConfiguration? storageConfiguration = null)
         {
