@@ -38,6 +38,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("Storage__External__HealthcheckEnabled", "true")
             .WithEnvironment("Storage__External__AccessKeySecretName", "IMB_S3_ACCESS_KEY")
             .WithEnvironment("Storage__External__SecretKeySecretName", "IMB_S3_SECRET_KEY")
+            .WithEnvironment("Storage__External__EnvironmentName", "PreProd")
             .WithEnvironment("Messaging__Queues__CadsBridgeFifo__QueueUrl", TestSqsConstants.CadsBridgeFifoQueueName)
             .WithEnvironment("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", TestSqsConstants.CadsBridgeFifoDeadLetterQueueName)
             .WithEnvironment("Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled", "true")

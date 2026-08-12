@@ -9,7 +9,7 @@ namespace CadsBridge.Worker.Tasks;
 public abstract class FileScanTask(
     ScanTaskType scanTaskType,
     IFileDiscoveryService fileDiscoveryService,
-    ILogger logger
+    ILogger<FileScanTask> logger
     ) : IFileScanTask
 {
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -57,39 +57,29 @@ public abstract class FileScanTask(
         }
     }
 
-    private async Task<List<string>> GetKeysToEnqueue(List<string> result, CancellationToken cancellationToken)
+    private async Task<List<string>> GetKeysToEnqueue(List<string> objectKeys, CancellationToken cancellationToken)
     {
-        var validFileKeys = result.Where(fileName => ValidateFileName(scanTaskType, fileName)).ToList();
-        if (validFileKeys.Count == 0)
-        {
-            return validFileKeys;
-        }
+        var keysToProcess = new List<string>();
 
-        // Validate if processed or complete already, if so ignore
-        var keysToIgnore = new List<string>();
-        foreach (var fileName in validFileKeys)
+        var validObjectKeys = objectKeys.Where(fk => ValidateFileKey(scanTaskType, fk)).ToList();
+
+        foreach (var objectKey in validObjectKeys)
         {
-            if (!await fileDiscoveryService.IsFileValid(fileName, cancellationToken))
+            var fileName = Path.GetFileName(objectKey);
+            if (await fileDiscoveryService.IsFileValid(fileName, cancellationToken))
             {
-                keysToIgnore.Add(fileName);
+                keysToProcess.Add(objectKey);
             }
         }
 
-        if (keysToIgnore.Count > 0)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Ignoring {Count} files that have already been processed or failed too many times: {Files}", keysToIgnore.Count, string.Join(", ", keysToIgnore));
-            }
-            validFileKeys.RemoveAll(keysToIgnore.Contains);
-        }
-
-        return validFileKeys;
+        return keysToProcess;
     }
 
-    private static bool ValidateFileName(ScanTaskType scanTaskType, string fileName)
+    private static bool ValidateFileKey(ScanTaskType scanTaskType, string objectKey)
     {
         var name = scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Name;
+
+        var fileName = Path.GetFileName(objectKey);
 
         return CtsmFilenameParser.TryParse(fileName, out var parsed) &&
             parsed!.Type.Equals(name, StringComparison.OrdinalIgnoreCase);

@@ -2,9 +2,6 @@ using CadsBridge.Application.Extensions;
 using CadsBridge.Core.Attributes;
 using CadsBridge.Worker.Tasks;
 using FluentAssertions;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace CadsBridge.Worker.Tests.Unit.Tasks;
 
@@ -19,7 +16,7 @@ public class ScanTaskTypeAttributeTests
         var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
         result.Should().NotBeNull();
         result!.Name.Should().Be("BULK");
-        result!.Prefix.Should().Be("bulk");
+        result!.Prefix.Should().Be("cads/cts/bulk");
     }
 
     [Fact]
@@ -30,6 +27,6 @@ public class ScanTaskTypeAttributeTests
         var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
         result.Should().NotBeNull();
         result!.Name.Should().Be("DELTA");
-        result!.Prefix.Should().Be("daily");
+        result!.Prefix.Should().Be("cads/cts/daily");
     }
 }

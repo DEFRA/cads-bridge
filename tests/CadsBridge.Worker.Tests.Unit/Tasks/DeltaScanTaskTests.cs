@@ -11,12 +11,14 @@ public class DeltaScanTaskTests
     private readonly Mock<IFileDiscoveryService> _fileDiscoveryServiceMock = new();
     private readonly Mock<ILogger<DeltaFileScanTask>> _loggerMock = new Mock<ILogger<DeltaFileScanTask>>().EnableAllLogLevels();
 
+    private const string Prefix = "cads/cts/daily";
     private const string ValidFileName = "CTSM_UKV_PROD_DELTA_######_CT_REGISTERED_ANIMALS_2026-02-22-074603.csv";
+    private string ValidObjectKey = $"{Prefix}/{ValidFileName}";
 
     private DeltaFileScanTask CreateSut(List<string> fileNames)
     {
         _fileDiscoveryServiceMock
-            .Setup(x => x.GetFileNames("daily", TestContext.Current.CancellationToken))
+            .Setup(x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken))
             .ReturnsAsync(fileNames);
         // Register the catch-all first: Moq gives precedence to the most-recently configured matching setup
         _fileDiscoveryServiceMock
@@ -33,7 +35,7 @@ public class DeltaScanTaskTests
     {
         // Arrange
         _fileDiscoveryServiceMock
-            .Setup(x => x.GetFileNames("daily", TestContext.Current.CancellationToken))
+            .Setup(x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken))
             .ReturnsAsync([]);
 
         var sut = CreateSut(new List<string>());
@@ -43,7 +45,7 @@ public class DeltaScanTaskTests
 
         // Assert
         _fileDiscoveryServiceMock.Verify(
-            x => x.GetFileNames("daily", TestContext.Current.CancellationToken),
+            x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken),
             Times.Once);
     }
 
@@ -60,7 +62,7 @@ public class DeltaScanTaskTests
 
         // Assert
         _fileDiscoveryServiceMock.Verify(
-            x => x.GetFileNames("daily", TestContext.Current.CancellationToken),
+            x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken),
             Times.Once);
 
         _fileDiscoveryServiceMock.Verify(
@@ -81,7 +83,7 @@ public class DeltaScanTaskTests
 
         // Assert
         _fileDiscoveryServiceMock.Verify(
-            x => x.GetFileNames("daily", TestContext.Current.CancellationToken),
+            x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken),
             Times.Once);
 
         _fileDiscoveryServiceMock.Verify(
@@ -93,8 +95,8 @@ public class DeltaScanTaskTests
     public async Task RunAsync_EnqueuesValidFile_WhenFileIsValid()
     {
         // Arrange
-        var fileNames = new List<string> { ValidFileName };
-        var sut = CreateSut(fileNames);
+        var objectKeys = new List<string> { ValidObjectKey };
+        var sut = CreateSut(objectKeys);
 
         // Act
         await sut.RunAsync(TestContext.Current.CancellationToken);
@@ -102,7 +104,7 @@ public class DeltaScanTaskTests
         // Assert
         _fileDiscoveryServiceMock.Verify(
             x => x.EnQueueFileImportMessages(
-                It.Is<IReadOnlyList<string>>(list => list.Count == 1 && list[0] == ValidFileName),
+                It.Is<IReadOnlyList<string>>(list => list.Count == 1 && list[0] == ValidObjectKey),
                 TestContext.Current.CancellationToken),
             Times.Once);
     }

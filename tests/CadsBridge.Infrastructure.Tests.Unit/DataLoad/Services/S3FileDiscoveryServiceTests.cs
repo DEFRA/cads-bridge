@@ -15,6 +15,7 @@ using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
 using FluentAssertions;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -27,10 +28,10 @@ public class S3FileDiscoveryServiceTests
         [Fact]
         public async Task GetFileNames_ReturnsEmpty_WhenBucketIsEmpty()
         {
-            var sut = CreateSut(new[]
-            {
+            var sut = CreateSut(
+            [
                 MakePage(isTruncated: false)
-            });
+            ]);
 
             var result = await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
@@ -40,10 +41,10 @@ public class S3FileDiscoveryServiceTests
         [Fact]
         public async Task GetFileNames_ReturnsAllKeys_WhenSinglePage()
         {
-            var sut = CreateSut(new[]
-            {
+            var sut = CreateSut(
+            [
                 MakePage(isTruncated: false, keys: ["file1.csv", "file2.csv", "file3.csv"])
-            });
+            ]);
 
             var result = await sut.GetFileNames(null, TestContext.Current.CancellationToken);
 
@@ -195,9 +196,10 @@ public class S3FileDiscoveryServiceTests
             params string[] keys) =>
             new()
             {
+                HttpStatusCode = HttpStatusCode.OK,
                 IsTruncated = isTruncated,
                 NextContinuationToken = nextToken,
-                S3Objects = keys.Select(k => new S3Object { Key = k }).ToList()
+                S3Objects = [.. keys.Select(k => new S3Object { Key = k })]
             };
     }
 

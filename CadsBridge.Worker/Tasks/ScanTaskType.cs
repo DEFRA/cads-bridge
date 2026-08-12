@@ -1,12 +1,11 @@
 using CadsBridge.Core.Attributes;
-using System.ComponentModel;
 
 namespace CadsBridge.Worker.Tasks;
 
 public enum ScanTaskType
 {
-    [ScanTaskInfo("BULK", "bulk")]
+    [ScanTaskInfo("BULK", "cads/cts/bulk")]
     Bulk,
-    [ScanTaskInfo("DELTA", "daily")]
+    [ScanTaskInfo("DELTA", "cads/cts/daily")]
     Delta
 }

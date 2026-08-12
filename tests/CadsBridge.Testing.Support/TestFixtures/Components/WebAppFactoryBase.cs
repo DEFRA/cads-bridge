@@ -117,6 +117,7 @@ public abstract class WebAppFactoryBase<TStart>(
 
         Environment.SetEnvironmentVariable("Storage__Internal__BucketName", TestS3Constants.TestCadsBridgeInternalBucketName);
         Environment.SetEnvironmentVariable("Storage__External__BucketName", TestS3Constants.TestCadsBridgeExternalBucketName);
+        Environment.SetEnvironmentVariable("Storage__External__EnvironmentName", "PreProd");
 
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__HealthcheckEnabled", "true");
         Environment.SetEnvironmentVariable("ApiClients__CdsApi__BaseUrl", "http://localhost:5555");

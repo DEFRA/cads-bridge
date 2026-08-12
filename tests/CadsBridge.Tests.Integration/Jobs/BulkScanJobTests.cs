@@ -17,11 +17,12 @@ namespace CadsBridge.Tests.Integration.Jobs;
 [Trait("Dependence", "testcontainers")]
 public class BulkScanJobTests
 {
-    private const string CompleteFile = "CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345";
-    private const string FailedFile = "CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345";
+    private const string CompleteFile = "CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345.csv";
+    private const string FailedFile = "CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345.csv";
     private const string InvalidFilename = "invalid-filename.csv";
-    private const string DeltaTypeFile = "CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000";
-    private const string NewFile = "CTSM_CADS_PROD_BULK_NEW_0001_CT_ANIMALS_2026-07-31-120000";
+    private const string DeltaTypeFile = "CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000.csv";
+    private const string NewFile = "CTSM_CADS_PROD_BULK_NEW_0001_CT_ANIMALS_2026-07-31-120000.csv";
+    private const string Prefix = "cads/cts/bulk/";
 
     [Fact]
     public async Task BulkScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
@@ -33,6 +34,7 @@ public class BulkScanJobTests
         {
             ["Messaging__DisableQueueConsumer"] = "true",
             ["Quartz__Jobs__0__Enabled"] = "true",
+            ["Quartz__Jobs__0__CronSchedule"] = "*/10 * * * * ?"
         });
 
         await fixture.InitializeAsync();
@@ -49,7 +51,7 @@ public class BulkScanJobTests
             await s3.PutObjectAsync(new PutObjectRequest
             {
                 BucketName = externalBucket,
-                Key = "bulk/" + key,
+                Key = Prefix + key,
                 ContentBody = "test"
             }, ct);
         }
@@ -82,25 +84,25 @@ public class BulkScanJobTests
             }
 
             receivedMessages.Should().HaveCount(2);
-        }, backOffMilliSeconds: 500, attempts: 30);
+        }, backOffMilliSeconds: 5000, attempts: 10);
 
         // ── Verify the two expected files were enqueued ──
         var enqueuedKeys = receivedMessages.Select(m => m.ObjectKey).ToList();
 
-        enqueuedKeys.Should().Contain(FailedFile,
+        enqueuedKeys.Should().Contain(Prefix + FailedFile,
             because: "a Failed file with 0 prior attempts must be re-enqueued");
 
-        enqueuedKeys.Should().Contain(NewFile,
+        enqueuedKeys.Should().Contain(Prefix + NewFile,
             because: "a file with no prior import record must be enqueued for the first time");
 
         // ── Verify the files that must NOT be enqueued ──
-        enqueuedKeys.Should().NotContain(CompleteFile,
+        enqueuedKeys.Should().NotContain(Prefix + CompleteFile,
             because: "a Completed file must be skipped by IsFileValid");
 
-        enqueuedKeys.Should().NotContain(InvalidFilename,
+        enqueuedKeys.Should().NotContain(Prefix + InvalidFilename,
             because: "an invalid CTSM filename must be dropped before any CDS API call");
 
-        enqueuedKeys.Should().NotContain(DeltaTypeFile,
+        enqueuedKeys.Should().NotContain(Prefix + DeltaTypeFile,
             because: "a non-BULK type file must be dropped by GetValidBulkFileNames");
 
         // ── Verify the bucket and correlation metadata are present ──
