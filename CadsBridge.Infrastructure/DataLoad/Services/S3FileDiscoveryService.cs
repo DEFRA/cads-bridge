@@ -12,7 +12,6 @@ using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -29,7 +28,7 @@ public class S3FileDiscoveryService<TClient>(
 
     public async Task<List<string>> GetFileNames(string? prefix = null, CancellationToken cancellationToken = default)
     {
-        var result = await ListObjectKeys(_clientInfo, prefix ?? "", cancellationToken).ToListAsync(cancellationToken);
+        var result = await ListObjectKeys(_clientInfo, prefix, cancellationToken).ToListAsync(cancellationToken);
         return result;
     }
 
@@ -76,9 +75,18 @@ public class S3FileDiscoveryService<TClient>(
         }
     }
 
-    private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, string prefix, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private static async IAsyncEnumerable<string> ListObjectKeys(S3ClientFactory.ClientInfo clientInfo, string? prefix, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var request = new ListObjectsV2Request { BucketName = clientInfo.BucketName, Prefix = prefix };
+        if (!string.IsNullOrEmpty(prefix))
+        {
+            prefix = prefix.EndsWith('/') ? prefix : prefix + "/";
+        }
+
+        var request = new ListObjectsV2Request
+        {
+            BucketName = clientInfo.BucketName,
+            Prefix = prefix
+        };
 
         ListObjectsV2Response? response = null;
         do
