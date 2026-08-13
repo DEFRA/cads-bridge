@@ -9,11 +9,22 @@ namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
 public class FileImportStore(IFileImportApiService fileImportStatusApiService, ILogger<FileImportStore> logger) : IFileImportStore
 {
+    private const string UnknownTableName = "UNKNOWN";
+
     public async Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
+            var fileImport = await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
+            if (fileImport.DestinationTableName != UnknownTableName)
+            {
+                return fileImport.Id;
+            }
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning("Destination table name derived from {FileName} is unknown", fileName);
+            }
+            throw new Exception($"Destination table name derived from {fileName} is unknown");
         }
         catch (ConflictException ex)
         {

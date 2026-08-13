@@ -22,6 +22,7 @@ public class S3FileDiscoveryService<TClient>(
     ) : IFileDiscoveryService where TClient : IStorageClient, new()
 {
     private const int MaxFailedAttempts = 3;
+    private const string UnknownTableName = "UNKNOWN";
 
     private readonly S3ClientFactory.ClientInfo _clientInfo = s3ClientFactory.GetClientInfo<TClient>();
 
@@ -36,6 +37,7 @@ public class S3FileDiscoveryService<TClient>(
         var existingFile = await fileImportApiService.GetByFileNameIfExists(fileName, cancellationToken);
         return existingFile is null ||
                (existingFile.ImportStatus == FileImportStatus.Failed &&
+                existingFile.DestinationTableName != UnknownTableName &&
                 existingFile.FailedAttempts < MaxFailedAttempts);
     }
 

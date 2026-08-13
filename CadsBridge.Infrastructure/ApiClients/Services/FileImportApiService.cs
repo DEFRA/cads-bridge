@@ -71,7 +71,7 @@ public class FileImportApiService(
         return await GetRequestToApiAsync<FileImportDto>(endpoint, context, cancellationToken);
     }
 
-    public async Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
+    public async Task<FileImport> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
     {
         var context = $"Creating file import for '{objectKey}' with {totalRowsToProcess} records";
         var body = new CreateFileImportRequest
@@ -89,7 +89,7 @@ public class FileImportApiService(
             // This is a temporary workaround for a bug in the API where it returns 0 for the ID on creation. We will attempt to retrieve the record by file name to get the correct ID.
             dto = await GetByFileName(objectKey, cancellationToken) ?? throw new NonRetryableException($"Failed to retrieve file import for '{objectKey}'.");
         }
-        return dto.Id;
+        return dto.ToFileImport();
     }
 
     public async Task Update(long id, UpdateFileImportRequest request, CancellationToken cancellationToken)

@@ -155,7 +155,7 @@ public class FileImportStatusApiServiceTests
 
             var result = await CreateSut(handler).Create("file.csv", 10, TestContext.Current.CancellationToken);
 
-            result.Should().Be(42);
+            result.Id.Should().Be(42);
         }
 
         [Fact]
