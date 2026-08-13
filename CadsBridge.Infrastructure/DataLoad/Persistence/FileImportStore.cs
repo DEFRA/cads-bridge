@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Domain.BusinessRules;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
@@ -16,15 +17,8 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
         try
         {
             var fileImport = await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
-            if (fileImport.DestinationTableName != UnknownTableName)
-            {
-                return fileImport.Id;
-            }
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                logger.LogWarning("Destination table name derived from {FileName} is unknown", fileName);
-            }
-            throw new Exception($"Destination table name derived from {fileName} is unknown");
+            BusinessRuleChecker.CheckRule(new DestinationTableNameIsValid(fileImport));
+            return fileImport.Id;
         }
         catch (ConflictException ex)
         {

@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Worker", "CadsBr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Worker.Tests.Unit", "tests\CadsBridge.Worker.Tests.Unit\CadsBridge.Worker.Tests.Unit.csproj", "{8A78ACBD-FD2F-431E-822F-FA67C5CEF7DB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CadsBridge.Core.Tests.Unit", "tests\CadsBridge.Core.Tests.Unit\CadsBridge.Core.Tests.Unit.csproj", "{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -179,6 +181,18 @@ Global
 		{8A78ACBD-FD2F-431E-822F-FA67C5CEF7DB}.Release|x64.Build.0 = Release|Any CPU
 		{8A78ACBD-FD2F-431E-822F-FA67C5CEF7DB}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A78ACBD-FD2F-431E-822F-FA67C5CEF7DB}.Release|x86.Build.0 = Release|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Debug|x64.Build.0 = Debug|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Debug|x86.Build.0 = Debug|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Release|x64.ActiveCfg = Release|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Release|x64.Build.0 = Release|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Release|x86.ActiveCfg = Release|Any CPU
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -190,5 +204,6 @@ Global
 		{4A717033-05FF-4557-B9D7-6ECA367DE5C2} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 		{63350A54-4318-487A-883C-97A5F728CB2E} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 		{8A78ACBD-FD2F-431E-822F-FA67C5CEF7DB} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
+		{CAC35522-7039-4E8A-9275-6B70FF9EA9BF} = {5E1FF158-9AE4-4763-8000-2C4D3DCDE435}
 	EndGlobalSection
 EndGlobal

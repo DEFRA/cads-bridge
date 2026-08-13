@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using CadsBridge.Core.Exceptions;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -48,6 +49,11 @@ public class CsvDataFileImportBackgroundService(
                         try
                         {
                             fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
+                        }
+                        catch (BusinessRuleValidationException ex)
+                        {
+                            logger.LogError(ex, "Skipped import for {Key}", request.SourceKey);
+                            return;
                         }
                         catch (Exception ex)
                         {
