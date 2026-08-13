@@ -2,7 +2,7 @@ using CadsBridge.Core.Exceptions;
 
 namespace CadsBridge.Core.Domain.BusinessRules;
 
-public class BusinessRuleChecker
+public static class BusinessRuleChecker
 {
     public static void CheckRule(params IBusinessRule[] rules)
     {

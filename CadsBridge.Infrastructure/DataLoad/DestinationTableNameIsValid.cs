@@ -5,7 +5,7 @@ namespace CadsBridge.Infrastructure.DataLoad;
 
 public class DestinationTableNameIsValid(FileImport fileImport) : IBusinessRule
 {
-    private static string UnknownDestinationTableName = "UNKNOWN";
+    public static readonly string UnknownDestinationTableName = "UNKNOWN";
     public bool IsBroken()
     {
         return fileImport is null || fileImport.DestinationTableName == UnknownDestinationTableName;

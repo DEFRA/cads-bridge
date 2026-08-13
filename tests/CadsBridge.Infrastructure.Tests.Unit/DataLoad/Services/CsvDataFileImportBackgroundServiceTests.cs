@@ -9,6 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
+using Amazon.Runtime.Internal.Auth;
+using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Exceptions;
+using CadsBridge.Infrastructure.DataLoad;
+using FluentAssertions;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -142,6 +147,37 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             Times.Once);
 
         _splitProducer.Verify(x => x.SendAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Logs_exception_and_marks_skipped_when_destination_table_is_unknown()
+    {
+        var job = CreateJob();
+
+        var ex = new BusinessRuleValidationException(new DestinationTableNameIsValid(new FileImport
+        {
+            Id = 1,
+            DestinationTableName = DestinationTableNameIsValid.UnknownDestinationTableName,
+            FileName = job.SourceKey,
+            ImportStatus = FileImportStatus.Failed,
+            FailedAttempts = 1
+        }));
+
+        _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(ex);
+
+        await _sut.StartAsync(CancellationToken.None);
+        await Write(job);
+
+        await _fileImportStore.AsyncVerify(x => x.UpdateAsync(DefaultFileImportId, FileImportStatus.Failed, 0, 0, It.IsAny<CancellationToken>()), Times.Never);
+        await _logger.AsyncVerify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Skipped import for {job.SourceKey}")),
+                ex,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]

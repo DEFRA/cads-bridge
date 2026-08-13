@@ -10,8 +10,6 @@ namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
 public class FileImportStore(IFileImportApiService fileImportStatusApiService, ILogger<FileImportStore> logger) : IFileImportStore
 {
-    private const string UnknownTableName = "UNKNOWN";
-
     public async Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default)
     {
         try
