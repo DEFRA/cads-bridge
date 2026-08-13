@@ -78,9 +78,16 @@ public class FakeFileImportApiService : IFileImportApiService
         return Task.FromResult<FileImportDto?>(response);
     }
 
-    public Task<long> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
+    public Task<FileImport> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
     {
-        return Task.FromResult<long>(_random.Next(1, 99));
+        return Task.FromResult(new FileImport
+        {
+            Id = _random.Next(1, 99),
+            FileName = objectKey,
+            ImportStatus = FileImportStatus.Pending,
+            DestinationTableName = "cts_table",
+            FailedAttempts = 0
+        });
     }
 
     public Task Update(long id, UpdateFileImportRequest request, CancellationToken cancellationToken)

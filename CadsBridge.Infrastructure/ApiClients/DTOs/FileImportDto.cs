@@ -14,9 +14,22 @@ public record FileImportDto
 
     public long Id { get; set; }
     public string FileName { get; set; } = string.Empty;
+    public string DestinationTableName { get; set; } = string.Empty;
     public long TotalRowsToProcess { get; set; }
     public long RowsFound { get; set; }
     public FileImportStatus ImportStatus { get; set; }
     public FileProcessingStatus ProcessingStatus { get; set; }
     public int FailedAttempts { get; }
+
+    public FileImport ToFileImport()
+    {
+        return new FileImport
+        {
+            Id = Id,
+            FileName = FileName,
+            DestinationTableName = DestinationTableName,
+            ImportStatus = ImportStatus,
+            FailedAttempts = FailedAttempts
+        };
+    }
 }

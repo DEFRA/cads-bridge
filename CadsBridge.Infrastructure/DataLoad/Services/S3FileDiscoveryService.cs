@@ -36,6 +36,7 @@ public class S3FileDiscoveryService<TClient>(
         var existingFile = await fileImportApiService.GetByFileNameIfExists(fileName, cancellationToken);
         return existingFile is null ||
                (existingFile.ImportStatus == FileImportStatus.Failed &&
+                existingFile.DestinationTableName != DestinationTableNameIsValid.UnknownDestinationTableName &&
                 existingFile.FailedAttempts < MaxFailedAttempts);
     }
 

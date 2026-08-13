@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Domain.BusinessRules;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.DTOs.Requests;
@@ -13,7 +14,9 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
     {
         try
         {
-            return await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
+            var fileImport = await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
+            BusinessRuleChecker.CheckRule(new DestinationTableNameIsValid(fileImport));
+            return fileImport.Id;
         }
         catch (ConflictException ex)
         {

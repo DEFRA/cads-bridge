@@ -23,11 +23,37 @@ public class FileImportStatusStoreTests
         {
             _apiService
                 .Setup(x => x.Create("file.csv", 100L, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(7L);
+                .ReturnsAsync(new FileImport
+                {
+                    Id = 7L,
+                    FileName = "file.csv",
+                    DestinationTableName = "some_table",
+                    ImportStatus = FileImportStatus.Pending,
+                    FailedAttempts = 0
+                });
 
             var result = await CreateSut().CreateAsync("file.csv", 100L, TestContext.Current.CancellationToken);
 
             result.Should().Be(7L);
+        }
+
+        [Fact]
+        public async Task Creates_ThrowsExceptions_WhenApiSucceedsWithUknownDestinationTable()
+        {
+            _apiService
+                .Setup(x => x.Create("file.csv", 100L, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileImport
+                {
+                    Id = 7L,
+                    FileName = "file.csv",
+                    DestinationTableName = "UNKNOWN",
+                    ImportStatus = FileImportStatus.Pending,
+                    FailedAttempts = 0
+                });
+
+            var act = async () => await CreateSut().CreateAsync("file.csv", 100L, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<BusinessRuleValidationException>();
         }
 
         [Fact]
