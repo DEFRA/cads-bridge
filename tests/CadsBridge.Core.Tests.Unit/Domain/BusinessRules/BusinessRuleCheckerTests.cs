@@ -1,9 +1,9 @@
-﻿using CadsBridge.Core.Domain.BusinessRules;
+using CadsBridge.Core.Domain.BusinessRules;
 using CadsBridge.Core.Exceptions;
 using FluentAssertions;
 using Moq;
 
-namespace CadsBridge.Core.Tests.Unit;
+namespace CadsBridge.Core.Tests.Unit.Domain.BusinessRules;
 
 public class BusinessRuleCheckerTests
 {
