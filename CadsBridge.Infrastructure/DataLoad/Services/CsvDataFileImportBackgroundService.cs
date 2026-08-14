@@ -47,9 +47,12 @@ public class CsvDataFileImportBackgroundService(
                     {
                         try
                         {
-                            var fileImportId = await CreateFileImportRecord(stoppingToken, fileImportStore, request);
-
-                            await ProcessFileTransferAndDecrypt(stoppingToken, s3ExternalToInternalCopyService, request, fileImportId, fileImportStore, splitMessageProducer);
+                            var fileImportId = await CreateFileImportRecord(fileImportStore, request, stoppingToken);
+                            if (fileImportId is null)
+                            {
+                                return; // File import record not created
+                            }
+                            await ProcessFileTransferAndDecrypt(s3ExternalToInternalCopyService, request, fileImportId.Value, fileImportStore, splitMessageProducer, stoppingToken);
                         }
                         finally
                         {
@@ -64,9 +67,13 @@ public class CsvDataFileImportBackgroundService(
         await Task.WhenAll(runningTasks);
     }
 
-    private async Task ProcessFileTransferAndDecrypt(CancellationToken stoppingToken,
-        IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId,
-        IFileImportStore fileImportStore, ISplitMessageProducer splitMessageProducer)
+    private async Task ProcessFileTransferAndDecrypt(
+        IS3CopyService s3ExternalToInternalCopyService,
+        CsvDataFileImportJob request,
+        long fileImportId,
+        IFileImportStore fileImportStore,
+        ISplitMessageProducer splitMessageProducer,
+        CancellationToken stoppingToken)
     {
         try
         {
@@ -91,8 +98,10 @@ public class CsvDataFileImportBackgroundService(
         }
     }
 
-    private async Task<long> CreateFileImportRecord(CancellationToken stoppingToken, IFileImportStore fileImportStore,
-        CsvDataFileImportJob request)
+    private async Task<long?> CreateFileImportRecord(
+        IFileImportStore fileImportStore,
+        CsvDataFileImportJob request,
+        CancellationToken stoppingToken)
     {
         long fileImportId;
         try
@@ -106,7 +115,7 @@ public class CsvDataFileImportBackgroundService(
             {
                 logger.LogError(ex, "Skipped import for {Key}", request.SourceKey);
             }
-            return 0;
+            return null;
         }
         catch (Exception ex)
         {
@@ -114,7 +123,7 @@ public class CsvDataFileImportBackgroundService(
             {
                 logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
             }
-            return 0;
+            return null;
         }
 
         return fileImportId;
