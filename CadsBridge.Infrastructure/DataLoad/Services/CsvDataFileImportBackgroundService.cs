@@ -45,35 +45,11 @@ public class CsvDataFileImportBackgroundService(
 
                     using (CorrelationScope.Begin(request.CorrelationId))
                     {
-                        long fileImportId;
                         try
                         {
-                            fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, cancellationToken: stoppingToken);
-                        }
-                        catch (BusinessRuleValidationException ex)
-                        {
-                            logger.LogError(ex, "Skipped import for {Key}", request.SourceKey);
-                            return;
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
-                            return;
-                        }
+                            var fileImportId = await CreateFileImportRecord(stoppingToken, fileImportStore, request);
 
-                        try
-                        {
-                            var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request, fileImportId, stoppingToken);
-                            await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred, totalRowsToProcess, cancellationToken: stoppingToken);
-
-                            await splitMessageProducer.SendAsync(
-                                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess, request.CorrelationId),
-                                stoppingToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
-                            await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}", stoppingToken);
+                            await ProcessFileTransferAndDecrypt(stoppingToken, s3ExternalToInternalCopyService, request, fileImportId, fileImportStore, splitMessageProducer);
                         }
                         finally
                         {
@@ -86,6 +62,62 @@ public class CsvDataFileImportBackgroundService(
             runningTasks.Add(task);
         }
         await Task.WhenAll(runningTasks);
+    }
+
+    private async Task ProcessFileTransferAndDecrypt(CancellationToken stoppingToken,
+        IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId,
+        IFileImportStore fileImportStore, ISplitMessageProducer splitMessageProducer)
+    {
+        try
+        {
+            var totalRowsToProcess = await ProcessRequest(s3ExternalToInternalCopyService, request,
+                fileImportId, stoppingToken);
+            await fileImportStore.UpdateAsync(fileImportId, FileImportStatus.Transferred,
+                totalRowsToProcess, cancellationToken: stoppingToken);
+
+            await splitMessageProducer.SendAsync(
+                new CsvDataFileSplitJob(request.TargetKey, fileImportId, totalRowsToProcess,
+                    request.CorrelationId),
+                stoppingToken);
+        }
+        catch (Exception ex)
+        {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
+            }
+            await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}",
+                stoppingToken);
+        }
+    }
+
+    private async Task<long> CreateFileImportRecord(CancellationToken stoppingToken, IFileImportStore fileImportStore,
+        CsvDataFileImportJob request)
+    {
+        long fileImportId;
+        try
+        {
+            fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName,
+                cancellationToken: stoppingToken);
+        }
+        catch (BusinessRuleValidationException ex)
+        {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError(ex, "Skipped import for {Key}", request.SourceKey);
+            }
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError(ex, "Failed to initiate import for {Key}", request.SourceKey);
+            }
+            return 0;
+        }
+
+        return fileImportId;
     }
 
     private async Task<long> ProcessRequest(IS3CopyService s3ExternalToInternalCopyService, CsvDataFileImportJob request, long fileImportId, CancellationToken stoppingToken)
