@@ -51,16 +51,7 @@ public class CsvDataFileSplitBackgroundService(
                     {
                         try
                         {
-                            var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
-
-                            if (foundRows > 0)
-                            {
-                                await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
-                            }
-                            else
-                            {
-                                await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
-                            }
+                            await ProcessCsvDataFileSplit(request, csvDataFileSplitterService, fileImportStore, stoppingToken);
                         }
                         catch (Exception ex)
                         {
@@ -83,5 +74,21 @@ public class CsvDataFileSplitBackgroundService(
         }
 
         await Task.WhenAll(runningTasks);
+    }
+
+    private static async Task ProcessCsvDataFileSplit(CsvDataFileSplitJob request,
+        ICsvDataFileSplitterService csvDataFileSplitterService, IFileImportStore fileImportStore,
+        CancellationToken stoppingToken)
+    {
+        var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
+
+        if (foundRows > 0)
+        {
+            await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+        }
+        else
+        {
+            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
+        }
     }
 }

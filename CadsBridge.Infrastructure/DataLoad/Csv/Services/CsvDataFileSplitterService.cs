@@ -28,6 +28,7 @@ public class CsvDataFileSplitterService(
             }
 
             attempt++;
+
             if (attempt > config.MaxRetryAttempts)
             {
                 throw new RetriesExceededException($"Exceeded maximum retry attempts ({config.MaxRetryAttempts}) for splitting {job.SourceKey}");
@@ -35,24 +36,7 @@ public class CsvDataFileSplitterService(
 
             try
             {
-                if (logger.IsEnabled(LogLevel.Information))
-                {
-                    logger.LogInformation(
-                        "S3 splitting copy of {Key}, attempt {Attempt}",
-                        job.SourceKey,
-                        attempt);
-                }
-
-                var result = await csvDataFileSplitterStrategy.ProcessAsync(job, cancellationToken);
-
-                if (logger.IsEnabled(LogLevel.Information))
-                {
-                    logger.LogInformation(
-                        "S3 file split complete: {SourceKey}",
-                        job.SourceKey);
-                }
-
-                return result;
+                return await SplitAsync(job, attempt, csvDataFileSplitterStrategy, cancellationToken);
             }
             catch (Exception ex) when (
                 attempt < config.MaxRetryAttempts &&
@@ -74,5 +58,28 @@ public class CsvDataFileSplitterService(
                 await Task.Delay(delay, cancellationToken);
             }
         }
+    }
+
+    private async Task<long> SplitAsync(CsvDataFileSplitJob job, int attempt,
+        ICsvDataFileSplitterStrategy csvDataFileSplitterStrategy, CancellationToken cancellationToken)
+    {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "S3 splitting copy of {Key}, attempt {Attempt}",
+                job.SourceKey,
+                attempt);
+        }
+
+        var result = await csvDataFileSplitterStrategy.ProcessAsync(job, cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "S3 file split complete: {SourceKey}",
+                job.SourceKey);
+        }
+
+        return result;
     }
 }

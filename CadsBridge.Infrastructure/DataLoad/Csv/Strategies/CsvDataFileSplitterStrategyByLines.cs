@@ -8,7 +8,9 @@ using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using Amazon.S3;
 using CadsBridge.Core.Exceptions;
+using CadsBridge.Infrastructure.Storage.Factories;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
@@ -58,6 +60,17 @@ public class CsvDataFileSplitterStrategyByLines(
         // and apply lowercase to the remaining columns.
         columns = columns.ProcessColumnDefinitions(ColumnDelimiter);
 
+        return await SplitAsync(job.SourceKey, columns, reader, s3, internalS3Info.BucketName, cancellationToken);
+    }
+
+    private async Task<long> SplitAsync(
+        string sourceKey,
+        string columns,
+        StreamReader reader,
+        IAmazonS3 s3,
+        string bucketName,
+        CancellationToken cancellationToken)
+    {
         var chunkNumber = 1;
         var lineCount = 0;
         var totalLinesProcessed = 0;
@@ -70,7 +83,7 @@ public class CsvDataFileSplitterStrategyByLines(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
+                    logger.LogInformation("Cancellation requested for {Key}, aborting split", sourceKey);
                 return 0;
             }
 
@@ -90,8 +103,8 @@ public class CsvDataFileSplitterStrategyByLines(
             if (lineCount >= config.SplitValue || (lineCount > 0 && isTerminatorLine)) // only upload if there are lines to upload
             {
                 await s3.UploadChunkAsync(
-                    internalS3Info.BucketName,
-                    job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
+                    bucketName,
+                    sourceKey.FormatSplitFileTargetKey(chunkNumber),
                     chunkBuilder.ToString(),
                     cancellationToken: cancellationToken);
 
@@ -109,8 +122,8 @@ public class CsvDataFileSplitterStrategyByLines(
             totalLinesProcessed += lineCount;
 
             await s3.UploadChunkAsync(
-                internalS3Info.BucketName,
-                job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
+                bucketName,
+                sourceKey.FormatSplitFileTargetKey(chunkNumber),
                 chunkBuilder.ToString(),
                 cancellationToken: cancellationToken);
         }
