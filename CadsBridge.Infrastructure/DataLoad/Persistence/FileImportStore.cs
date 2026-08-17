@@ -42,20 +42,34 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
 
     private async Task<long> MarkFileReset(string fileName, CancellationToken cancellationToken = default)
     {
-        var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken) ?? throw new NotFoundException(
-                $"File import status for '{fileName}' was not found when attempting to reset it after a conflict.");
-        if (fileImportStatus.ImportStatus == FileImportStatus.Completed)
+        try
         {
-            throw new InvalidOperationException(
-                $"File import status for '{fileName}' is already marked as completed and cannot be reset.");
+            var fileImportStatus = await fileImportStatusApiService.GetByFileName(fileName, cancellationToken)
+                ?? throw new NotFoundException(
+                    $"File import status for '{fileName}' was not found when attempting to reset it.");
+
+            if (fileImportStatus.ImportStatus == FileImportStatus.Completed)
+            {
+                throw new InvalidOperationException(
+                    $"File import status for '{fileName}' is already marked as completed and cannot be reset.");
+            }
+            if (fileImportStatus.ImportStatus == FileImportStatus.Failed && fileImportStatus.FailedAttempts >= 3)
+            {
+                throw new InvalidOperationException(
+                    $"File import status for '{fileName}' has failed too many times and cannot be reset.");
+            }
+
+            await fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
+            return fileImportStatus.Id;
         }
-        if (fileImportStatus.ImportStatus == FileImportStatus.Failed && fileImportStatus.FailedAttempts >= 3)
+        catch (NotFoundException ex)
         {
-            throw new InvalidOperationException(
-                $"File import status for '{fileName}' has failed too many times and cannot be reset.");
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(ex, "File import status for {FileName} was not found when attempting to reset it.", fileName);
+            }
+            throw;
         }
-        await fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
-        return fileImportStatus.Id;
     }
 
     public async Task MarkFailedAsync(long fileImportId, string? reason = null, CancellationToken cancellationToken = default)

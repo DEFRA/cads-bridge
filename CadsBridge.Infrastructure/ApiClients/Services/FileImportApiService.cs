@@ -37,6 +37,7 @@ public class FileImportApiService(
     {
         var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
         var context = $"Getting file import status for '{objectKey}' if it exists";
+
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
@@ -46,22 +47,12 @@ public class FileImportApiService(
         {
             var response = await SendAsync(ct => _httpClient.GetAsync(endpoint, ct), context, cancellationToken);
 
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("API call succeeded: {Context}", context);
-            }
-
             return await ReadJsonOrThrowAsync<FileImportDto>(response, context, cancellationToken);
         }
-        catch (NonRetryableException ex)
+        catch (NotFoundException)
         {
-            if (ex.Message.Contains("404 Not Found"))
-            {
-                return null;
-            }
-            throw;
+            return null;
         }
-
     }
 
     public async Task<FileImportDto?> GetByFileName(string objectKey, CancellationToken cancellationToken)
@@ -134,11 +125,6 @@ public class FileImportApiService(
         }
 
         var response = await SendAsync(ct => _httpClient.GetAsync(requestUri, ct), context, cancellationToken);
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation("API call succeeded: {Context}", context);
-        }
 
         return await ReadJsonOrThrowAsync<T>(response, context, cancellationToken);
     }
@@ -222,6 +208,7 @@ public class FileImportApiService(
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter() }
             };
+
             var result = await response.Content.ReadFromJsonAsync<T>(options, cancellationToken);
             if (result is null)
             {
@@ -244,31 +231,23 @@ public class FileImportApiService(
         }
     }
 
-    private async Task HandleFailedRequestAsync(HttpResponseMessage response, string context,
+    private static async Task HandleFailedRequestAsync(
+        HttpResponseMessage response,
+        string context,
         CancellationToken cancellationToken)
     {
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (logger.IsEnabled(LogLevel.Warning))
-        {
-            logger.LogWarning("API call failed: {Context}, Status: {Status}, Response: {Response}",
-                context, response.StatusCode, content);
-        }
-        if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.RequestTimeout)
-        {
-            throw new RetryableException(
-                $"Transient failure when calling {context}. " +
-                $"Status: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {content}");
-        }
 
-        if (response.StatusCode == HttpStatusCode.Conflict)
+        throw response.StatusCode switch
         {
-            throw new ConflictException(
-                $"Conflict when calling {context}. " +
-                $"Status: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {content}");
-        }
-
-        throw new NonRetryableException(
-            $"Permanent failure when calling {context}. " +
-            $"Status: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {content}");
+            HttpStatusCode.NotFound => new NotFoundException(
+                $"NotFound response when calling {context}."),
+            HttpStatusCode.Conflict => new ConflictException(
+                $"Conflict calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+            HttpStatusCode.RequestTimeout or >= HttpStatusCode.InternalServerError => new RetryableException(
+                $"Transient failure calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+            _ => new NonRetryableException(
+                $"Permanent failure calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+        };
     }
 }
