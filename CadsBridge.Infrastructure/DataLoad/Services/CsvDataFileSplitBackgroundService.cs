@@ -84,11 +84,11 @@ public class CsvDataFileSplitBackgroundService(
 
         if (foundRows > 0)
         {
-            await fileImportStore.UpdateAsync(request.FileImportId.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+            await fileImportStore.UpdateAsync(request.FileImportId!.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
         }
         else
         {
-            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: No rows to process", stoppingToken);
+            await fileImportStore.MarkFailedAsync(request.FileImportId!.Value, $"Split failed: No rows to process", stoppingToken);
         }
     }
 }
