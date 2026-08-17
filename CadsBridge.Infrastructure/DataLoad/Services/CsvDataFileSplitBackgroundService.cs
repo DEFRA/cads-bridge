@@ -49,23 +49,7 @@ public class CsvDataFileSplitBackgroundService(
 
                     using (CorrelationScope.Begin(request.CorrelationId))
                     {
-                        try
-                        {
-                            await ProcessCsvDataFileSplit(request, csvDataFileSplitterService, fileImportStore, stoppingToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (logger.IsEnabled(LogLevel.Error))
-                            {
-                                logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                            }
-                            var token = ex is OperationCanceledException ? CancellationToken.None : stoppingToken;
-                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", token);
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
+                        await ProcessCsvDataFileSplit(csvDataFileSplitterService, request, fileImportStore, semaphore, stoppingToken);
                     }
                 },
                 stoppingToken);
@@ -76,19 +60,35 @@ public class CsvDataFileSplitBackgroundService(
         await Task.WhenAll(runningTasks);
     }
 
-    private static async Task ProcessCsvDataFileSplit(CsvDataFileSplitJob request,
-        ICsvDataFileSplitterService csvDataFileSplitterService, IFileImportStore fileImportStore,
+    private async Task ProcessCsvDataFileSplit(ICsvDataFileSplitterService csvDataFileSplitterService,
+        CsvDataFileSplitJob request, IFileImportStore fileImportStore, SemaphoreSlim semaphore,
         CancellationToken stoppingToken)
     {
-        var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
+        try
+        {
+            var foundRows = await csvDataFileSplitterService.ExecuteAsync(request, stoppingToken);
 
-        if (foundRows > 0)
-        {
-            await fileImportStore.UpdateAsync(request.FileImportId!.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+            if (foundRows > 0)
+            {
+                await fileImportStore.UpdateAsync(request.FileImportId!.Value, FileImportStatus.Split, request.TotalRowsToProcess, foundRows, stoppingToken);
+            }
+            else
+            {
+                await fileImportStore.MarkFailedAsync(request.FileImportId!.Value, $"Split failed: No rows to process", stoppingToken);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await fileImportStore.MarkFailedAsync(request.FileImportId!.Value, $"Split failed: No rows to process", stoppingToken);
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
+            }
+            var token = ex is OperationCanceledException ? CancellationToken.None : stoppingToken;
+            await fileImportStore.MarkFailedAsync(request.FileImportId!.Value, $"Split failed: {ex.Message}", token);
+        }
+        finally
+        {
+            semaphore.Release();
         }
     }
 }
