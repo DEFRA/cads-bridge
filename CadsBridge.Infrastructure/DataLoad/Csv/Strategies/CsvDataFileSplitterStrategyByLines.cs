@@ -8,6 +8,7 @@ using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using CadsBridge.Core.Exceptions;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
@@ -26,7 +27,7 @@ public class CsvDataFileSplitterStrategyByLines(
     {
         if (!config.SplitValue.HasValue)
         {
-            throw new ArgumentException("Split value must be specified for splitting.");
+            throw new NonRetryableException("Split value must be specified for splitting.");
         }
         var internalS3Info = s3ClientFactory.GetClientInfo<InternalStorageClient>();
         var s3 = internalS3Info.Client;
@@ -73,14 +74,20 @@ public class CsvDataFileSplitterStrategyByLines(
                 return 0;
             }
 
+            if (string.IsNullOrEmpty(line))
+            {
+                continue; // Skip empty lines
+            }
+
+            var isTerminatorLine = line[0].Equals(TerminatorRowIndicator);
             // Exclude terminator line from processing.
-            if (!line[0].Equals(TerminatorRowIndicator))
+            if (!isTerminatorLine)
             {
                 chunkBuilder.AppendLine(line);
                 lineCount++;
             }
 
-            if (lineCount >= config.SplitValue || line[0].Equals(TerminatorRowIndicator))
+            if (lineCount >= config.SplitValue || (lineCount > 0 && isTerminatorLine)) // only upload if there are lines to upload
             {
                 await s3.UploadChunkAsync(
                     internalS3Info.BucketName,

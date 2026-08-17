@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Amazon.Runtime.Internal;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -63,8 +64,12 @@ public class CsvDataFileSplitBackgroundService(
                         }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
-                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", stoppingToken);
+                            if (logger.IsEnabled(LogLevel.Error))
+                            {
+                                logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
+                            }
+                            var token = ex is OperationCanceledException ? CancellationToken.None : stoppingToken;
+                            await fileImportStore.MarkFailedAsync(request.FileImportId.Value, $"Split failed: {ex.Message}", token);
                         }
                         finally
                         {

@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad;
+using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Services;
@@ -35,7 +36,7 @@ public class CsvDataFileSplitterServiceTests
         var sut = CreateSut(new FakeS3(), SplitType.ByLines, null);
         var request = new CsvDataFileSplitJob(SourceKey, null);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<NonRetryableException>(() =>
             sut.ExecuteAsync(request, CancellationToken.None));
     }
 
@@ -132,10 +133,6 @@ public class CsvDataFileSplitterServiceTests
                 "record_type|first_name|last_name",
                 "D|Charlie|Brown",
                 "D|Dana|White",
-                string.Empty),
-            [ExpectedKey(3)] = string.Join(
-                Environment.NewLine,
-                "record_type|first_name|last_name",
                 string.Empty)
         });
     }

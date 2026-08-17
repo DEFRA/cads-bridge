@@ -93,8 +93,9 @@ public class CsvDataFileImportBackgroundService(
             {
                 logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
             }
+            var token = ex is OperationCanceledException ? CancellationToken.None : stoppingToken;
             await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}",
-                stoppingToken);
+                token);
         }
     }
 
