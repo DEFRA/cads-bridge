@@ -74,7 +74,7 @@ public class CsvDataFileSplitterStrategyByLines(
                 return 0;
             }
 
-            if (string.IsNullOrEmpty(line))
+            if (string.IsNullOrWhiteSpace(line))
             {
                 continue; // Skip empty lines
             }
