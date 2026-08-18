@@ -9,7 +9,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using Amazon.Runtime.Internal;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -24,37 +23,45 @@ public class CsvDataFileSplitBackgroundService(
         var semaphore = new SemaphoreSlim(config.MaxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
+        try
         {
-            if (stoppingToken.IsCancellationRequested)
+            // Drain the channel rather than aborting: WaitToReadAsync observes the stopping token,
+            // but we deliberately do NOT abandon in-flight work. When cancellation is requested we
+            // stop accepting new jobs and fall through to Task.WhenAll so already-started splits can
+            // finish (or run their mark-as-failed path) before the host tears the process down.
+            while (await channel.Reader.WaitToReadAsync(stoppingToken))
             {
-                logger.LogInformation("Cancellation requested, aborting split");
-                return;
-            }
-
-            if (!request.FileImportId.HasValue)
-            {
-                logger.LogError("FileImportId is required for split job {Key}, CorrelationId {CorrelationId}", request.SourceKey, request.CorrelationId);
-                continue;
-            }
-
-            await semaphore.WaitAsync(stoppingToken);
-
-            var task = Task.Run(
-                async () =>
+                while (channel.Reader.TryRead(out var request))
                 {
-                    using var scope = scopeFactory.CreateScope();
-                    var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
-                    var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
-
-                    using (CorrelationScope.Begin(request.CorrelationId))
+                    if (!request.FileImportId.HasValue)
                     {
-                        await ProcessCsvDataFileSplit(csvDataFileSplitterService, request, fileImportStore, semaphore, stoppingToken);
+                        logger.LogError("FileImportId is required for split job {Key}, CorrelationId {CorrelationId}", request.SourceKey, request.CorrelationId);
+                        continue;
                     }
-                },
-                stoppingToken);
 
-            runningTasks.Add(task);
+                    await semaphore.WaitAsync(stoppingToken);
+
+                    var task = Task.Run(
+                        async () =>
+                        {
+                            using var scope = scopeFactory.CreateScope();
+                            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+                            var csvDataFileSplitterService = scope.ServiceProvider.GetRequiredService<ICsvDataFileSplitterService>();
+
+                            using (CorrelationScope.Begin(request.CorrelationId))
+                            {
+                                await ProcessCsvDataFileSplit(csvDataFileSplitterService, request, fileImportStore, semaphore, stoppingToken);
+                            }
+                        },
+                        stoppingToken);
+
+                    runningTasks.Add(task);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("Shutdown requested; waiting for in-flight splits to finalise");
         }
 
         await Task.WhenAll(runningTasks);
@@ -83,12 +90,36 @@ public class CsvDataFileSplitBackgroundService(
             {
                 logger.LogError(ex, "Failed to split file {Key}", request.SourceKey);
             }
-            var token = ex is OperationCanceledException ? CancellationToken.None : stoppingToken;
-            await fileImportStore.MarkFailedAsync(request.FileImportId!.Value, $"Split failed: {ex.Message}", token);
+            await MarkFailedWithinGracePeriodAsync(fileImportStore, request.FileImportId!.Value,
+                $"Split failed: {ex.Message}");
         }
         finally
         {
             semaphore.Release();
+        }
+    }
+
+    private async Task MarkFailedWithinGracePeriodAsync(
+        IFileImportStore fileImportStore,
+        long fileImportId,
+        string reason)
+    {
+        // Use a fresh, bounded token that is independent of the host stopping token so the
+        // mark-as-failed API call is neither pre-empted by shutdown nor able to hang the
+        // shutdown indefinitely if the API is slow/unresponsive.
+        using var markCts = new CancellationTokenSource(
+            TimeSpan.FromSeconds(config.MarkFailedTimeoutSeconds));
+        try
+        {
+            await fileImportStore.MarkFailedAsync(fileImportId, reason, markCts.Token);
+        }
+        catch (Exception markEx)
+        {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError(markEx,
+                    "Failed to mark split {FileImportId} as failed", fileImportId);
+            }
         }
     }
 }

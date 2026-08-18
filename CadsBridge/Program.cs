@@ -28,6 +28,11 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
 {
     builder.Configuration.AddEnvironmentVariables();
 
+    // Give hosted background services time to gracefully finalise in-flight S3 transfers/uploads
+    var shutdownTimeoutSeconds = builder.Configuration.GetValue("Host:ShutdownTimeoutSeconds", 25);
+    builder.Services.Configure<HostOptions>(options =>
+        options.ShutdownTimeout = TimeSpan.FromSeconds(shutdownTimeoutSeconds));
+
     // Configure logging to use the CDP Platform standards.
     builder.Services.AddHttpContextAccessor();
     builder.Host.UseSerilog(CdpLogging.Configuration);
