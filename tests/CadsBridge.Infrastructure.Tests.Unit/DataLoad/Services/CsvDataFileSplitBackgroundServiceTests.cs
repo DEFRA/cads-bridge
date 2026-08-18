@@ -110,6 +110,33 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Logs_error_and_swallows_when_mark_failed_throws()
+    {
+        var job = CreateJob(1);
+        var splitEx = new InvalidOperationException("Split failed");
+        var markEx = new InvalidOperationException("Mark failed API unavailable");
+
+        _splitter.Setup(x => x.ExecuteAsync(job, It.IsAny<CancellationToken>()))
+                 .ThrowsAsync(splitEx);
+
+        _fileImportStatusStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                              .ThrowsAsync(markEx);
+
+        await _sut.StartAsync(CancellationToken.None);
+        await Write(job);
+
+        // The mark-as-failed failure must be logged distinctly and must not propagate.
+        await _logger.AsyncVerify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to mark split {job.FileImportId!.Value} as failed")),
+                markEx,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task Processes_multiple_jobs_independently()
     {
         var job1 = CreateJob(1);
