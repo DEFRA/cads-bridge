@@ -40,7 +40,7 @@ public class FileImportApiService(
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
+            logger.LogDebug("Initiating Get API call '{RequestUri}': '{Context}'", endpoint, context);
         }
 
         try
@@ -121,7 +121,7 @@ public class FileImportApiService(
     {
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Initiating Get API call '{requestUri}': '{Context}'", requestUri, context);
+            logger.LogDebug("Initiating Get API call '{RequestUri}': '{Context}'", requestUri, context);
         }
 
         var response = await SendAsync(ct => _httpClient.GetAsync(requestUri, ct), context, cancellationToken);
@@ -133,7 +133,7 @@ public class FileImportApiService(
     {
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Initiating Post API call '{requestUri}': '{Context}'", requestUri, context);
+            logger.LogDebug("Initiating Post API call '{RequestUri}': '{Context}'", requestUri, context);
         }
 
         var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, options: JsonDefaults.DefaultOptionsWithStringEnumConversion, ct), context, cancellationToken);
@@ -145,7 +145,7 @@ public class FileImportApiService(
     {
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Initiating Put API call '{requestUri}': '{Context}'", requestUri, context);
+            logger.LogDebug("Initiating Put API call '{RequestUri}': '{Context}'", requestUri, context);
         }
 
         var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, options: JsonDefaults.DefaultOptionsWithStringEnumConversion, ct), context, cancellationToken);

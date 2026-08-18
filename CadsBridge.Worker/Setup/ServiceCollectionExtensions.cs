@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddTasks();
     }
 
-    private static IServiceCollection AddQuartzJobs(this IServiceCollection services, IConfiguration configuration)
+    private static void AddQuartzJobs(this IServiceCollection services, IConfiguration configuration)
     {
         var scheduledJobsConfiguration =
             configuration.GetRequiredSection("Quartz:Jobs").Get<List<ScheduledJobConfiguration>>() ?? [];
@@ -48,8 +48,6 @@ public static class ServiceCollectionExtensions
                 options.WaitForJobsToComplete = true;
             });
         }
-
-        return services;
     }
 
     private static void AddQuartzJob<T>(this IServiceCollectionQuartzConfigurator quartzConfigurator,
