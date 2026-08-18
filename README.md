@@ -30,6 +30,17 @@ The CADS Bridge service is a data ingestion service for the CADS Central Data Pl
 
 ## Getting Started
 
+**Create a .env file in the backend root:**
+
+These values are used by the backend’s Docker Compose:
+   
+```bash
+ENV=local
+ApiClients__CdsApi__BasicApiKey=****
+DataLoad__Salt=****
+ApiClients__CdsApi__UseFakeClient=false|true
+```
+
 A Docker Compose template is in [docker-compose.yml](docker-compose.yml).
 
 A local environment with:
