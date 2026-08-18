@@ -21,11 +21,14 @@ public class CsvDataFileSplitterService(
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
+                {
                     logger.LogInformation("Cancellation requested for {Key}, aborting split", job.SourceKey);
+                }
                 return 0;
             }
 
             attempt++;
+
             if (attempt > config.MaxRetryAttempts)
             {
                 throw new RetriesExceededException($"Exceeded maximum retry attempts ({config.MaxRetryAttempts}) for splitting {job.SourceKey}");
@@ -33,35 +36,50 @@ public class CsvDataFileSplitterService(
 
             try
             {
-                if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation(
-                        "S3 splitting copy of {Key}, attempt {Attempt}",
-                        job.SourceKey,
-                        attempt);
-
-                var result = await csvDataFileSplitterStrategy.ProcessAsync(job, cancellationToken);
-
-                if (logger.IsEnabled(LogLevel.Information))
-                    logger.LogInformation(
-                        "S3 file split complete: {SourceKey}",
-                        job.SourceKey);
-
-                return result;
+                return await SplitAsync(job, attempt, csvDataFileSplitterStrategy, cancellationToken);
             }
-            catch (Exception ex) when (attempt < config.MaxRetryAttempts)
+            catch (Exception ex) when (
+                attempt < config.MaxRetryAttempts &&
+                ex is not NonRetryableException &&
+                ex is not OperationCanceledException)
             {
                 var delay = TimeSpan.FromMilliseconds(config.RetryDelayBase * Math.Pow(2, attempt - 1));
-
-                logger.LogWarning(
-                    ex,
-                    "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
-                    job.SourceKey,
-                    attempt,
-                    config.MaxRetryAttempts,
-                    delay.TotalMilliseconds);
+                if (logger.IsEnabled(LogLevel.Warning))
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Error splitting {Key}, attempt {Attempt}/{Max}. Retrying in {Delay}ms",
+                        job.SourceKey,
+                        attempt,
+                        config.MaxRetryAttempts,
+                        delay.TotalMilliseconds);
+                }
 
                 await Task.Delay(delay, cancellationToken);
             }
         }
+    }
+
+    private async Task<long> SplitAsync(CsvDataFileSplitJob job, int attempt,
+        ICsvDataFileSplitterStrategy csvDataFileSplitterStrategy, CancellationToken cancellationToken)
+    {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "S3 splitting copy of {Key}, attempt {Attempt}",
+                job.SourceKey,
+                attempt);
+        }
+
+        var result = await csvDataFileSplitterStrategy.ProcessAsync(job, cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "S3 file split complete: {SourceKey}",
+                job.SourceKey);
+        }
+
+        return result;
     }
 }

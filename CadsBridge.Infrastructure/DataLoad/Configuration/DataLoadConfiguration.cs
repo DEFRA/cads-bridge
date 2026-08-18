@@ -10,4 +10,5 @@ public class DataLoadConfiguration
     public int MaxRetryAttempts { get; set; } = 3;
     public int RetryDelayBase { get; set; } = 500;
     public int MaxParallelDownloads { get; set; } = 4;
+    public int MarkFailedTimeoutSeconds { get; set; } = 10;
 }

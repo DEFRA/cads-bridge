@@ -25,45 +25,57 @@ public class CsvDataFileImportBackgroundService(
         var semaphore = new SemaphoreSlim(config.MaxParallelDownloads);
         var runningTasks = new ConcurrentBag<Task>();
 
-        await foreach (var request in channel.Reader.ReadAllAsync(stoppingToken))
+        try
         {
-            if (stoppingToken.IsCancellationRequested)
+            // Drain the channel rather than aborting: WaitToReadAsync observes the stopping token,
+            // but we deliberately do NOT abandon in-flight work. When cancellation is requested we
+            // stop accepting new jobs and fall through to Task.WhenAll so already-started imports
+            // can finish (or run their mark-as-failed path) before the host tears the process down.
+            while (await channel.Reader.WaitToReadAsync(stoppingToken))
             {
-                logger.LogInformation("Cancellation requested, aborting copy");
-                return;
-            }
-
-            await semaphore.WaitAsync(stoppingToken);
-
-            var task = Task.Run(
-                async () =>
+                while (channel.Reader.TryRead(out var request))
                 {
-                    using var scope = serviceScopeFactory.CreateScope();
-                    var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
-                    var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
-                    var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
+                    await semaphore.WaitAsync(stoppingToken);
 
-                    using (CorrelationScope.Begin(request.CorrelationId))
-                    {
-                        try
+                    var task = Task.Run(
+                        async () =>
                         {
-                            var fileImportId = await CreateFileImportRecord(fileImportStore, request, stoppingToken);
-                            if (fileImportId is null)
+                            using var scope = serviceScopeFactory.CreateScope();
+                            var fileImportStore = scope.ServiceProvider.GetRequiredService<IFileImportStore>();
+                            var s3ExternalToInternalCopyService = scope.ServiceProvider.GetRequiredService<IS3CopyService>();
+                            var splitMessageProducer = scope.ServiceProvider.GetRequiredService<ISplitMessageProducer>();
+
+                            using (CorrelationScope.Begin(request.CorrelationId))
                             {
-                                return; // File import record not created
+                                try
+                                {
+                                    var fileImportId = await CreateFileImportRecord(fileImportStore, request, stoppingToken);
+                                    if (fileImportId is null)
+                                    {
+                                        return; // File import record not created
+                                    }
+                                    await ProcessFileTransferAndDecrypt(s3ExternalToInternalCopyService, request, fileImportId.Value, fileImportStore, splitMessageProducer, stoppingToken);
+                                }
+                                finally
+                                {
+                                    semaphore.Release();
+                                }
                             }
-                            await ProcessFileTransferAndDecrypt(s3ExternalToInternalCopyService, request, fileImportId.Value, fileImportStore, splitMessageProducer, stoppingToken);
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
-                    }
-                },
-                stoppingToken);
+                        },
+                        stoppingToken);
 
-            runningTasks.Add(task);
+                    runningTasks.Add(task);
+                }
+            }
         }
+        catch (OperationCanceledException)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Shutdown requested; waiting for in-flight imports to finalise");
+            }
+        }
+
         await Task.WhenAll(runningTasks);
     }
 
@@ -93,8 +105,32 @@ public class CsvDataFileImportBackgroundService(
             {
                 logger.LogError(ex, "Failed to import {Key}", request.SourceKey);
             }
-            await fileImportStore.MarkFailedAsync(fileImportId, $"Import failed: {ex.Message}",
-                stoppingToken);
+            await MarkFailedWithinGracePeriodAsync(fileImportStore, fileImportId,
+                $"Import failed: {ex.Message}");
+        }
+    }
+
+    private async Task MarkFailedWithinGracePeriodAsync(
+        IFileImportStore fileImportStore,
+        long fileImportId,
+        string reason)
+    {
+        // Use a fresh, bounded token that is independent of the host stopping token so the
+        // mark-as-failed API call is neither pre-empted by shutdown nor able to hang the
+        // shutdown indefinitely if the API is slow/unresponsive.
+        using var markCts = new CancellationTokenSource(
+            TimeSpan.FromSeconds(config.MarkFailedTimeoutSeconds));
+        try
+        {
+            await fileImportStore.MarkFailedAsync(fileImportId, reason, markCts.Token);
+        }
+        catch (Exception markEx)
+        {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError(markEx,
+                    "Failed to mark import {FileImportId} as failed", fileImportId);
+            }
         }
     }
 

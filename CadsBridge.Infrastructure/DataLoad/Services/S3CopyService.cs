@@ -85,7 +85,7 @@ public class S3CopyService(
 
                 break;
             }
-            catch (Exception ex) when (attempt < _maxRetries)
+            catch (Exception ex) when (ex is not OperationCanceledException && attempt < _maxRetries)
             {
                 var delay = TimeSpan.FromMilliseconds(delayBaseMs * Math.Pow(2, attempt - 1));
 
