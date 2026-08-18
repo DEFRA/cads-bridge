@@ -73,12 +73,21 @@ public class FileImportStatusApiServiceTests
             await act.Should().ThrowAsync<RetryableException>();
         }
 
-        [Theory]
-        [InlineData(HttpStatusCode.NotFound)]
-        [InlineData(HttpStatusCode.BadRequest)]
-        public async Task GetByFileName_ThrowsNonRetryable_OnPermanentFailure(HttpStatusCode statusCode)
+        [Fact]
+        public async Task GetByFileName_WhenFileDoesNotExist_ShouldThrowNotFoundException()
         {
-            var handler = new StubHttpMessageHandler(statusCode);
+            var handler = new StubHttpMessageHandler(HttpStatusCode.NotFound);
+
+            var act = async () => await CreateSut(handler)
+                .GetByFileName("file.csv", TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NotFoundException>();
+        }
+
+        [Fact]
+        public async Task GetByFileName_ThrowsNonRetryable_OnPermanentFailure()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest);
 
             var act = async () => await CreateSut(handler)
                 .GetByFileName("file.csv", TestContext.Current.CancellationToken);
@@ -309,12 +318,21 @@ public class FileImportStatusApiServiceTests
             await act.Should().ThrowAsync<RetryableException>();
         }
 
-        [Theory]
-        [InlineData(HttpStatusCode.BadRequest)]
-        [InlineData(HttpStatusCode.NotFound)]
-        public async Task MarkStatus_ThrowsNonRetryable_OnPermanentFailure(HttpStatusCode statusCode)
+        [Fact]
+        public async Task MarkStatus_WhenFileDoesNotExist_ShouldThrowNotFoundException()
         {
-            var handler = new StubHttpMessageHandler(statusCode);
+            var handler = new StubHttpMessageHandler(HttpStatusCode.NotFound);
+
+            var act = async () => await CreateSut(handler)
+                .MarkStatus(1, FileImportStatus.Completed, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NotFoundException>();
+        }
+
+        [Fact]
+        public async Task MarkStatus_ThrowsNonRetryable_OnPermanentFailure()
+        {
+            var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest);
 
             var act = async () => await CreateSut(handler)
                 .MarkStatus(1, FileImportStatus.Completed, TestContext.Current.CancellationToken);
