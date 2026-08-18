@@ -59,11 +59,11 @@ public class CsvDataFileSplitBackgroundService(
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Shutdown requested; waiting for in-flight splits to finalise");
+                logger.LogInformation(ex, "Shutdown requested; waiting for in-flight splits to finalise");
             }
         }
 

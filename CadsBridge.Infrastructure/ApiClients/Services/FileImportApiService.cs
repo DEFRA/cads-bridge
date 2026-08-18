@@ -38,9 +38,9 @@ public class FileImportApiService(
         var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
         var context = $"Getting file import status for '{objectKey}' if it exists";
 
-        if (logger.IsEnabled(LogLevel.Information))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
+            logger.LogDebug("Initiating Get API call '{requestUri}': '{Context}'", endpoint, context);
         }
 
         try
@@ -119,9 +119,9 @@ public class FileImportApiService(
 
     private async Task<T> GetRequestToApiAsync<T>(string requestUri, string context, CancellationToken cancellationToken)
     {
-        if (logger.IsEnabled(LogLevel.Information))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogInformation("Initiating Get API call '{requestUri}': '{Context}'", requestUri, context);
+            logger.LogDebug("Initiating Get API call '{requestUri}': '{Context}'", requestUri, context);
         }
 
         var response = await SendAsync(ct => _httpClient.GetAsync(requestUri, ct), context, cancellationToken);
@@ -131,34 +131,24 @@ public class FileImportApiService(
 
     private async Task<HttpResponseMessage> PostRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
     {
-        if (logger.IsEnabled(LogLevel.Information))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogInformation("Initiating Post API call '{requestUri}': '{Context}'", requestUri, context);
+            logger.LogDebug("Initiating Post API call '{requestUri}': '{Context}'", requestUri, context);
         }
 
         var response = await SendAsync(ct => _httpClient.PostAsJsonAsync(requestUri, body, options: JsonDefaults.DefaultOptionsWithStringEnumConversion, ct), context, cancellationToken);
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation("API call succeeded: {Context}", context);
-        }
 
         return response;
     }
 
     private async Task<HttpResponseMessage> PutRequestToApiAsync<T>(string requestUri, T body, string context, CancellationToken cancellationToken)
     {
-        if (logger.IsEnabled(LogLevel.Information))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogInformation("Initiating Put API call '{requestUri}': '{Context}'", requestUri, context);
+            logger.LogDebug("Initiating Put API call '{requestUri}': '{Context}'", requestUri, context);
         }
 
         var response = await SendAsync(ct => _httpClient.PutAsJsonAsync(requestUri, body, options: JsonDefaults.DefaultOptionsWithStringEnumConversion, ct), context, cancellationToken);
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation("API call succeeded: {Context}", context);
-        }
 
         return response;
     }

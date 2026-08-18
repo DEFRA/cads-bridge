@@ -34,8 +34,8 @@ public class CsvDataFileSplitterStrategyBySize(
         var metadata = await s3.GetObjectMetadataAsync(internalS3Info.BucketName, job.SourceKey, cancellationToken);
         var totalSize = metadata.ContentLength;
 
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("Source file size: {SizeMB} MB", totalSize / (1024 * 1024));
+        if (logger.IsEnabled(LogLevel.Debug))
+            logger.LogDebug("Source file size: {SizeMB} MB", totalSize / (1024 * 1024));
 
         // Get the object from S3
         using var response = await s3.GetObjectAsync(
