@@ -70,7 +70,10 @@ public class CsvDataFileImportBackgroundService(
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("Shutdown requested; waiting for in-flight imports to finalise");
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Shutdown requested; waiting for in-flight imports to finalise");
+            }
         }
 
         await Task.WhenAll(runningTasks);
