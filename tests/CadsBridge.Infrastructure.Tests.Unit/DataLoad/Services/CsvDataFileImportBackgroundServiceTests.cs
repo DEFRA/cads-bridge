@@ -180,6 +180,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             Times.Once);
     }
 
+
     [Fact]
     public async Task Logs_exception_and_marks_failed_when_split_message_fails()
     {
@@ -203,6 +204,34 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task Logs_error_and_swallows_when_mark_failed_throws()
+    {
+        var job = CreateJob();
+        var importEx = new InvalidOperationException("Copy failed.");
+        var markEx = new InvalidOperationException("Mark failed API unavailable");
+
+        _copy.Setup(x => x.ExecAsync(job, It.IsAny<CancellationToken>()))
+             .ThrowsAsync(importEx);
+
+        _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(markEx);
+
+        await _sut.StartAsync(CancellationToken.None);
+        await Write(job);
+
+        // The mark-as-failed failure must be logged distinctly and must not propagate.
+        await _logger.AsyncVerify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to mark import {DefaultFileImportId} as failed")),
+                markEx,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
 
     [Fact]
     public async Task Processes_multiple_jobs()
