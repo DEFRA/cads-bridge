@@ -87,7 +87,8 @@ public class CsvDataFileImportEndpointTests
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var expectedFileSplitJob = new CsvDataFileSplitJob(_importedKey, FileImportId: 1L, 555L);
+        var correlationId = response.Headers.GetValues("x-cdp-request-id").Single();
+        var expectedFileSplitJob = new CsvDataFileSplitJob(_importedKey, FileImportId: 1L, 555L, correlationId);
         await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
     }
 

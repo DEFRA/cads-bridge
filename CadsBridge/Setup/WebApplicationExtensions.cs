@@ -1,3 +1,5 @@
+using CadsBridge.Core.Correlation;
+using CadsBridge.Endpoints;
 using CadsBridge.Middleware;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -30,6 +32,7 @@ public static class WebApplicationExtensions
         app.UseRouting();
 
         app.UseMiddleware<ExceptionHandlingMiddleware>();
+        app.UseCorrelationId();
 
         app.UseAuthentication();
         app.UseAuthorization();
@@ -57,5 +60,7 @@ public static class WebApplicationExtensions
                 [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
             }
         }).AllowAnonymous();
+
+        app.CreateEndpoints();
     }
 }
