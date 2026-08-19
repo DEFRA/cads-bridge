@@ -1,5 +1,5 @@
-using System.Net;
 using CadsBridge.Core.Domain.BusinessRules;
+using System.Net;
 
 namespace CadsBridge.Core.Exceptions;
 
