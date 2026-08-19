@@ -2,6 +2,9 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Core.ApiClients;
+using CadsBridge.Core.Exceptions;
+using CadsBridge.Infrastructure.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Testing.Support.Utilities.Assertions;
@@ -9,11 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading.Channels;
-using Amazon.Runtime.Internal.Auth;
-using CadsBridge.Core.ApiClients;
-using CadsBridge.Core.Exceptions;
-using CadsBridge.Infrastructure.DataLoad;
-using FluentAssertions;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
