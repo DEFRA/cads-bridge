@@ -18,7 +18,7 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
             BusinessRuleChecker.CheckRule(new DestinationTableNameIsValid(fileImport));
             return fileImport.Id;
         }
-        catch (ConflictException ex)
+        catch (ConflictException)
         {
             return await MarkFileReset(fileName, cancellationToken);
         }
