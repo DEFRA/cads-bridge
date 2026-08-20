@@ -18,12 +18,8 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
             BusinessRuleChecker.CheckRule(new DestinationTableNameIsValid(fileImport));
             return fileImport.Id;
         }
-        catch (ConflictException ex)
+        catch (ConflictException)
         {
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                logger.LogWarning(ex, "File import already exists, resetting existing record: {FileName}", fileName);
-            }
             return await MarkFileReset(fileName, cancellationToken);
         }
     }
@@ -60,6 +56,11 @@ public class FileImportStore(IFileImportApiService fileImportStatusApiService, I
             }
 
             await fileImportStatusApiService.MarkReset(fileImportStatus.Id, cancellationToken);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("File import already exists and has been reset: {FileName}", fileName);
+            }
+
             return fileImportStatus.Id;
         }
         catch (NotFoundException ex)
