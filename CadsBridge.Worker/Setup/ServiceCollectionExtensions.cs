@@ -11,6 +11,8 @@ namespace CadsBridge.Worker.Setup;
 [ExcludeFromCodeCoverage]
 public static class ServiceCollectionExtensions
 {
+    private static readonly TimeZoneInfo SchedulerTimeZone = TimeZoneInfo.Utc;
+
     public static void AddBackgroundServiceScheduling(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddQuartzJobs(configuration);
@@ -53,15 +55,48 @@ public static class ServiceCollectionExtensions
     private static void AddQuartzJob<T>(this IServiceCollectionQuartzConfigurator quartzConfigurator,
         ScheduledJobConfiguration jobConfiguration) where T : IJob
     {
-        if (jobConfiguration.Enabled && jobConfiguration.JobType == typeof(T).Name && jobConfiguration?.CronSchedule != null)
+        if (!jobConfiguration.Enabled)
         {
-            quartzConfigurator.AddJob<T>(opts => opts.WithIdentity(jobConfiguration.JobType));
-            quartzConfigurator.AddTrigger(opts => opts
-                .ForJob(jobConfiguration.JobType)
-                .StartAt(jobConfiguration.EnabledFrom)
-                .EndAt(jobConfiguration.EnabledTo)
-                .WithIdentity($"{jobConfiguration.JobType}-trigger")
-                .WithCronSchedule(jobConfiguration.CronSchedule));
+            return;
+        }
+
+        ValidateJobConfiguration(jobConfiguration);
+
+        var startAtUtc = DateTime.SpecifyKind(jobConfiguration.EnabledFrom, DateTimeKind.Utc);
+        var endAtUtc = DateTime.SpecifyKind(jobConfiguration.EnabledTo, DateTimeKind.Utc);
+
+        quartzConfigurator.AddJob<T>(opts => opts.WithIdentity(jobConfiguration.JobType));
+        quartzConfigurator.AddTrigger(opts => opts
+            .ForJob(jobConfiguration.JobType)
+            .StartAt(startAtUtc)
+            .EndAt(endAtUtc)
+            .WithIdentity($"{jobConfiguration.JobType}-trigger")
+            .WithCronSchedule(jobConfiguration.CronSchedule, x => x
+                .InTimeZone(SchedulerTimeZone)
+                // StartAt is intentionally allowed to be in the past (EnabledFrom). DoNothing stops
+                // Quartz treating the skipped occurrences as misfires and firing immediately on startup.
+                .WithMisfireHandlingInstructionDoNothing()));
+    }
+
+    private static void ValidateJobConfiguration(ScheduledJobConfiguration jobConfiguration)
+    {
+        if (string.IsNullOrWhiteSpace(jobConfiguration.CronSchedule))
+        {
+            throw new InvalidOperationException(
+                $"Job '{jobConfiguration.JobType}' is enabled but has no CronSchedule configured.");
+        }
+
+        if (!CronExpression.IsValidExpression(jobConfiguration.CronSchedule))
+        {
+            throw new InvalidOperationException(
+                $"Job '{jobConfiguration.JobType}' has an invalid CronSchedule '{jobConfiguration.CronSchedule}'.");
+        }
+
+        if (jobConfiguration.EnabledFrom >= jobConfiguration.EnabledTo)
+        {
+            throw new InvalidOperationException(
+                $"Job '{jobConfiguration.JobType}' has EnabledFrom ({jobConfiguration.EnabledFrom:o}) " +
+                $"that is not before EnabledTo ({jobConfiguration.EnabledTo:o}).");
         }
     }
 
