@@ -58,30 +58,7 @@ public class S3CopyService(
                     throw new RetriesExceededException($"Exceeded maximum retry attempts ({_maxRetries}) for copying {job.SourceKey}");
                 }
 
-                if (logger.IsEnabled(LogLevel.Information))
-                {
-                    logger.LogInformation(
-                        "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
-                        job.SourceKey,
-                        externalS3Info.BucketName,
-                        internalS3Info.BucketName,
-                        attempt);
-                }
-
-                var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
-
-                // Retrieve row count from the decrypted file and update the file import status accordingly.
-                rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
-
-                if (logger.IsEnabled(LogLevel.Information))
-                {
-                    logger.LogInformation(
-                        "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
-                        externalS3Info.BucketName,
-                        job.SourceKey,
-                        internalS3Info.BucketName,
-                        targetKey);
-                }
+                rowCount = await TransferAndDecryptFile(job, externalS3Info, internalS3Info, attempt, cancellationToken);
 
                 break;
             }
@@ -99,6 +76,48 @@ public class S3CopyService(
         }
 
         return rowCount;
+    }
+
+    private async Task<long> TransferAndDecryptFile(CsvDataFileImportJob job, S3ClientFactory.ClientInfo externalS3Info,
+        S3ClientFactory.ClientInfo internalS3Info, int attempt, CancellationToken cancellationToken)
+    {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "S3 accelerating copy of {Key} from {SourceBucket} to {DestBucket}, attempt {Attempt}",
+                job.SourceKey,
+                externalS3Info.BucketName,
+                internalS3Info.BucketName,
+                attempt);
+        }
+
+        var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
+
+        // Retrieve row count from the decrypted file and update the file import status accordingly.
+        try
+        {
+            return await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(ex, "Failed to retrieve record count for {Key}", targetKey);
+            }
+            return 0;
+        }
+        finally
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "S3 accelerated copy complete: {SourceBucket}/{SourceKey} → {DestBucket}/{DestKey}",
+                    externalS3Info.BucketName,
+                    job.SourceKey,
+                    internalS3Info.BucketName,
+                    targetKey);
+            }
+        }
     }
 
     private async Task<string> DecryptAndCopyAsync(
