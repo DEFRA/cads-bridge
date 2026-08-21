@@ -71,7 +71,18 @@ public class S3CopyService(
                 var targetKey = await DecryptAndCopyAsync(job, externalS3Info, internalS3Info, cancellationToken);
 
                 // Retrieve row count from the decrypted file and update the file import status accordingly.
-                rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
+                try
+                {
+                    rowCount = await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    if (logger.IsEnabled(LogLevel.Warning))
+                    {
+                        logger.LogWarning(ex, "Failed to retrieve record count for {Key}", targetKey);
+                    }
+                    rowCount = 0;
+                }
 
                 if (logger.IsEnabled(LogLevel.Information))
                 {

@@ -148,6 +148,31 @@ public class S3CopyServiceTests
             sut.ExecAsync(CreateJob(), CancellationToken.None));
     }
 
+    [Fact]
+    public async Task Returns_zero_when_record_count_lookup_fails()
+    {
+        var s3 = new FakeS3
+        {
+            FileSize = 1024,
+            EncryptedContent = "encrypted"
+        };
+
+        var aes = new FakeAesCryptoTransform("decrypted");
+        var transfer = new FakeTransferUtilityAdapter();
+
+        var s3FileMetaDataService = new Mock<IS3FileMetaDataService>();
+        s3FileMetaDataService
+            .Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("record count failure"));
+
+        var sut = CreateSut(s3, aes, transfer, s3FileMetaDataService.Object);
+
+        var result = await sut.ExecAsync(CreateJob(), CancellationToken.None);
+
+        result.Should().Be(0);
+        s3.PutRequests.Should().ContainSingle();
+    }
+
     private static S3CopyService CreateSut(
         IAmazonS3 s3,
         IAesCryptoTransform aes,
