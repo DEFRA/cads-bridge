@@ -70,8 +70,11 @@ public class CsvDataFileSplitBackgroundService(
         await Task.WhenAll(runningTasks);
     }
 
-    private async Task ProcessCsvDataFileSplit(ICsvDataFileSplitterService csvDataFileSplitterService,
-        CsvDataFileSplitJob request, IFileImportStore fileImportStore, SemaphoreSlim semaphore,
+    private async Task ProcessCsvDataFileSplit(
+        ICsvDataFileSplitterService csvDataFileSplitterService,
+        CsvDataFileSplitJob request,
+        IFileImportStore fileImportStore,
+        SemaphoreSlim semaphore,
         CancellationToken stoppingToken)
     {
         try
