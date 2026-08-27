@@ -71,7 +71,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 
 
     [Fact]
-    public async Task Marks_failed_when_splitter_returns_false()
+    public async Task Marks_complete_when_splitter_returns_zero_rows()
     {
         var job = CreateJob(1);
 
@@ -81,7 +81,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         await _sut.StartAsync(CancellationToken.None);
         await Write(job);
 
-        await _fileImportStatusStore.AsyncVerify(x => x.MarkFailedAsync(job.FileImportId!.Value, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStatusStore.AsyncVerify(x => x.UpdateAsync(job.FileImportId!.Value, FileImportStatus.Completed, job.TotalRowsToProcess, 0, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
