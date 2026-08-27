@@ -87,7 +87,7 @@ public class CsvDataFileSplitBackgroundService(
             }
             else
             {
-                await fileImportStore.MarkFailedAsync(request.FileImportId!.Value, $"Split failed: No rows to process", stoppingToken);
+                await fileImportStore.UpdateAsync(request.FileImportId!.Value, FileImportStatus.Completed, request.TotalRowsToProcess, foundRows, stoppingToken);
             }
         }
         catch (Exception ex)
