@@ -18,6 +18,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 {
     private const long DefaultFileImportId = 1L;
+    private const string DestinationPrefix = "import/cts/bulk";
 
     private readonly Channel<CsvDataFileImportJob> _channel = Channel.CreateUnbounded<CsvDataFileImportJob>();
     private readonly Mock<ILogger<CsvDataFileImportBackgroundService>> _logger = new();
@@ -40,7 +41,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _s3FileMetaDataService.Setup(x => x.GetRecordCountAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultFileImportId);
         _fileImportStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -69,7 +70,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         var job = CreateJob();
         await Write(job);
         var sourceKey = job.SourceKeyFileName;
-        await _fileImportStore.AsyncVerify(x => x.CreateAsync(sourceKey, 0, It.IsAny<CancellationToken>()), Times.Once);
+        await _fileImportStore.AsyncVerify(x => x.CreateAsync(sourceKey, DestinationPrefix, 0, It.IsAny<CancellationToken>()), Times.Once);
         await _copy.AsyncVerify(x => x.ExecAsync(job, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -85,8 +86,9 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
     }
 
     [Theory]
-    [InlineData("incoming/example-file.csv", "import/example-file.csv")]
-    [InlineData("incoming/example-file", "import/example-file")]
+    [InlineData("cads/cts/bulk/example-file.csv", "import/cts/bulk/example-file.csv")]
+    [InlineData("cads/cts/bulk/example-file", "import/cts/bulk/example-file")]
+    [InlineData("example-file.csv", "import/cts/bulk/example-file.csv")]
     public async Task Sends_split_message_with_computed_target_key_after_successful_copy(string sourceKey, string expectedTargetKey)
     {
         var job = CreateJob(sourceKey: sourceKey);
@@ -161,7 +163,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             FailedAttempts = 1
         }));
 
-        _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+        _fileImportStore.Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(ex);
 
         await _sut.StartAsync(CancellationToken.None);
@@ -252,7 +254,8 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
 
     private static CsvDataFileImportJob CreateJob(int jobNo = 1, string? sourceKey = null)
         => new(
-            SourceKey: sourceKey ?? $"incoming/file-{jobNo}.csv");
+            SourceKey: sourceKey ?? $"cads/cts/bulk/file-{jobNo}.csv",
+            DestinationPrefix: DestinationPrefix);
 
     public async ValueTask DisposeAsync()
     {

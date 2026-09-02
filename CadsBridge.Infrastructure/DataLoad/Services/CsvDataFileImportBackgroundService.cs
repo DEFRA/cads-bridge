@@ -142,7 +142,7 @@ public class CsvDataFileImportBackgroundService(
         long fileImportId;
         try
         {
-            fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName,
+            fileImportId = await fileImportStore.CreateAsync(request.SourceKeyFileName, request.DestinationPrefix,
                 cancellationToken: stoppingToken);
         }
         catch (BusinessRuleValidationException ex)

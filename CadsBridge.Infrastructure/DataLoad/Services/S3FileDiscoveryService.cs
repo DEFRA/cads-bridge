@@ -40,9 +40,11 @@ public class S3FileDiscoveryService<TClient>(
                 existingFile.FailedAttempts < MaxFailedAttempts);
     }
 
-    public async Task EnQueueFileImportMessages(IReadOnlyList<string> objectKeys, CancellationToken cancellationToken)
+    public async Task EnQueueFileImportMessages(IReadOnlyList<string> objectKeys, string destinationPrefix, CancellationToken cancellationToken)
     {
         if (objectKeys.Count == 0) return;
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPrefix);
 
         var oracleEnvironment = storageConfiguration.External.EnvironmentName;
         var bucketName = _clientInfo.BucketName;
@@ -60,6 +62,7 @@ public class S3FileDiscoveryService<TClient>(
                 Bucket = bucketName,
                 CorrelationId = correlationId,
                 ObjectKey = objectKey,
+                DestinationPrefix = destinationPrefix,
                 DiscoveredAtUtc = DateTime.UtcNow,
                 Etag = etag,
                 Id = DeterministicGuid.From(dedipId),

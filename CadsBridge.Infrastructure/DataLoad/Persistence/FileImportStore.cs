@@ -10,11 +10,11 @@ namespace CadsBridge.Infrastructure.DataLoad.Persistence;
 
 public class FileImportStore(IFileImportApiService fileImportStatusApiService, ILogger<FileImportStore> logger) : IFileImportStore
 {
-    public async Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default)
+    public async Task<long> CreateAsync(string fileName, string destinationPrefix, long totalRowsToProcess = 0, CancellationToken cancellationToken = default)
     {
         try
         {
-            var fileImport = await fileImportStatusApiService.Create(fileName, totalRowsToProcess, cancellationToken);
+            var fileImport = await fileImportStatusApiService.Create(fileName, destinationPrefix, totalRowsToProcess, cancellationToken);
             BusinessRuleChecker.CheckRule(new DestinationTableNameIsValid(fileImport));
             return fileImport.Id;
         }

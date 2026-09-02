@@ -6,5 +6,9 @@ public interface IFileDiscoveryService
 
     Task<bool> IsFileValid(string fileName, CancellationToken cancellationToken);
 
-    Task EnQueueFileImportMessages(IReadOnlyList<string> objectKeys, CancellationToken cancellationToken);
+    /// <summary>
+    /// Publishes an import message for each external object key. <paramref name="destinationPrefix"/> is the
+    /// internal bucket prefix the file will be copied to (e.g. <c>import/cts/bulk</c>).
+    /// </summary>
+    Task EnQueueFileImportMessages(IReadOnlyList<string> objectKeys, string destinationPrefix, CancellationToken cancellationToken);
 }

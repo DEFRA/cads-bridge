@@ -4,7 +4,7 @@ namespace CadsBridge.Application.DataLoad.Persistence;
 
 public interface IFileImportStore
 {
-    Task<long> CreateAsync(string fileName, long totalRowsToProcess = 0, CancellationToken cancellationToken = default);
+    Task<long> CreateAsync(string fileName, string destinationPrefix, long totalRowsToProcess = 0, CancellationToken cancellationToken = default);
 
     Task UpdateAsync(long fileImportId, FileImportStatus status, long totalRowsToProcess, long rowsFound = 0, CancellationToken cancellationToken = default);
 

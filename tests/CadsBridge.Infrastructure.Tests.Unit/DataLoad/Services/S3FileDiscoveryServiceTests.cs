@@ -205,6 +205,7 @@ public class S3FileDiscoveryServiceTests
 
     public class EnQueueFileImportMessagesTests : IDisposable
     {
+        private const string DestinationPrefix = "import/cts/bulk";
         private readonly Mock<IAmazonS3> _s3Mock = new();
         private readonly Mock<IMessagePublisher<CadsBridgeFifoQueueClient>> _publisherMock = new();
 
@@ -232,9 +233,23 @@ public class S3FileDiscoveryServiceTests
         {
             var sut = CreateSut();
 
-            await sut.EnQueueFileImportMessages([], TestContext.Current.CancellationToken);
+            await sut.EnQueueFileImportMessages([], DestinationPrefix, TestContext.Current.CancellationToken);
 
             _s3Mock.Verify(x => x.GetObjectMetadataAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            _publisherMock.Verify(x => x.PublishAsync(It.IsAny<object>(), It.IsAny<FifoMessageMetadata>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData(null)]
+        public async Task EnQueueFileImportMessages_ShouldThrow_WhenDestinationPrefixIsMissing(string? destinationPrefix)
+        {
+            var sut = CreateSut();
+
+            var act = () => sut.EnQueueFileImportMessages(["file1.csv"], destinationPrefix!, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<ArgumentException>();
             _publisherMock.Verify(x => x.PublishAsync(It.IsAny<object>(), It.IsAny<FifoMessageMetadata>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -247,7 +262,7 @@ public class S3FileDiscoveryServiceTests
 
             var sut = CreateSut();
 
-            await sut.EnQueueFileImportMessages(["file1.csv", "file2.csv"], TestContext.Current.CancellationToken);
+            await sut.EnQueueFileImportMessages(["file1.csv", "file2.csv"], DestinationPrefix, TestContext.Current.CancellationToken);
 
             _publisherMock.Verify(
                 x => x.PublishAsync(
@@ -284,11 +299,12 @@ public class S3FileDiscoveryServiceTests
 
             var sut = CreateSut(storageConfiguration);
 
-            await sut.EnQueueFileImportMessages([fileName], TestContext.Current.CancellationToken);
+            await sut.EnQueueFileImportMessages([fileName], DestinationPrefix, TestContext.Current.CancellationToken);
 
             publishedMessage.Should().NotBeNull();
             publishedMessage!.Bucket.Should().Be(Bucket);
             publishedMessage.ObjectKey.Should().Be(fileName);
+            publishedMessage.DestinationPrefix.Should().Be(DestinationPrefix);
             publishedMessage.Etag.Should().Be("\"etag-value\"");
             publishedMessage.OracleEnvironment.Should().Be("PreProd");
             publishedMessage.Id.Should().NotBe(Guid.Empty);
