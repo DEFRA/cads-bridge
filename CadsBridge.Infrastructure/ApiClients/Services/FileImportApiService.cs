@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
@@ -32,6 +33,11 @@ public class FileImportApiService(
             { FileImportStatus.Completed, "completed" },
             { FileImportStatus.Failed, "failed" }
        };
+
+    private static readonly JsonSerializerOptions s_problemDetailsOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public async Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
     {
@@ -228,17 +234,42 @@ public class FileImportApiService(
         CancellationToken cancellationToken)
     {
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        var statusCode = (int)response.StatusCode;
 
         throw response.StatusCode switch
         {
             HttpStatusCode.NotFound => new NotFoundException(
                 $"NotFound response when calling {context}."),
             HttpStatusCode.Conflict => new ConflictException(
-                $"Conflict calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+                $"Conflict calling {context}. Status {statusCode}. Response: {FormatResponseContent(content, statusCode)}"),
             HttpStatusCode.RequestTimeout or >= HttpStatusCode.InternalServerError => new RetryableException(
-                $"Transient failure calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+                $"Transient failure calling {context}. Status {statusCode}. Response: {content}"),
             _ => new NonRetryableException(
-                $"Permanent failure calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+                $"Permanent failure calling {context}. Status {statusCode}. Response: {content}"),
         };
+    }
+
+    private static string FormatResponseContent(string content, int statusCode)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        try
+        {
+            var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(content, s_problemDetailsOptions);
+
+            if (!string.IsNullOrWhiteSpace(problemDetails?.Detail))
+            {
+                return $"({problemDetails.Status ?? statusCode}) {problemDetails.Detail}";
+            }
+        }
+        catch (JsonException)
+        {
+            // Not a problem details payload
+        }
+
+        return content;
     }
 }
