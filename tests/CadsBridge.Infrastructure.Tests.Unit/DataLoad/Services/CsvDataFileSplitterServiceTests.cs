@@ -20,7 +20,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 public class CsvDataFileSplitterServiceTests
 {
     private const string BucketName = "internal-bucket";
-    private const string SourceKey = "imports/source-file.csv";
+    private const string SourceKey = "import/cts/bulk/source-file.csv";
 
     private static string SmallInputFile => string.Join(
         Environment.NewLine,
@@ -28,7 +28,7 @@ public class CsvDataFileSplitterServiceTests
         "C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO",
         "D|1|One") + Environment.NewLine;
 
-    private static string ExpectedKey(int part = 1) => $"import/source-file/source-file-part-{part:D4}.csv";
+    private static string ExpectedKey(int part = 1) => $"import/cts/bulk/source-file/source-file-part-{part:D4}.csv";
 
     [Fact]
     public async Task Throws_when_split_value_is_null_for_by_lines()

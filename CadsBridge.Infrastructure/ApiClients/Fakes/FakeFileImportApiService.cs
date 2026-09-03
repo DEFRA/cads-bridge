@@ -78,7 +78,7 @@ public class FakeFileImportApiService : IFileImportApiService
         return Task.FromResult<FileImportDto?>(response);
     }
 
-    public Task<FileImport> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
+    public Task<FileImport> Create(string objectKey, string destinationPrefix, long totalRowsToProcess, CancellationToken cancellationToken)
     {
         return Task.FromResult(new FileImport
         {

@@ -26,8 +26,8 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
     public async Task GivenASingleFile_WhenProcessMessageAsync_ShouldSucceed()
     {
         // Arrange
-        var incomingObjectKey = $"incoming/{FileNameWithoutFileType}.csv";
-        var importedObjectKey = $"import/{FileNameWithoutFileType}.csv";
+        var incomingObjectKey = $"cads/cts/bulk/{FileNameWithoutFileType}.csv";
+        var importedObjectKey = $"import/cts/bulk/{FileNameWithoutFileType}.csv";
         var etag = Guid.NewGuid().ToString("N");
 
         var fileContents = string.Join(
@@ -90,18 +90,18 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
                 new ListObjectsV2Request()
                 {
                     BucketName = TestS3Constants.TestCadsBridgeInternalBucketName,
-                    Prefix = $"import/{FileNameWithoutFileType}"
+                    Prefix = $"import/cts/bulk/{FileNameWithoutFileType}"
                 },
                 TestContext.Current.CancellationToken);
             listObjectsV2Response.S3Objects.Should().HaveCount(4);
 
             // The original imported file should always remain alongside the split parts.
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().NotBeNull();
 
             // The parts from the imported file (SplitValue set as 5 so expect 3 parts)
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv").Should().NotBeNull();
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv").Should().NotBeNull();
         });
     }
 
@@ -128,6 +128,7 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
         {
             Bucket = bucket,
             ObjectKey = objectKey,
+            DestinationPrefix = "import/cts/bulk",
             OracleEnvironment = oracleEnvironment,
             Etag = etag,
             DiscoveredAtUtc = discoveredAtUtc,

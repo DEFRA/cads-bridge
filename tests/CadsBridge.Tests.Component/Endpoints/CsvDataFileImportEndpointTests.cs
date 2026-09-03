@@ -19,10 +19,11 @@ public class CsvDataFileImportEndpointTests
     // CTSM-format filename: CTSM_<app>_<env>_<type>_<batchId>_<tablename>_<timestamp>.csv
     // Password is derived from the filename by CtsmFilenameParser as "<app>_<env>_<type>_<batchId>".
     private const string CtsmFilename = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
+    private const string DestinationPrefix = "import/cts/bulk";
     private readonly string _testDerivedValue = "2026-07-10_MYTABLE_BATCH1_FULL_TEST_CADS_CTSM";
     private readonly string _testSalt = "test-salt";
     private readonly string _incomingKey = $"incoming/{CtsmFilename}";
-    private readonly string _importedKey = $"import/{CtsmFilename}";
+    private readonly string _importedKey = $"import/cts/bulk/{CtsmFilename}";
 
     private static Dictionary<string, string?> SaltOverride(string salt) => new() { ["DataLoad:Salt"] = salt };
 
@@ -54,7 +55,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var request = new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]);
 
         var response = await TriggerImportJob(client, request);
@@ -81,7 +82,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
         // Assert
@@ -106,7 +107,7 @@ public class CsvDataFileImportEndpointTests
 
         var sourceKey = Path.GetFileName(_incomingKey);
         factory.FileImportStoreMock
-            .Setup(x => x.CreateAsync(sourceKey, 0, cancellationToken: It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateAsync(sourceKey, DestinationPrefix, 0, cancellationToken: It.IsAny<CancellationToken>()))
             .ReturnsAsync(9L);
 
         factory.FileImportStoreMock
@@ -116,7 +117,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
         // Assert
@@ -125,7 +126,7 @@ public class CsvDataFileImportEndpointTests
         await AsyncAssert.WaitForAssertion(async () =>
         {
             factory.FileImportStoreMock.Verify(
-                x => x.CreateAsync(sourceKey, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
+                x => x.CreateAsync(sourceKey, DestinationPrefix, 0, cancellationToken: It.IsAny<CancellationToken>()), Times.Once);
             factory.FileImportStoreMock.Verify(
                 x => x.UpdateAsync(9L, FileImportStatus.Transferred, 1, 0, It.IsAny<CancellationToken>()), Times.Once);
         }, 1000);
@@ -137,12 +138,12 @@ public class CsvDataFileImportEndpointTests
         await using var factory = new CadsBridgeWebAppFactory(null, false);
         const string errorMessage = "downstream unavailable";
         factory.FileImportStoreMock
-            .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(errorMessage));
         var client = factory.CreateClient();
 
         var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
         // Assert
@@ -161,7 +162,7 @@ public class CsvDataFileImportEndpointTests
 
         factory.OverrideSingleton(fileSplitterMock.Object);
         factory.FileImportStoreMock
-            .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(42L);
 
         factory.S3FileMetaDataServiceMock
@@ -172,7 +173,7 @@ public class CsvDataFileImportEndpointTests
         var client = factory.CreateClient();
 
         var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
-            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
         // Assert
@@ -186,6 +187,52 @@ public class CsvDataFileImportEndpointTests
         {
             factory.FileImportStoreMock.Verify(x => x.UpdateAsync(It.IsAny<long>(), Core.ApiClients.FileImportStatus.Transferred, It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Once);
         }, 1000);
+    }
+
+    [Fact]
+    public async Task ImportFile_WithSourceKeyUnderAScanPrefix_ResolvesDestinationPrefixFromScanTaskType()
+    {
+        await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
+
+        var fileSplitterMock = new Mock<ISplitMessageProducer>();
+        factory.OverrideSingleton(fileSplitterMock.Object);
+
+        var s3ExternalToInternalCopyServiceMock = new Mock<IS3CopyService>();
+        s3ExternalToInternalCopyServiceMock
+            .Setup(x => x.ExecAsync(It.IsAny<CsvDataFileImportJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1L);
+        factory.OverrideSingleton(s3ExternalToInternalCopyServiceMock.Object);
+
+        var scannedSourceKey = $"cads/cts/daily/{CtsmFilename}";
+        var client = factory.CreateClient();
+
+        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(sourceKey: scannedSourceKey)
+        ]));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var correlationId = response.Headers.GetValues("x-cdp-request-id").Single();
+        var expectedFileSplitJob = new CsvDataFileSplitJob($"import/cts/daily/{CtsmFilename}", FileImportId: 1L, 1L, correlationId);
+        await fileSplitterMock.AsyncVerify(x => x.SendAsync(expectedFileSplitJob, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportFile_WithUnresolvableDestinationPrefix_ReturnsBadRequestAndEnqueuesNothing()
+    {
+        await using var factory = new CadsBridgeWebAppFactory(null, false);
+        var client = factory.CreateClient();
+
+        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+            new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
+        ]));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        factory.FileImportStoreMock.Verify(
+            x => x.CreateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private sealed record ImportJobResponse(string JobId);

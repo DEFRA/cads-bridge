@@ -7,7 +7,9 @@ public static class StringExtensions
         public string FormatSplitFileTargetKey(int partNumber = 1)
         {
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(s);
-            return $"import/{fileNameWithoutExtension}/{fileNameWithoutExtension}-part-{partNumber:D4}.csv";
+            var lastSeparator = s.LastIndexOf('/');
+            var folder = lastSeparator < 0 ? string.Empty : s[..(lastSeparator + 1)];
+            return $"{folder}{fileNameWithoutExtension}/{fileNameWithoutExtension}-part-{partNumber:D4}.csv";
         }
 
         public string ProcessColumnDefinitions(char delimiter, bool skipFirstColumn = true)

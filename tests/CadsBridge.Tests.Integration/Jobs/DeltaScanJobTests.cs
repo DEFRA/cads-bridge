@@ -23,6 +23,7 @@ public class DeltaScanJobTests
     private const string BulkTypeFile = "CTSM_CADS_PROD_BULK_XYZ_0001_CT_ANIMALS_2026-07-31-120000.csv";
     private const string NewFile = "CTSM_CADS_PROD_DELTA_NEW_0001_CT_ANIMALS_2026-07-31-120000.csv";
     private const string Prefix = "cads/cts/daily/";
+    private const string DestinationPrefix = "import/cts/daily";
 
     [Fact]
     public async Task DeltaScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
@@ -109,6 +110,7 @@ public class DeltaScanJobTests
         receivedMessages.Should().AllSatisfy(m =>
         {
             m.Bucket.Should().Be(externalBucket);
+            m.DestinationPrefix.Should().Be(DestinationPrefix);
             m.CorrelationId.Should().NotBeNullOrWhiteSpace();
             m.Etag.Should().NotBeNullOrWhiteSpace();
             m.DiscoveredAtUtc.Should().BeCloseTo(DateTime.UtcNow, precision: TimeSpan.FromMinutes(2));

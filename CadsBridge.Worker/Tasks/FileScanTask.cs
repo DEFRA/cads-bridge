@@ -18,6 +18,8 @@ public abstract class FileScanTask(
         var scanTaskInfo = scanTaskType.GetAttribute<ScanTaskInfoAttribute>();
         var scanTaskTypePrefix = scanTaskInfo?.Prefix;
         var scanTaskTypeName = scanTaskInfo?.Name;
+        var destinationPrefix = scanTaskInfo?.DestinationPrefix
+            ?? throw new InvalidOperationException($"Scan task type '{scanTaskType}' has no destination prefix configured.");
 
         // Get the list of files in the external bucket
         if (logger.IsEnabled(LogLevel.Debug))
@@ -49,7 +51,7 @@ public abstract class FileScanTask(
         }
 
         // Send file names to the queue for processing
-        await fileDiscoveryService.EnQueueFileImportMessages(validFileKeys, cancellationToken);
+        await fileDiscoveryService.EnQueueFileImportMessages(validFileKeys, destinationPrefix, cancellationToken);
 
         if (logger.IsEnabled(LogLevel.Information))
         {

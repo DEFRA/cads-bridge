@@ -7,7 +7,7 @@ public static class CsvDataFileImportJobExtensions
         /// <summary>
         /// The internal storage key the file is copied to once decrypted.
         /// </summary>
-        public string TargetKey => $"import/{Path.GetFileName(job.SourceKey)}";
+        public string TargetKey => $"{job.DestinationPrefix.Trim('/')}/{Path.GetFileName(job.SourceKey)}";
 
         public string SourceKeyFileName => Path.GetFileName(job.SourceKey);
     }

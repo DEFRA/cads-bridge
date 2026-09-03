@@ -30,16 +30,23 @@ public class CsvDataFileImportMessageHandler(
                 $"messageId: {message.MessageId}," +
                 $"correlationId: {message.CorrelationId}");
 
+        if (string.IsNullOrWhiteSpace(messagePayload.DestinationPrefix))
+        {
+            throw new NonRetryableException(
+                $"Message for ObjectKey={messagePayload.ObjectKey} has no DestinationPrefix; " +
+                $"messageId: {message.MessageId}, correlationId: {message.CorrelationId}");
+        }
+
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Enqueueing CsvDataFileImportJob with ObjectKey={ObjectKey}",
-                messagePayload.ObjectKey);
+            logger.LogInformation("Enqueueing CsvDataFileImportJob with ObjectKey={ObjectKey} DestinationPrefix={DestinationPrefix}",
+                messagePayload.ObjectKey, messagePayload.DestinationPrefix);
         }
 
         try
         {
             await _channel.Writer.WriteAsync(
-                new CsvDataFileImportJob(messagePayload.ObjectKey, messagePayload.CorrelationId), cancellationToken);
+                new CsvDataFileImportJob(messagePayload.ObjectKey, messagePayload.DestinationPrefix, messagePayload.CorrelationId), cancellationToken);
         }
         catch (ChannelClosedException ex)
         {

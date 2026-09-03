@@ -62,12 +62,13 @@ public class FileImportApiService(
         return await GetRequestToApiAsync<FileImportDto>(endpoint, context, cancellationToken);
     }
 
-    public async Task<FileImport> Create(string objectKey, long totalRowsToProcess, CancellationToken cancellationToken)
+    public async Task<FileImport> Create(string objectKey, string destinationPrefix, long totalRowsToProcess, CancellationToken cancellationToken)
     {
-        var context = $"Creating file import for '{objectKey}' with {totalRowsToProcess} records";
+        var context = $"Creating file import for '{objectKey}' (destination '{destinationPrefix}') with {totalRowsToProcess} records";
         var body = new CreateFileImportRequest
         {
             FileName = objectKey,
+            DestinationPrefix = destinationPrefix,
             TotalRowsToProcess = totalRowsToProcess
         };
 

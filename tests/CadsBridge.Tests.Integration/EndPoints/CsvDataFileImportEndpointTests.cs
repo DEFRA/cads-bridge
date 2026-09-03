@@ -29,8 +29,8 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
     public async Task ImportFile_WithOneFile_DecryptsAndSplitsFile()
     {
         // Arrange
-        var incomingObjectKey = $"incoming/{FileNameWithoutFileType}.csv";
-        var importedObjectKey = $"import/{FileNameWithoutFileType}.csv";
+        var incomingObjectKey = $"cads/cts/bulk/{FileNameWithoutFileType}.csv";
+        var importedObjectKey = $"import/cts/bulk/{FileNameWithoutFileType}.csv";
 
         var fileContents = string.Join(
             Environment.NewLine,
@@ -71,18 +71,18 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
                 new ListObjectsV2Request()
                 {
                     BucketName = TestS3Constants.TestCadsBridgeInternalBucketName,
-                    Prefix = $"import/{FileNameWithoutFileType}"
+                    Prefix = $"import/cts/bulk/{FileNameWithoutFileType}"
                 },
                 TestContext.Current.CancellationToken);
             listObjectsV2Response.S3Objects.Should().HaveCount(4);
 
             // The original imported file should always remain alongside the split parts.
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().NotBeNull();
 
             // The parts from the imported file (SplitValue set as 5 so expect 3 parts)
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv").Should().NotBeNull();
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv").Should().NotBeNull();
         });
     }
 

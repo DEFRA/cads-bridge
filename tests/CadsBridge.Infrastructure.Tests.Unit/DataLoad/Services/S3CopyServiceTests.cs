@@ -196,5 +196,5 @@ public class S3CopyServiceTests
     }
 
     private static CsvDataFileImportJob CreateJob() =>
-        new(SourceKey: SourceKey);
+        new(SourceKey: SourceKey, DestinationPrefix: "import/cts/bulk");
 }

@@ -162,7 +162,7 @@ public class FileImportStatusApiServiceTests
                 Content = JsonContent.Create(dto)
             });
 
-            var result = await CreateSut(handler).Create("file.csv", 10, TestContext.Current.CancellationToken);
+            var result = await CreateSut(handler).Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             result.Id.Should().Be(42);
         }
@@ -175,12 +175,16 @@ public class FileImportStatusApiServiceTests
                 Content = JsonContent.Create(new FileImportDto { Id = 1 })
             });
 
-            await CreateSut(handler).Create("file.csv", 123, TestContext.Current.CancellationToken);
+            await CreateSut(handler).Create("file.csv", "import/cts/bulk", 123, TestContext.Current.CancellationToken);
 
             handler.Requests.Should().ContainSingle();
             var request = handler.Requests[0];
             request.RequestUri!.PathAndQuery.Should().Be("/api/v1/systemadmin/fileimports");
             request.Method.Should().Be(HttpMethod.Post);
+
+            var body = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            body.Should().Contain("file.csv");
+            body.Should().Contain("import/cts/bulk");
         }
 
         [Theory]
@@ -191,7 +195,7 @@ public class FileImportStatusApiServiceTests
             var handler = new StubHttpMessageHandler(statusCode);
 
             var act = async () => await CreateSut(handler)
-                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<RetryableException>();
         }
@@ -204,7 +208,7 @@ public class FileImportStatusApiServiceTests
             var handler = new StubHttpMessageHandler(statusCode);
 
             var act = async () => await CreateSut(handler)
-                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>();
         }
@@ -215,7 +219,7 @@ public class FileImportStatusApiServiceTests
             var handler = new StubHttpMessageHandler(HttpStatusCode.Conflict);
 
             var act = async () => await CreateSut(handler)
-                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<ConflictException>();
         }
@@ -229,7 +233,7 @@ public class FileImportStatusApiServiceTests
             });
 
             var act = async () => await CreateSut(handler)
-                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>().WithMessage("*file.csv*");
         }
@@ -243,7 +247,7 @@ public class FileImportStatusApiServiceTests
             });
 
             var act = async () => await CreateSut(handler)
-                .Create("file.csv", 10, TestContext.Current.CancellationToken);
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>().WithMessage("*file.csv*");
         }

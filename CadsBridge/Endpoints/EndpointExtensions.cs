@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Core.Correlation;
 using CadsBridge.Endpoints.Requests;
+using CadsBridge.Worker.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Channels;
 
@@ -52,15 +53,30 @@ public static class EndpointsExtensions
         ILogger<Program> logger,
         CancellationToken cancellationToken)
     {
-        var sourceKeys = request.Files.Select(importFile => importFile.sourceKey).ToList();
-        foreach (var sourceKey in sourceKeys)
+        var jobs = new List<CsvDataFileImportJob>(request.Files.Count);
+        foreach (var importFile in request.Files)
         {
+            var destinationPrefix = importFile.destinationPrefix;
+            if (string.IsNullOrWhiteSpace(destinationPrefix) &&
+                !ScanTaskTypeExtensions.TryResolveDestinationPrefix(importFile.sourceKey, out destinationPrefix))
+            {
+                return Results.BadRequest(
+                    $"No destinationPrefix supplied for '{importFile.sourceKey}' and none could be resolved from the configured scan task source prefixes.");
+            }
+
+            jobs.Add(new CsvDataFileImportJob(
+                SourceKey: importFile.sourceKey,
+                DestinationPrefix: destinationPrefix!,
+                CorrelationId: CorrelationIdContext.Value));
+        }
+
+        var sourceKeys = jobs.Select(job => job.SourceKey).ToList();
+        foreach (var job in jobs)
+        {
+            var sourceKey = job.SourceKey;
             try
             {
-                await channel.Writer.WriteAsync(new CsvDataFileImportJob(
-                    SourceKey: sourceKey,
-                    CorrelationId: CorrelationIdContext.Value
-                ), cancellationToken);
+                await channel.Writer.WriteAsync(job, cancellationToken);
             }
             catch (Exception ex)
             {

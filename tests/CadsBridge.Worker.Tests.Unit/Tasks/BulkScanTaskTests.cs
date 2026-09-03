@@ -12,6 +12,7 @@ public class BulkScanTaskTests
     private readonly Mock<ILogger<BulkFileScanTask>> _loggerMock = new Mock<ILogger<BulkFileScanTask>>().EnableAllLogLevels();
 
     private const string Prefix = "cads/cts/bulk";
+    private const string DestinationPrefix = "import/cts/bulk";
     private const string ValidFileName = "CTSM_UKV_PROD_BULK_######_CT_REGISTERED_ANIMALS_2026-02-22-074603.csv";
     private string ValidObjectKey = $"{Prefix}/{ValidFileName}";
 
@@ -105,6 +106,7 @@ public class BulkScanTaskTests
         _fileDiscoveryServiceMock.Verify(
             x => x.EnQueueFileImportMessages(
                 It.Is<IReadOnlyList<string>>(list => list.Count == 1 && list[0] == ValidObjectKey),
+                DestinationPrefix,
                 TestContext.Current.CancellationToken),
             Times.Once);
     }
@@ -126,7 +128,7 @@ public class BulkScanTaskTests
             Times.Once);
 
         _fileDiscoveryServiceMock.Verify(
-            x => x.EnQueueFileImportMessages(It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()),
+            x => x.EnQueueFileImportMessages(It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -145,6 +147,7 @@ public class BulkScanTaskTests
         _fileDiscoveryServiceMock.Verify(
             x => x.EnQueueFileImportMessages(
                 It.Is<IReadOnlyList<string>>(list => list.Count == 1 && list[0] == ValidFileName),
+                DestinationPrefix,
                 TestContext.Current.CancellationToken),
             Times.Once);
     }
