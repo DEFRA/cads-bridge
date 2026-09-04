@@ -225,6 +225,39 @@ public class FileImportStatusApiServiceTests
         }
 
         [Fact]
+        public async Task Create_ConflictMessageUsesProblemDetail_WhenResponseIsProblemDetails()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Conflict)
+            {
+                Content = new StringContent(
+                    """{"title":"Conflict","status":409,"detail":"A file import already exists for 'file.csv'."}""",
+                    System.Text.Encoding.UTF8,
+                    "application/problem+json")
+            });
+
+            var act = async () => await CreateSut(handler)
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<ConflictException>()
+                .WithMessage("*Response: (409) A file import already exists for 'file.csv'.*");
+        }
+
+        [Fact]
+        public async Task Create_ConflictMessageKeepsRawContent_WhenResponseIsNotProblemDetails()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Conflict)
+            {
+                Content = new StringContent("file import already exists", System.Text.Encoding.UTF8, "text/plain")
+            });
+
+            var act = async () => await CreateSut(handler)
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<ConflictException>()
+                .WithMessage("*Response: file import already exists*");
+        }
+
+        [Fact]
         public async Task Create_ThrowsNonRetryable_WhenResponseBodyIsNull()
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
