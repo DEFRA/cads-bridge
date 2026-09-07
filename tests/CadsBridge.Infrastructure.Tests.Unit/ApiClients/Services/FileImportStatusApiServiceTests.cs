@@ -225,12 +225,18 @@ public class FileImportStatusApiServiceTests
         }
 
         [Fact]
-        public async Task Create_ConflictMessageUsesProblemDetail_WhenResponseIsProblemDetails()
+        public async Task Create_ConflictMessageCondensesJson_WhenResponseIsJson()
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Conflict)
             {
                 Content = new StringContent(
-                    """{"title":"Conflict","status":409,"detail":"A file import already exists for 'file.csv'."}""",
+                    """
+                    {
+                      "title": "Conflict",
+                      "status": 409,
+                      "detail": "A file import already exists for 'file.csv'."
+                    }
+                    """,
                     System.Text.Encoding.UTF8,
                     "application/problem+json")
             });
@@ -239,11 +245,11 @@ public class FileImportStatusApiServiceTests
                 .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<ConflictException>()
-                .WithMessage("*Response: (409) A file import already exists for 'file.csv'.*");
+                .WithMessage("""{"title":"Conflict","status":409,"detail":"A file import already exists for 'file.csv'."}""");
         }
 
         [Fact]
-        public async Task Create_ConflictMessageKeepsRawContent_WhenResponseIsNotProblemDetails()
+        public async Task Create_ConflictMessageKeepsRawContent_WhenResponseIsNotJson()
         {
             var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Conflict)
             {
@@ -254,7 +260,46 @@ public class FileImportStatusApiServiceTests
                 .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<ConflictException>()
-                .WithMessage("*Response: file import already exists*");
+                .WithMessage("file import already exists");
+        }
+
+        [Fact]
+        public async Task Create_PermanentFailureMessageCondensesJson_WhenResponseIsJson()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                      "title": "Bad Request",
+                      "status": 400,
+                      "detail": "'file.csv' is not a valid file name."
+                    }
+                    """,
+                    System.Text.Encoding.UTF8,
+                    "application/problem+json")
+            });
+
+            var act = async () => await CreateSut(handler)
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>()
+                .WithMessage("""*Response: {"title":"Bad Request","status":400,"detail":"'file.csv' is not a valid file name."}""");
+        }
+
+        [Fact]
+        public async Task Create_PermanentFailureMessageKeepsRawContent_WhenResponseIsNotJson()
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent("file name is not valid", System.Text.Encoding.UTF8, "text/plain")
+            });
+
+            var act = async () => await CreateSut(handler)
+                .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>()
+                .WithMessage("*Response: file name is not valid");
         }
 
         [Fact]

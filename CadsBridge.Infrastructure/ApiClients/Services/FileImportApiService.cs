@@ -8,9 +8,9 @@ using CadsBridge.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace CadsBridge.Infrastructure.ApiClients.Services;
 
@@ -34,9 +34,11 @@ public class FileImportApiService(
             { FileImportStatus.Failed, "failed" }
        };
 
-    private static readonly JsonSerializerOptions s_problemDetailsOptions = new()
+    private static readonly JsonSerializerOptions s_condensedJsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     public async Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
@@ -240,16 +242,14 @@ public class FileImportApiService(
         {
             HttpStatusCode.NotFound => new NotFoundException(
                 $"NotFound response when calling {context}."),
-            HttpStatusCode.Conflict => new ConflictException(
-                $"Conflict calling {context}. Status {statusCode}. Response: {FormatResponseContent(content, statusCode)}"),
+            HttpStatusCode.Conflict => new ConflictException(CondenseResponseContent(content)),
             HttpStatusCode.RequestTimeout or >= HttpStatusCode.InternalServerError => new RetryableException(
                 $"Transient failure calling {context}. Status {statusCode}. Response: {content}"),
-            _ => new NonRetryableException(
-                $"Permanent failure calling {context}. Status {statusCode}. Response: {content}"),
+            _ => new NonRetryableException(CondenseResponseContent(content)),
         };
     }
 
-    private static string FormatResponseContent(string content, int statusCode)
+    private static string CondenseResponseContent(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -258,18 +258,14 @@ public class FileImportApiService(
 
         try
         {
-            var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(content, s_problemDetailsOptions);
+            using var document = JsonDocument.Parse(content);
 
-            if (!string.IsNullOrWhiteSpace(problemDetails?.Detail))
-            {
-                return $"({problemDetails.Status ?? statusCode}) {problemDetails.Detail}";
-            }
+            return JsonSerializer.Serialize(document, s_condensedJsonOptions);
         }
         catch (JsonException)
         {
-            // Not a problem details payload
+            // Not a JSON payload, keep the original content
+            return content;
         }
-
-        return content;
     }
 }
