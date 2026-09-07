@@ -284,7 +284,7 @@ public class FileImportStatusApiServiceTests
                 .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>()
-                .WithMessage("""*Response: {"title":"Bad Request","status":400,"detail":"'file.csv' is not a valid file name."}""");
+                .WithMessage("""{"title":"Bad Request","status":400,"detail":"'file.csv' is not a valid file name."}""");
         }
 
         [Fact]
@@ -299,7 +299,7 @@ public class FileImportStatusApiServiceTests
                 .Create("file.csv", "import/cts/bulk", 10, TestContext.Current.CancellationToken);
 
             await act.Should().ThrowAsync<NonRetryableException>()
-                .WithMessage("*Response: file name is not valid");
+                .WithMessage("file name is not valid");
         }
 
         [Fact]
