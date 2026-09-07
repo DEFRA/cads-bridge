@@ -22,7 +22,6 @@ using Microsoft.Extensions.Hosting;
 using Moq;
 using System.Globalization;
 using System.Net;
-using Microsoft.AspNetCore.Authorization;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 
@@ -67,7 +66,6 @@ public abstract class WebAppFactoryBase<TStart>(
 
         builder.ConfigureTestServices(services =>
         {
-            ConfigureDefaultAuthorization(services);
             OverrideAmazonS3(services);
             OverrideAmazonSqs(services);
             ConfigureMessageConsumers(services);
@@ -132,14 +130,6 @@ public abstract class WebAppFactoryBase<TStart>(
 
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_KEY", "test");
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_SECRET", "test");
-    }
-
-    private static void ConfigureDefaultAuthorization(IServiceCollection services)
-    {
-        services.AddAuthorizationBuilder()
-            .SetDefaultPolicy(new AuthorizationPolicyBuilder()
-                .RequireAssertion(_ => true)
-                .Build());
     }
 
     private void ResetInfrastructureMocks()
