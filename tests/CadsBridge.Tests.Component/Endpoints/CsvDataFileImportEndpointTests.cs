@@ -41,9 +41,8 @@ public class CsvDataFileImportEndpointTests
     public async Task ImportFile_WithNoFiles_CreatesAnImportJobWithNoFiles()
     {
         await using var factory = new CadsBridgeWebAppFactory();
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client);
+        var response = await TriggerImportJob(factory);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -52,13 +51,12 @@ public class CsvDataFileImportEndpointTests
     public async Task ImportFile_WithOneFileNotFoundInS3_CreatesAnImportJobWithOneFileAndFails()
     {
         await using var factory = new CadsBridgeWebAppFactory(null, false);
-        var client = factory.CreateClient();
 
         var request = new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]);
 
-        var response = await TriggerImportJob(client, request);
+        var response = await TriggerImportJob(factory, request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -79,9 +77,8 @@ public class CsvDataFileImportEndpointTests
         factory.OverrideSingleton(s3ExternalToInternalCopyServiceMock.Object);
 
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(factory, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
@@ -114,9 +111,8 @@ public class CsvDataFileImportEndpointTests
            .Setup(x => x.UpdateAsync(9L, FileImportStatus.Transferred, 1, 1, cancellationToken: It.IsAny<CancellationToken>()));
 
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(factory, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
@@ -140,9 +136,8 @@ public class CsvDataFileImportEndpointTests
         factory.FileImportStoreMock
             .Setup(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(errorMessage));
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(factory, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
@@ -170,9 +165,8 @@ public class CsvDataFileImportEndpointTests
             .ReturnsAsync(123L);
 
         await factory.AmazonS3Mock.SetUpEncryptedFileAsync(TestS3Constants.TestCadsBridgeExternalBucketName, _incomingKey, _testDerivedValue, _testSalt, GetDefaultFileContents(), TestContext.Current.CancellationToken);
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(factory, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey, destinationPrefix: DestinationPrefix)
         ]));
 
@@ -204,9 +198,8 @@ public class CsvDataFileImportEndpointTests
         factory.OverrideSingleton(s3ExternalToInternalCopyServiceMock.Object);
 
         var scannedSourceKey = $"cads/cts/daily/{CtsmFilename}";
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(factory, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: scannedSourceKey)
         ]));
 
@@ -222,9 +215,8 @@ public class CsvDataFileImportEndpointTests
     public async Task ImportFile_WithUnresolvableDestinationPrefix_ReturnsBadRequestAndEnqueuesNothing()
     {
         await using var factory = new CadsBridgeWebAppFactory(null, false);
-        var client = factory.CreateClient();
 
-        var response = await TriggerImportJob(client, new CsvDataFileImportRequest([
+        var response = await TriggerImportJob(factory, new CsvDataFileImportRequest([
             new CsvDataFileImportRequestItem(sourceKey: _incomingKey)
         ]));
 
@@ -237,11 +229,11 @@ public class CsvDataFileImportEndpointTests
 
     private sealed record ImportJobResponse(string JobId);
 
-    private static async Task<HttpResponseMessage> TriggerImportJob(HttpClient httpClient, CsvDataFileImportRequest? request = null)
+    private static async Task<HttpResponseMessage> TriggerImportJob(CadsBridgeWebAppFactory factory, CsvDataFileImportRequest? request = null)
     {
         var content = HttpContentUtility.CreateApplicationJsonAsStringContent(request ?? new CsvDataFileImportRequest([]));
-
-        var response = await httpClient.PostAsync("import", content, TestContext.Current.CancellationToken);
+        var client = factory.CreateClient().AddBasicTestApiKey();
+        var response = await client.PostAsync("import", content, TestContext.Current.CancellationToken);
 
         return response;
     }

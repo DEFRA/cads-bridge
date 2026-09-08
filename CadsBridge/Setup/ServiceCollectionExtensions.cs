@@ -7,7 +7,6 @@ using CadsBridge.Infrastructure.Setup;
 using CadsBridge.Worker.Setup;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
 
 namespace CadsBridge.Setup;
 
@@ -44,14 +43,15 @@ public static class ServiceCollectionExtensions
 
         services.Configure<AclOptions>(
             configuration.GetSection("Acl"));
-
         services.Configure<AuthenticationConfiguration>(
-            configuration.GetSection("AuthenticationConfiguration"));
+            configuration.GetSection(nameof(AuthenticationConfiguration)));
+
         var authenticationBuilder = services.AddAuthentication();
         var authorizationBuilder = services.AddAuthorizationBuilder();
+
         if (authConfig.ApiKey.Enabled)
         {
-            AddApiKeyScheme(authenticationBuilder);
+            authenticationBuilder.AddApiKeyScheme();
             authorizationBuilder.AddApiKeyPolicy();
         }
     }
@@ -64,7 +64,12 @@ public static class ServiceCollectionExtensions
 
     private static void AddApiKeyPolicy(this AuthorizationBuilder authorizationBuilder)
     {
-        authorizationBuilder.AddPolicy(AuthenticationConstants.ApiKeyPolicyName,
-            policy => policy.AddAuthenticationSchemes(AuthenticationConstants.ApiKeySchemeName).RequireAuthenticatedUser());
+        var apiKeyPolicy = new AuthorizationPolicyBuilder()
+            .AddAuthenticationSchemes(AuthenticationConstants.ApiKeySchemeName)
+            .RequireAuthenticatedUser()
+            .Build();
+
+        authorizationBuilder.AddPolicy(AuthenticationConstants.ApiKeyPolicyName, apiKeyPolicy);
+        authorizationBuilder.SetFallbackPolicy(apiKeyPolicy);
     }
 }

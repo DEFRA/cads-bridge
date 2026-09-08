@@ -47,7 +47,7 @@ public class BasicAuthenticationHandler(
         if (!aclOptions.Value.Clients.TryGetValue(clientId, out var client))
             return Fail();
 
-        if (client is null || client.Secret != secret)
+        if (client.Secret != secret)
             return Fail();
 
         // Build claims

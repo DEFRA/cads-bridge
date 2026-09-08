@@ -4,8 +4,10 @@ using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Channels;
+using CadsBridge.Testing.Support.Utilities.Http;
 
 namespace CadsBridge.Tests.Component.Endpoints;
 
@@ -18,9 +20,8 @@ public class DataSeedImportEndpointTests
     public async Task GetDataSeedImport_WhenDisabled_Returns200WithDisabledMessage()
     {
         await using var factory = CreateFactory(dataSeedingEnabled: false);
-        var client = factory.CreateClient();
 
-        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+        var response = await TriggerImportJob(factory);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -35,9 +36,7 @@ public class DataSeedImportEndpointTests
             .Setup(x => x.GetFiles())
             .Returns([]);
 
-        var client = factory.CreateClient();
-
-        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+        var response = await TriggerImportJob(factory);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -55,9 +54,7 @@ public class DataSeedImportEndpointTests
                 new DataSeedFileDetail("002_seed.sql", "sql/v1/002_seed.sql")
             ]);
 
-        var client = factory.CreateClient();
-
-        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+        var response = await TriggerImportJob(factory);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -81,9 +78,7 @@ public class DataSeedImportEndpointTests
             .Setup(x => x.GetFiles())
             .Returns([new DataSeedFileDetail("001_seed.sql", "sql/v1/001_seed.sql")]);
 
-        var client = factory.CreateClient();
-
-        await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+        _ = await TriggerImportJob(factory);
 
         using var scope = factory.Services.CreateScope();
         var channel = scope.ServiceProvider
@@ -92,5 +87,13 @@ public class DataSeedImportEndpointTests
         channel.Reader.TryRead(out var job).Should().BeTrue();
         job!.FileName.Should().Be("sql/v1/001_seed.sql");
         job.TargetKey.Should().Be("data-seed/001_seed.sql");
+    }
+
+    private static async Task<HttpResponseMessage> TriggerImportJob(CadsBridgeWebAppFactory factory)
+    {
+        var client = factory.CreateClient().AddBasicTestApiKey();
+        var response = await client.GetAsync("data-seed/import", TestContext.Current.CancellationToken);
+
+        return response;
     }
 }
