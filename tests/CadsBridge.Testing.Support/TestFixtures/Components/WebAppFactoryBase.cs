@@ -130,6 +130,9 @@ public abstract class WebAppFactoryBase<TStart>(
 
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_KEY", "test");
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_SECRET", "test");
+
+        Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Secret", "test-secret");
+        Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Scopes__0", "access");
     }
 
     private void ResetInfrastructureMocks()

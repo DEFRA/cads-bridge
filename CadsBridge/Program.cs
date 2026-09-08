@@ -58,6 +58,7 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
         }
     });
 
-    builder.Services.ConfigureCds(builder.Configuration);
+    builder.Services.ConfigureCadsBridge(builder.Configuration);
+
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 }

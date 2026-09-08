@@ -1,15 +1,21 @@
 using CadsBridge.Application.Setup;
+using CadsBridge.Infrastructure.Authentication.Configuration;
+using CadsBridge.Infrastructure.Authentication.Handlers;
 using CadsBridge.Infrastructure.Configuration.Aws;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Setup;
 using CadsBridge.Worker.Setup;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CadsBridge.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static void ConfigureCds(this IServiceCollection services, IConfiguration configuration)
+    public static void ConfigureCadsBridge(this IServiceCollection services, IConfiguration configuration)
     {
+        services.ConfigureAuthentication(configuration);
+
         services.AddControllers()
             .AddJsonOptions(opts =>
             {
@@ -29,5 +35,41 @@ public static class ServiceCollectionExtensions
         services.AddBackgroundServiceScheduling(configuration);
 
         services.AddApplicationLayer();
+    }
+
+    private static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
+    {
+        var authConfig = configuration.GetSection(nameof(AuthenticationConfiguration)).Get<AuthenticationConfiguration>()!;
+
+        services.Configure<AclOptions>(
+            configuration.GetSection("Acl"));
+        services.Configure<AuthenticationConfiguration>(
+            configuration.GetSection(nameof(AuthenticationConfiguration)));
+
+        var authenticationBuilder = services.AddAuthentication();
+        var authorizationBuilder = services.AddAuthorizationBuilder();
+
+        if (authConfig.ApiKey.Enabled)
+        {
+            authenticationBuilder.AddApiKeyScheme();
+            authorizationBuilder.AddApiKeyPolicy();
+        }
+    }
+
+    private static void AddApiKeyScheme(this AuthenticationBuilder authenticationBuilder)
+    {
+        authenticationBuilder.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(
+            AuthenticationConstants.ApiKeySchemeName, _ => { });
+    }
+
+    private static void AddApiKeyPolicy(this AuthorizationBuilder authorizationBuilder)
+    {
+        var apiKeyPolicy = new AuthorizationPolicyBuilder()
+            .AddAuthenticationSchemes(AuthenticationConstants.ApiKeySchemeName)
+            .RequireAuthenticatedUser()
+            .Build();
+
+        authorizationBuilder.AddPolicy(AuthenticationConstants.ApiKeyPolicyName, apiKeyPolicy);
+        authorizationBuilder.SetFallbackPolicy(apiKeyPolicy);
     }
 }
