@@ -8,6 +8,7 @@ using CadsBridge.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -32,6 +33,13 @@ public class FileImportApiService(
             { FileImportStatus.Completed, "completed" },
             { FileImportStatus.Failed, "failed" }
        };
+
+    private static readonly JsonSerializerOptions s_condensedJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     public async Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
     {
@@ -228,17 +236,36 @@ public class FileImportApiService(
         CancellationToken cancellationToken)
     {
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        var statusCode = (int)response.StatusCode;
 
         throw response.StatusCode switch
         {
             HttpStatusCode.NotFound => new NotFoundException(
                 $"NotFound response when calling {context}."),
-            HttpStatusCode.Conflict => new ConflictException(
-                $"Conflict calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+            HttpStatusCode.Conflict => new ConflictException(CondenseResponseContent(content)),
             HttpStatusCode.RequestTimeout or >= HttpStatusCode.InternalServerError => new RetryableException(
-                $"Transient failure calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
-            _ => new NonRetryableException(
-                $"Permanent failure calling {context}. Status {(int)response.StatusCode}. Response: {content}"),
+                $"Transient failure calling {context}. Status {statusCode}. Response: {content}"),
+            _ => new NonRetryableException(CondenseResponseContent(content)),
         };
+    }
+
+    private static string CondenseResponseContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+
+            return JsonSerializer.Serialize(document, s_condensedJsonOptions);
+        }
+        catch (JsonException)
+        {
+            // Not a JSON payload, keep the original content
+            return content;
+        }
     }
 }
