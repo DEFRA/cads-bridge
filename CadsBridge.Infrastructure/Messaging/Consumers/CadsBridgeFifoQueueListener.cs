@@ -15,7 +15,7 @@ public class CadsBridgeFifoQueueListener(
     /// <summary>
     /// When <c>Messaging:DisableQueueConsumer</c> is <c>true</c> the listener skips
     /// starting the underlying poller. Intended for integration-test scenarios where the
-    /// BulkScanJob publisher must be observable without the consumer racing to drain the
+    /// CtsBulkScanJob publisher must be observable without the consumer racing to drain the
     /// queue.
     /// </summary>
     private bool IsDisabled => configuration.GetValue<bool>("Messaging:DisableQueueConsumer");

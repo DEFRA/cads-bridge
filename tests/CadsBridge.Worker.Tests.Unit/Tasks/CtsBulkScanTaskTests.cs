@@ -6,17 +6,17 @@ using Moq;
 
 namespace CadsBridge.Worker.Tests.Unit.Tasks;
 
-public class BulkScanTaskTests
+public class CtsBulkScanTaskTests
 {
     private readonly Mock<IFileDiscoveryService> _fileDiscoveryServiceMock = new();
-    private readonly Mock<ILogger<BulkFileScanTask>> _loggerMock = new Mock<ILogger<BulkFileScanTask>>().EnableAllLogLevels();
+    private readonly Mock<ILogger<CtsBulkFileScanTask>> _loggerMock = new Mock<ILogger<CtsBulkFileScanTask>>().EnableAllLogLevels();
 
     private const string Prefix = "cads/cts/bulk";
     private const string DestinationPrefix = "import/cts/bulk";
     private const string ValidFileName = "CTSM_UKV_PROD_BULK_######_CT_REGISTERED_ANIMALS_2026-02-22-074603.csv";
     private string ValidObjectKey = $"{Prefix}/{ValidFileName}";
 
-    private BulkFileScanTask CreateSut(List<string> fileNames)
+    private CtsBulkFileScanTask CreateSut(List<string> fileNames)
     {
         _fileDiscoveryServiceMock
             .Setup(x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken))
@@ -28,7 +28,7 @@ public class BulkScanTaskTests
         _fileDiscoveryServiceMock
             .Setup(x => x.IsFileValid(ValidFileName, TestContext.Current.CancellationToken))
             .ReturnsAsync(true);
-        return new BulkFileScanTask(_fileDiscoveryServiceMock.Object, _loggerMock.Object);
+        return new CtsBulkFileScanTask(_fileDiscoveryServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]

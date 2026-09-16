@@ -6,17 +6,17 @@ using Moq;
 
 namespace CadsBridge.Worker.Tests.Unit.Tasks;
 
-public class DeltaScanTaskTests
+public class CtsDeltaScanTaskTests
 {
     private readonly Mock<IFileDiscoveryService> _fileDiscoveryServiceMock = new();
-    private readonly Mock<ILogger<DeltaFileScanTask>> _loggerMock = new Mock<ILogger<DeltaFileScanTask>>().EnableAllLogLevels();
+    private readonly Mock<ILogger<CtsDeltaFileScanTask>> _loggerMock = new Mock<ILogger<CtsDeltaFileScanTask>>().EnableAllLogLevels();
 
     private const string Prefix = "cads/cts/daily";
     private const string DestinationPrefix = "import/cts/daily";
     private const string ValidFileName = "CTSM_UKV_PROD_DELTA_######_CT_REGISTERED_ANIMALS_2026-02-22-074603.csv";
     private string ValidObjectKey = $"{Prefix}/{ValidFileName}";
 
-    private DeltaFileScanTask CreateSut(List<string> fileNames)
+    private CtsDeltaFileScanTask CreateSut(List<string> fileNames)
     {
         _fileDiscoveryServiceMock
             .Setup(x => x.GetFileNames(Prefix, TestContext.Current.CancellationToken))
@@ -28,7 +28,7 @@ public class DeltaScanTaskTests
         _fileDiscoveryServiceMock
             .Setup(x => x.IsFileValid(ValidFileName, TestContext.Current.CancellationToken))
             .ReturnsAsync(true);
-        return new DeltaFileScanTask(_fileDiscoveryServiceMock.Object, _loggerMock.Object);
+        return new CtsDeltaFileScanTask(_fileDiscoveryServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]

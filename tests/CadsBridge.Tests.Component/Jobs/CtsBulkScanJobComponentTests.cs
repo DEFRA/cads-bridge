@@ -9,19 +9,19 @@ using Quartz;
 
 namespace CadsBridge.Tests.Component.Jobs;
 
-public class BulkScanJobComponentTests
+public class CtsCtsBulkScanJobComponentTests
 {
-    private readonly Mock<IBulkFileScanTask> _bulkScanTaskMock = new();
+    private readonly Mock<IFileScanTask> _bulkScanTaskMock = new();
     private readonly Mock<IDistributedLock> _distributedLockMock = new();
-    private readonly Mock<ILogger<BulkScanJob>> _loggerMock = new Mock<ILogger<BulkScanJob>>().EnableAllLogLevels();
+    private readonly Mock<ILogger<CtsBulkScanJob>> _loggerMock = new Mock<ILogger<CtsBulkScanJob>>().EnableAllLogLevels();
     private readonly Mock<IJobExecutionContext> _contextMock = new();
 
-    public BulkScanJobComponentTests()
+    public CtsCtsBulkScanJobComponentTests()
     {
         _contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
     }
 
-    private BulkScanJob CreateSut() =>
+    private CtsBulkScanJob CreateSut() =>
         new(_bulkScanTaskMock.Object, _distributedLockMock.Object, _loggerMock.Object);
 
     [Fact]
@@ -29,7 +29,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsBulkScanJob), CancellationToken.None))
             .ReturnsAsync(true);
 
         _bulkScanTaskMock
@@ -50,7 +50,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsBulkScanJob), CancellationToken.None))
             .ReturnsAsync(true);
 
         var sut = CreateSut();
@@ -59,7 +59,7 @@ public class BulkScanJobComponentTests
         await sut.Execute(_contextMock.Object);
 
         // Assert
-        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(BulkScanJob), CancellationToken.None), Times.Once);
+        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(CtsBulkScanJob), CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsBulkScanJob), CancellationToken.None))
             .ReturnsAsync(true);
 
         _bulkScanTaskMock
@@ -81,7 +81,7 @@ public class BulkScanJobComponentTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
-        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(BulkScanJob), CancellationToken.None), Times.Once);
+        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(CtsBulkScanJob), CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsBulkScanJob), CancellationToken.None))
             .ReturnsAsync(false);
 
         var sut = CreateSut();
@@ -106,7 +106,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsBulkScanJob), CancellationToken.None))
             .ReturnsAsync(false);
 
         var sut = CreateSut();
