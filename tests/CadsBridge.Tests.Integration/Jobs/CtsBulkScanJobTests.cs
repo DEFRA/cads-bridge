@@ -11,31 +11,31 @@ using System.Text.Json;
 namespace CadsBridge.Tests.Integration.Jobs;
 
 /// <summary>
-/// End-to-end integration test for <see cref="CadsBridge.Worker.Jobs.DeltaScanJob"/>.
+/// End-to-end integration test for <see cref="CadsBridge.Worker.Jobs.CtsBulkScanJob"/>.
 /// Expected outcome: exactly 2 SQS messages are enqueued (files 4 and 5).
 /// </summary>
 [Trait("Dependence", "testcontainers")]
-public class DeltaScanJobTests
+public class CtsBulkScanJobTests
 {
-    private const string CompleteFile = "CTSM_CADS_PROD_DELTA_ABC_0004_CT_PARTIES_2026-01-01-012345.csv";
-    private const string FailedFile = "CTSM_CADS_PROD_DELTA_ABC_0005_CT_PARTIES_2026-01-01-012345.csv";
+    private const string CompleteFile = "CTSM_CADS_PROD_BULK_ABC_0004_CT_PARTIES_2026-01-01-012345.csv";
+    private const string FailedFile = "CTSM_CADS_PROD_BULK_ABC_0005_CT_PARTIES_2026-01-01-012345.csv";
     private const string InvalidFilename = "invalid-filename.csv";
-    private const string BulkTypeFile = "CTSM_CADS_PROD_BULK_XYZ_0001_CT_ANIMALS_2026-07-31-120000.csv";
-    private const string NewFile = "CTSM_CADS_PROD_DELTA_NEW_0001_CT_ANIMALS_2026-07-31-120000.csv";
-    private const string Prefix = "cads/cts/daily/";
-    private const string DestinationPrefix = "import/cts/daily";
+    private const string DeltaTypeFile = "CTSM_CADS_PROD_DELTA_XYZ_0001_CT_ANIMALS_2026-07-31-120000.csv";
+    private const string NewFile = "CTSM_CADS_PROD_BULK_NEW_0001_CT_ANIMALS_2026-07-31-120000.csv";
+    private const string Prefix = "cads/cts/bulk/";
+    private const string DestinationPrefix = "import/cts/bulk";
 
     [Fact]
-    public async Task DeltaScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
+    public async Task CtsBulkScanJob_HappyPath_EnqueuesOnlyValidFilesNotYetCompleted()
     {
         // ── Arrange: start the container with the fake CDS API and the queue consumer
-        //   disabled so DeltaScanJob messages stay in the queue long enough for the test
+        //   disabled so CtsBulkScanJob messages stay in the queue long enough for the test
         //   to read them
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
             ["Messaging__DisableQueueConsumer"] = "true",
-            ["Quartz__Jobs__1__Enabled"] = "true",
-            ["Quartz__Jobs__1__CronSchedule"] = "*/10 * * * * ?"
+            ["Quartz__Jobs__0__Enabled"] = "true",
+            ["Quartz__Jobs__0__CronSchedule"] = "*/10 * * * * ?"
         });
 
         await fixture.InitializeAsync();
@@ -47,7 +47,7 @@ public class DeltaScanJobTests
         var ct = TestContext.Current.CancellationToken;
 
         // Upload all five test objects to the external bucket.
-        foreach (var key in new[] { InvalidFilename, BulkTypeFile, CompleteFile, FailedFile, NewFile })
+        foreach (var key in new[] { InvalidFilename, DeltaTypeFile, CompleteFile, FailedFile, NewFile })
         {
             await s3.PutObjectAsync(new PutObjectRequest
             {
@@ -103,7 +103,7 @@ public class DeltaScanJobTests
         enqueuedKeys.Should().NotContain(Prefix + InvalidFilename,
             because: "an invalid CTSM filename must be dropped before any CDS API call");
 
-        enqueuedKeys.Should().NotContain(Prefix + BulkTypeFile,
+        enqueuedKeys.Should().NotContain(Prefix + DeltaTypeFile,
             because: "a non-BULK type file must be dropped by GetValidBulkFileNames");
 
         // ── Verify the bucket and correlation metadata are present ──

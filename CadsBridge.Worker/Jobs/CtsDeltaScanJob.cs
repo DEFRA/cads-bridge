@@ -1,16 +1,17 @@
 using CadsBridge.Core.Locking;
 using CadsBridge.Worker.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace CadsBridge.Worker.Jobs;
 
-public class DeltaScanJob(
-    IDeltaFileScanTask deltaScanTask,
+public class CtsDeltaScanJob(
+    [FromKeyedServices(ScanTaskType.CtsDelta)] IFileScanTask deltaScanTask,
     IDistributedLock distributedLock,
-    ILogger<DeltaScanJob> logger) : IJob
+    ILogger<CtsDeltaScanJob> logger) : IJob
 {
-    private const string LockName = nameof(DeltaScanJob);
+    private const string LockName = nameof(CtsDeltaScanJob);
 
     public async Task Execute(IJobExecutionContext context)
     {

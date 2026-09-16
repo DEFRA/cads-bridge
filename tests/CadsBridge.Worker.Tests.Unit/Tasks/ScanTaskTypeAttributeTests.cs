@@ -11,7 +11,7 @@ public class ScanTaskTypeAttributeTests
     [Fact]
     public void GetBulkTypeAttribute_ShouldReturnAttribute()
     {
-        var testEnum = ScanTaskType.Bulk;
+        var testEnum = ScanTaskType.CtsBulk;
 
         var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
         result.Should().NotBeNull();
@@ -23,7 +23,7 @@ public class ScanTaskTypeAttributeTests
     [Fact]
     public void GetDeltaTypeAttribute_ShouldReturnAttribute()
     {
-        var testEnum = ScanTaskType.Delta;
+        var testEnum = ScanTaskType.CtsDelta;
 
         var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
         result.Should().NotBeNull();

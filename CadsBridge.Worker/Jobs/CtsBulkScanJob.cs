@@ -1,16 +1,17 @@
 using CadsBridge.Core.Locking;
 using CadsBridge.Worker.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace CadsBridge.Worker.Jobs;
 
-public class BulkScanJob(
-    IBulkFileScanTask bulkScanTask,
+public class CtsBulkScanJob(
+    [FromKeyedServices(ScanTaskType.CtsBulk)] IFileScanTask bulkScanTask,
     IDistributedLock distributedLock,
-    ILogger<BulkScanJob> logger) : IJob
+    ILogger<CtsBulkScanJob> logger) : IJob
 {
-    private const string LockName = nameof(BulkScanJob);
+    private const string LockName = nameof(CtsBulkScanJob);
 
     public async Task Execute(IJobExecutionContext context)
     {

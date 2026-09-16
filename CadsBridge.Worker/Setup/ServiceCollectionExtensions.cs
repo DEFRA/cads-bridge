@@ -33,11 +33,11 @@ public static class ServiceCollectionExtensions
                 {
                     switch (jobConfiguration.JobType)
                     {
-                        case nameof(BulkScanJob):
-                            q.AddQuartzJob<BulkScanJob>(jobConfiguration);
+                        case nameof(CtsBulkScanJob):
+                            q.AddQuartzJob<CtsBulkScanJob>(jobConfiguration);
                             break;
-                        case nameof(DeltaScanJob):
-                            q.AddQuartzJob<DeltaScanJob>(jobConfiguration);
+                        case nameof(CtsDeltaScanJob):
+                            q.AddQuartzJob<CtsDeltaScanJob>(jobConfiguration);
                             break;
                         default:
                             throw new ArgumentException($"Unknown job type: {jobConfiguration.JobType}");
@@ -102,13 +102,13 @@ public static class ServiceCollectionExtensions
 
     private static void AddJobs(this IServiceCollection services)
     {
-        services.AddScoped<BulkScanJob>();
-        services.AddScoped<DeltaScanJob>();
+        services.AddScoped<CtsBulkScanJob>();
+        services.AddScoped<CtsDeltaScanJob>();
     }
 
     private static void AddTasks(this IServiceCollection services)
     {
-        services.AddScoped<IBulkFileScanTask, BulkFileScanTask>();
-        services.AddScoped<IDeltaFileScanTask, DeltaFileScanTask>();
+        services.AddKeyedScoped<IFileScanTask, CtsBulkFileScanTask>(ScanTaskType.CtsBulk);
+        services.AddKeyedScoped<IFileScanTask, CtsDeltaFileScanTask>(ScanTaskType.CtsDelta);
     }
 }

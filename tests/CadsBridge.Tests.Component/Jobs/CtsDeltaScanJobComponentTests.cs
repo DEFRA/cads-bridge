@@ -9,30 +9,31 @@ using Quartz;
 
 namespace CadsBridge.Tests.Component.Jobs;
 
-public class BulkScanJobComponentTests
+public class CtsDeltaScanJobComponentTests
+
 {
-    private readonly Mock<IBulkFileScanTask> _bulkScanTaskMock = new();
+    private readonly Mock<IFileScanTask> _deltaScanTaskMock = new();
     private readonly Mock<IDistributedLock> _distributedLockMock = new();
-    private readonly Mock<ILogger<BulkScanJob>> _loggerMock = new Mock<ILogger<BulkScanJob>>().EnableAllLogLevels();
+    private readonly Mock<ILogger<CtsDeltaScanJob>> _loggerMock = new Mock<ILogger<CtsDeltaScanJob>>().EnableAllLogLevels();
     private readonly Mock<IJobExecutionContext> _contextMock = new();
 
-    public BulkScanJobComponentTests()
+    public CtsDeltaScanJobComponentTests()
     {
         _contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
     }
 
-    private BulkScanJob CreateSut() =>
-        new(_bulkScanTaskMock.Object, _distributedLockMock.Object, _loggerMock.Object);
+    private CtsDeltaScanJob CreateSut() =>
+        new(_deltaScanTaskMock.Object, _distributedLockMock.Object, _loggerMock.Object);
 
     [Fact]
     public async Task Execute_RunsTask_WhenLockIsAcquired()
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsDeltaScanJob), CancellationToken.None))
             .ReturnsAsync(true);
 
-        _bulkScanTaskMock
+        _deltaScanTaskMock
             .Setup(x => x.RunAsync(CancellationToken.None))
             .Returns(Task.CompletedTask);
 
@@ -42,7 +43,7 @@ public class BulkScanJobComponentTests
         await sut.Execute(_contextMock.Object);
 
         // Assert
-        _bulkScanTaskMock.Verify(x => x.RunAsync(CancellationToken.None), Times.Once);
+        _deltaScanTaskMock.Verify(x => x.RunAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -50,7 +51,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsDeltaScanJob), CancellationToken.None))
             .ReturnsAsync(true);
 
         var sut = CreateSut();
@@ -59,7 +60,7 @@ public class BulkScanJobComponentTests
         await sut.Execute(_contextMock.Object);
 
         // Assert
-        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(BulkScanJob), CancellationToken.None), Times.Once);
+        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(CtsDeltaScanJob), CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -67,10 +68,10 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsDeltaScanJob), CancellationToken.None))
             .ReturnsAsync(true);
 
-        _bulkScanTaskMock
+        _deltaScanTaskMock
             .Setup(x => x.RunAsync(CancellationToken.None))
             .ThrowsAsync(new InvalidOperationException("task failed"));
 
@@ -81,7 +82,7 @@ public class BulkScanJobComponentTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
-        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(BulkScanJob), CancellationToken.None), Times.Once);
+        _distributedLockMock.Verify(x => x.ReleaseAsync(nameof(CtsDeltaScanJob), CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsDeltaScanJob), CancellationToken.None))
             .ReturnsAsync(false);
 
         var sut = CreateSut();
@@ -98,7 +99,7 @@ public class BulkScanJobComponentTests
         await sut.Execute(_contextMock.Object);
 
         // Assert
-        _bulkScanTaskMock.Verify(x => x.RunAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _deltaScanTaskMock.Verify(x => x.RunAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class BulkScanJobComponentTests
     {
         // Arrange
         _distributedLockMock
-            .Setup(x => x.TryAcquireAsync(nameof(BulkScanJob), CancellationToken.None))
+            .Setup(x => x.TryAcquireAsync(nameof(CtsDeltaScanJob), CancellationToken.None))
             .ReturnsAsync(false);
 
         var sut = CreateSut();

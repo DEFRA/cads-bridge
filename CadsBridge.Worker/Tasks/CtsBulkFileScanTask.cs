@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Worker.Tasks;
 
-public class BulkFileScanTask(
+public class CtsBulkFileScanTask(
     IFileDiscoveryService fileDiscoveryService,
-    ILogger<BulkFileScanTask> logger
-    ) : FileScanTask(ScanTaskType.Bulk, fileDiscoveryService, logger), IBulkFileScanTask
+    ILogger<CtsBulkFileScanTask> logger
+    ) : FileScanTask(ScanTaskType.CtsBulk, fileDiscoveryService, logger)
 {
 }
