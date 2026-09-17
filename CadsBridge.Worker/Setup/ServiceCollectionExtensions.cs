@@ -1,3 +1,4 @@
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Worker.Configuration;
 using CadsBridge.Worker.Jobs;
 using CadsBridge.Worker.Tasks;
@@ -108,7 +109,7 @@ public static class ServiceCollectionExtensions
 
     private static void AddTasks(this IServiceCollection services)
     {
-        services.AddKeyedScoped<IFileScanTask, CtsBulkFileScanTask>(ScanTaskType.CtsBulk);
-        services.AddKeyedScoped<IFileScanTask, CtsDeltaFileScanTask>(ScanTaskType.CtsDelta);
+        services.AddKeyedScoped<IFileScanTask, CtsBulkFileScanTask>(DataSourceType.CtsBulk);
+        services.AddKeyedScoped<IFileScanTask, CtsDeltaFileScanTask>(DataSourceType.CtsDelta);
     }
 }

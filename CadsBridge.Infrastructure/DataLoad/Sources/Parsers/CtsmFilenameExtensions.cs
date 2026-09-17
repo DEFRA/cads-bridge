@@ -1,6 +1,4 @@
-using CadsBridge.Infrastructure.DataLoad.Csv.Files;
-
-namespace CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+namespace CadsBridge.Infrastructure.DataLoad.Sources.Parsers;
 
 public static class CtsmFilenameExtensions
 {

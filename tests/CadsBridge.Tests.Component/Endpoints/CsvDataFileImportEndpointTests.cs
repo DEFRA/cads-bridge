@@ -184,7 +184,7 @@ public class CsvDataFileImportEndpointTests
     }
 
     [Fact]
-    public async Task ImportFile_WithSourceKeyUnderAScanPrefix_ResolvesDestinationPrefixFromScanTaskType()
+    public async Task ImportFile_WithSourceKeyUnderAScanPrefix_ResolvesDestinationPrefixFromDataSourceType()
     {
         await using var factory = new CadsBridgeWebAppFactory(SaltOverride(_testSalt), false);
 

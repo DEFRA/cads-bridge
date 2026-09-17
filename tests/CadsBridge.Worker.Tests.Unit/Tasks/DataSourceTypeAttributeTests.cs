@@ -1,19 +1,19 @@
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Application.Extensions;
 using CadsBridge.Core.Attributes;
-using CadsBridge.Worker.Tasks;
 using FluentAssertions;
 
 namespace CadsBridge.Worker.Tests.Unit.Tasks;
 
-public class ScanTaskTypeAttributeTests
+public class DataSourceTypeAttributeTests
 {
 
     [Fact]
     public void GetBulkTypeAttribute_ShouldReturnAttribute()
     {
-        var testEnum = ScanTaskType.CtsBulk;
+        var testEnum = DataSourceType.CtsBulk;
 
-        var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
+        var result = testEnum.GetAttribute<DataSourceTypeInfoAttribute>();
         result.Should().NotBeNull();
         result!.Name.Should().Be("BULK");
         result!.Prefix.Should().Be("cads/cts/bulk");
@@ -23,9 +23,9 @@ public class ScanTaskTypeAttributeTests
     [Fact]
     public void GetDeltaTypeAttribute_ShouldReturnAttribute()
     {
-        var testEnum = ScanTaskType.CtsDelta;
+        var testEnum = DataSourceType.CtsDelta;
 
-        var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
+        var result = testEnum.GetAttribute<DataSourceTypeInfoAttribute>();
         result.Should().NotBeNull();
         result!.Name.Should().Be("DELTA");
         result!.Prefix.Should().Be("cads/cts/daily");
@@ -33,13 +33,13 @@ public class ScanTaskTypeAttributeTests
     }
 
     [Fact]
-    public void EveryScanTaskType_ShouldFollowTheOwnerDataSourceTypeLayout()
+    public void EveryDataSourceType_ShouldFollowTheOwnerDataSourceTypeLayout()
     {
-        foreach (var scanTaskType in Enum.GetValues<ScanTaskType>())
+        foreach (var dataSourceType in Enum.GetValues<DataSourceType>())
         {
-            var info = scanTaskType.GetAttribute<ScanTaskInfoAttribute>();
+            var info = dataSourceType.GetAttribute<DataSourceTypeInfoAttribute>();
 
-            info.Should().NotBeNull($"{scanTaskType} must declare a ScanTaskInfo attribute");
+            info.Should().NotBeNull($"{dataSourceType} must declare a ScanTaskInfo attribute");
             info!.Prefix.Split('/').Should().HaveCount(3, "source prefix should be cads/{{data_source}}/{{type}}");
             info.DestinationPrefix.Split('/').Should().HaveCount(3, "destination prefix should be import/{{data_source}}/{{type}}");
             info.DestinationPrefix.Should().StartWith("import/");

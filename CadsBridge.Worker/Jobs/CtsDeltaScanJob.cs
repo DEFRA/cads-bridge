@@ -1,3 +1,4 @@
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Core.Locking;
 using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +8,7 @@ using Quartz;
 namespace CadsBridge.Worker.Jobs;
 
 public class CtsDeltaScanJob(
-    [FromKeyedServices(ScanTaskType.CtsDelta)] IFileScanTask deltaScanTask,
+    [FromKeyedServices(DataSourceType.CtsDelta)] IFileScanTask deltaScanTask,
     IDistributedLock distributedLock,
     ILogger<CtsDeltaScanJob> logger) : IJob
 {

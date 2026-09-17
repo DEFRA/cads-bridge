@@ -2,13 +2,13 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
-using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
-using CadsBridge.Infrastructure.DataLoad.Csv.Files;
+using CadsBridge.Infrastructure.DataLoad.Sources;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
@@ -136,7 +136,14 @@ public class S3CopyService(
 
         // Determine file size to decide whether to use multipart upload or single upload
         var fileSize = await GetRemoteFileSizeAsync(externalS3, externalS3Info.BucketName, request.SourceKey, cancellationToken);
-        var password = CtsmFilenameParser.Parse(request.SourceKeyFileName)!.DerivePassword();
+
+        if (!DataSourceTypeExtensions.TryResolveDataSourceType(request.DestinationPrefix, out var dataSourceType))
+        {
+            throw new InvalidOperationException(
+                $"Could not resolve a data source type for destination prefix '{request.DestinationPrefix}'.");
+        }
+
+        var password = DataSourceStrategyFactory.Create(dataSourceType).DeriveDecryptionPassword(request.SourceKeyFileName);
 
         // if file is small enough to avoid multipart overhead, otherwise use streaming with multipart upload
         if (fileSize < MaxSingleFileSize)
