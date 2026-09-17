@@ -1,3 +1,4 @@
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Core.Locking;
 using CadsBridge.Worker.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +8,7 @@ using Quartz;
 namespace CadsBridge.Worker.Jobs;
 
 public class CtsBulkScanJob(
-    [FromKeyedServices(ScanTaskType.CtsBulk)] IFileScanTask bulkScanTask,
+    [FromKeyedServices(DataSourceType.CtsBulk)] IFileScanTask bulkScanTask,
     IDistributedLock distributedLock,
     ILogger<CtsBulkScanJob> logger) : IJob
 {

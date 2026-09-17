@@ -1,8 +1,8 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Core.Correlation;
 using CadsBridge.Endpoints.Requests;
-using CadsBridge.Worker.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Channels;
 
@@ -58,10 +58,10 @@ public static class EndpointsExtensions
         {
             var destinationPrefix = importFile.destinationPrefix;
             if (string.IsNullOrWhiteSpace(destinationPrefix) &&
-                !ScanTaskTypeExtensions.TryResolveDestinationPrefix(importFile.sourceKey, out destinationPrefix))
+                !DataSourceTypeExtensions.TryResolveDestinationPrefix(importFile.sourceKey, out destinationPrefix))
             {
                 return Results.BadRequest(
-                    $"No destinationPrefix supplied for '{importFile.sourceKey}' and none could be resolved from the configured scan task source prefixes.");
+                    $"No destinationPrefix supplied for '{importFile.sourceKey}' and none could be resolved from the configured data source type source prefixes.");
             }
 
             jobs.Add(new CsvDataFileImportJob(

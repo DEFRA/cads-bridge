@@ -1,8 +1,8 @@
 using CadsBridge.Core.Attributes;
 
-namespace CadsBridge.Worker.Tasks;
+namespace CadsBridge.Application.DataLoad.Scanning;
 
-public enum ScanTaskType
+public enum DataSourceType
 {
     [ScanTaskInfo("BULK", "cads/cts/bulk", "import/cts/bulk")]
     CtsBulk,

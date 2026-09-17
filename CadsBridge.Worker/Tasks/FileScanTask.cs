@@ -1,33 +1,34 @@
+using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Application.Extensions;
 using CadsBridge.Core.Attributes;
-using CadsBridge.Infrastructure.DataLoad.Csv.Files;
+using CadsBridge.Infrastructure.DataLoad.Sources;
 using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Worker.Tasks;
 
 public abstract class FileScanTask(
-    ScanTaskType scanTaskType,
+    DataSourceType dataSourceType,
     IFileDiscoveryService fileDiscoveryService,
     ILogger<FileScanTask> logger
     ) : IFileScanTask
 {
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        // Retrieve the list of files from the external bucket based on the scan type prefix if provided
-        var scanTaskInfo = scanTaskType.GetAttribute<ScanTaskInfoAttribute>();
-        var scanTaskTypePrefix = scanTaskInfo?.Prefix;
-        var scanTaskTypeName = scanTaskInfo?.Name;
+        // Retrieve the list of files from the external bucket based on the data source type prefix if provided
+        var scanTaskInfo = dataSourceType.GetAttribute<ScanTaskInfoAttribute>();
+        var dataSourceTypePrefix = scanTaskInfo?.Prefix;
+        var dataSourceTypeName = scanTaskInfo?.Name;
         var destinationPrefix = scanTaskInfo?.DestinationPrefix
-            ?? throw new InvalidOperationException($"Scan task type '{scanTaskType}' has no destination prefix configured.");
+            ?? throw new InvalidOperationException($"Data source type '{dataSourceType}' has no destination prefix configured.");
 
         // Get the list of files in the external bucket
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Starting {ScanTaskTypeName} scan task ...", scanTaskTypeName);
+            logger.LogDebug("Starting {DataSourceTypeName} scan task ...", dataSourceTypeName);
         }
 
-        var result = await fileDiscoveryService.GetFileNames(scanTaskTypePrefix, cancellationToken);
+        var result = await fileDiscoveryService.GetFileNames(dataSourceTypePrefix, cancellationToken);
 
         if (result.Count == 0)
         {
@@ -63,7 +64,7 @@ public abstract class FileScanTask(
     {
         var keysToProcess = new List<string>();
 
-        var validObjectKeys = objectKeys.Where(fk => ValidateFileKey(scanTaskType, fk)).ToList();
+        var validObjectKeys = objectKeys.Where(fk => ValidateFileKey(dataSourceType, fk)).ToList();
 
         foreach (var objectKey in validObjectKeys)
         {
@@ -77,13 +78,13 @@ public abstract class FileScanTask(
         return keysToProcess;
     }
 
-    private static bool ValidateFileKey(ScanTaskType scanTaskType, string objectKey)
+    private bool ValidateFileKey(DataSourceType dataSourceType, string objectKey)
     {
-        var name = scanTaskType.GetAttribute<ScanTaskInfoAttribute>()?.Name;
+        var name = dataSourceType.GetAttribute<ScanTaskInfoAttribute>()?.Name
+            ?? throw new InvalidOperationException($"Data source type '{dataSourceType}' has no name configured.");
 
         var fileName = Path.GetFileName(objectKey);
 
-        return CtsmFilenameParser.TryParse(fileName, out var parsed) &&
-            parsed!.Type.Equals(name, StringComparison.OrdinalIgnoreCase);
+        return DataSourceStrategyFactory.Create(dataSourceType).IsFileNameValidForType(fileName, name);
     }
 }
