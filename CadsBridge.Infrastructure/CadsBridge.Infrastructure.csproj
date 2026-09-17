@@ -22,4 +22,8 @@
       <ProjectReference Include="..\CadsBridge.Core\CadsBridge.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="DataLoad\Csv\Files\" />
+    </ItemGroup>
+
 </Project>

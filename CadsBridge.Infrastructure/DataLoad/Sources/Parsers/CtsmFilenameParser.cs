@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CadsBridge.Infrastructure.DataLoad.Csv.Files;
+namespace CadsBridge.Infrastructure.DataLoad.Sources.Parsers;
 
 public static partial class CtsmFilenameParser
 {

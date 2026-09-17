@@ -1,4 +1,4 @@
-namespace CadsBridge.Infrastructure.DataLoad.Csv.Files;
+namespace CadsBridge.Infrastructure.DataLoad.Sources.Parsers;
 
 public record CtsmFilename(
     string App,
