@@ -16,7 +16,7 @@ public static class DataSourceTypeExtensions
 
         foreach (var dataSourceType in Enum.GetValues<DataSourceType>())
         {
-            var info = dataSourceType.GetAttribute<ScanTaskInfoAttribute>();
+            var info = dataSourceType.GetAttribute<DataSourceTypeInfoAttribute>();
             if (info is null)
             {
                 continue;
@@ -46,7 +46,7 @@ public static class DataSourceTypeExtensions
 
         foreach (var candidate in Enum.GetValues<DataSourceType>())
         {
-            var info = candidate.GetAttribute<ScanTaskInfoAttribute>();
+            var info = candidate.GetAttribute<DataSourceTypeInfoAttribute>();
             if (info is null)
             {
                 continue;

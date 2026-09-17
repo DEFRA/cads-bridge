@@ -13,7 +13,7 @@ public class DataSourceTypeAttributeTests
     {
         var testEnum = DataSourceType.CtsBulk;
 
-        var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
+        var result = testEnum.GetAttribute<DataSourceTypeInfoAttribute>();
         result.Should().NotBeNull();
         result!.Name.Should().Be("BULK");
         result!.Prefix.Should().Be("cads/cts/bulk");
@@ -25,7 +25,7 @@ public class DataSourceTypeAttributeTests
     {
         var testEnum = DataSourceType.CtsDelta;
 
-        var result = testEnum.GetAttribute<ScanTaskInfoAttribute>();
+        var result = testEnum.GetAttribute<DataSourceTypeInfoAttribute>();
         result.Should().NotBeNull();
         result!.Name.Should().Be("DELTA");
         result!.Prefix.Should().Be("cads/cts/daily");
@@ -37,7 +37,7 @@ public class DataSourceTypeAttributeTests
     {
         foreach (var dataSourceType in Enum.GetValues<DataSourceType>())
         {
-            var info = dataSourceType.GetAttribute<ScanTaskInfoAttribute>();
+            var info = dataSourceType.GetAttribute<DataSourceTypeInfoAttribute>();
 
             info.Should().NotBeNull($"{dataSourceType} must declare a ScanTaskInfo attribute");
             info!.Prefix.Split('/').Should().HaveCount(3, "source prefix should be cads/{{data_source}}/{{type}}");

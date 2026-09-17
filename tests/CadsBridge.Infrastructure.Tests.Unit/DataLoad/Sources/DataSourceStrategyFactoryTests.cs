@@ -15,4 +15,13 @@ public class DataSourceStrategyFactoryTests
 
         strategy.Should().BeOfType<CtsDataSourceStrategy>();
     }
+
+    [Fact]
+    public void Create_ShouldThrowNotSupportedException_ForUnknownDataSourceType()
+    {
+        Action act = () => DataSourceStrategyFactory.Create((DataSourceType)999);
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage("No data source strategy is registered for data source type '999'.");
+    }
 }

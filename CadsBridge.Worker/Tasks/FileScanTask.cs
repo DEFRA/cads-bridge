@@ -16,7 +16,7 @@ public abstract class FileScanTask(
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         // Retrieve the list of files from the external bucket based on the data source type prefix if provided
-        var scanTaskInfo = dataSourceType.GetAttribute<ScanTaskInfoAttribute>();
+        var scanTaskInfo = dataSourceType.GetAttribute<DataSourceTypeInfoAttribute>();
         var dataSourceTypePrefix = scanTaskInfo?.Prefix;
         var dataSourceTypeName = scanTaskInfo?.Name;
         var destinationPrefix = scanTaskInfo?.DestinationPrefix
@@ -80,7 +80,7 @@ public abstract class FileScanTask(
 
     private bool ValidateFileKey(DataSourceType dataSourceType, string objectKey)
     {
-        var name = dataSourceType.GetAttribute<ScanTaskInfoAttribute>()?.Name
+        var name = dataSourceType.GetAttribute<DataSourceTypeInfoAttribute>()?.Name
             ?? throw new InvalidOperationException($"Data source type '{dataSourceType}' has no name configured.");
 
         var fileName = Path.GetFileName(objectKey);
