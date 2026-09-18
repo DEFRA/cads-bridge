@@ -32,6 +32,10 @@ public sealed class ExceptionHandlingMiddleware(
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.NotFound);
         }
+        catch (PayloadTooLargeException ex)
+        {
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.RequestEntityTooLarge);
+        }
         catch (DomainException ex)
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.Conflict, "Conflict error");

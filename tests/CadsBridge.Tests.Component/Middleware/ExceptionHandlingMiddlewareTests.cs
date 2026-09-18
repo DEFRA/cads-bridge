@@ -187,6 +187,22 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
+    public async Task PayloadTooLargeException_returns_413()
+    {
+        var context = CreateHttpContext();
+        var middleware = CreateMiddleware(_ => throw new PayloadTooLargeException("Content too large"));
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.StatusCode.Should().Be(413);
+
+        var problem = await GetProblemDetailsFromResponse(context);
+        problem.Status.Should().Be(413);
+        problem.Title.Should().Be("Content payload is too large");
+        problem.Detail.Should().Contain("Content too large");
+    }
+
+    [Fact]
     public async Task DomainException_returns_409()
     {
         var context = CreateHttpContext();
