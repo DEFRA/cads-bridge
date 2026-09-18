@@ -104,6 +104,6 @@ public sealed class ExceptionHandlingMiddleware(
         context.Response.ContentType = "application/json";
 
         var json = JsonSerializer.Serialize(problemDetails, JsonDefaults.DefaultOptionsWithIndented);
-        return context.Response.WriteAsync(json);
+        return context.Response.WriteAsync(json, context.RequestAborted);
     }
 }
