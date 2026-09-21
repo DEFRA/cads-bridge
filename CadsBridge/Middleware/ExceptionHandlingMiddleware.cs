@@ -32,6 +32,10 @@ public sealed class ExceptionHandlingMiddleware(
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.NotFound);
         }
+        catch (PayloadTooLargeException ex)
+        {
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.RequestEntityTooLarge);
+        }
         catch (DomainException ex)
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.Conflict, "Conflict error");
@@ -100,6 +104,6 @@ public sealed class ExceptionHandlingMiddleware(
         context.Response.ContentType = "application/json";
 
         var json = JsonSerializer.Serialize(problemDetails, JsonDefaults.DefaultOptionsWithIndented);
-        return context.Response.WriteAsync(json);
+        return context.Response.WriteAsync(json, context.RequestAborted);
     }
 }

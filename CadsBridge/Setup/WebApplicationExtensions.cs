@@ -4,6 +4,7 @@ using CadsBridge.Middleware;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics.CodeAnalysis;
+using CadsBridge.Endpoints.Testing;
 
 namespace CadsBridge.Setup;
 
@@ -62,5 +63,11 @@ public static class WebApplicationExtensions
         }).AllowAnonymous();
 
         app.CreateEndpoints();
+
+        var testEndpointsEnabled = configuration.GetValue<bool>("EnableTestEndpoints");
+        if (testEndpointsEnabled)
+        {
+            app.CreateTestEndpoints();
+        }
     }
 }
