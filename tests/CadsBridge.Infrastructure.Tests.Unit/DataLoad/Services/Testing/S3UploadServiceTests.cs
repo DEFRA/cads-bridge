@@ -128,7 +128,7 @@ public class S3UploadServiceTests
                 It.IsAny<long?>(), It.IsAny<ProgressCallback?>(), It.IsAny<CancellationToken>()))
            .ThrowsAsync(new InvalidOperationException("encryption failure"));
 
-        var logger = new Mock<ILogger<S3CopyService>>();
+        var logger = new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var sut = CreateSut(s3.Object, aes.Object, logger);
@@ -164,7 +164,7 @@ public class S3UploadServiceTests
                 It.IsAny<long?>(), It.IsAny<ProgressCallback?>(), It.IsAny<CancellationToken>()))
            .Returns(Task.CompletedTask);
 
-        var logger = new Mock<ILogger<S3CopyService>>();
+        var logger = new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var sut = CreateSut(s3.Object, aes.Object, logger);
@@ -181,21 +181,21 @@ public class S3UploadServiceTests
             Times.Once);
     }
 
-    private static S3UploadService<InternalStorageClient> CreateSut(
+    private static S3UploadService<ExternalStorageClient> CreateSut(
         IAmazonS3 s3,
         IAesCryptoTransform aes,
-        Mock<ILogger<S3CopyService>>? logger = null)
+        Mock<ILogger<S3UploadService<ExternalStorageClient>>>? logger = null)
     {
         var factory = new Mock<IS3ClientFactory>();
 
         factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
                .Returns(new S3ClientFactory.ClientInfo(s3, Bucket));
 
-        logger ??= new Mock<ILogger<S3CopyService>>();
+        logger ??= new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var config = new DataLoadConfiguration { Salt = Salt };
 
-        return new S3UploadService<InternalStorageClient>(factory.Object, aes, config, logger.Object);
+        return new S3UploadService<ExternalStorageClient>(factory.Object, aes, config, logger.Object);
     }
 }
