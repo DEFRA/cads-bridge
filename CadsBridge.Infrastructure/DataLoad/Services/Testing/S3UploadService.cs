@@ -15,7 +15,7 @@ public class S3UploadService<TClient>(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
     DataLoadConfiguration config,
-    ILogger<S3CopyService> logger) : IS3UploadService where TClient : IStorageClient, new()
+    ILogger<S3UploadService<TClient>> logger) : IS3UploadService where TClient : IStorageClient, new()
 {
     private readonly S3ClientFactory.ClientInfo _clientInfo = s3ClientFactory.GetClientInfo<TClient>();
 
