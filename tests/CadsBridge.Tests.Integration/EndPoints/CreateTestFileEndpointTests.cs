@@ -8,6 +8,8 @@ using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using System.Net;
 using System.Text.Json;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 using CadsBridge.Infrastructure.Json;
 
 namespace CadsBridge.Tests.Integration.EndPoints;
@@ -42,7 +44,9 @@ public class CreateTestFileEndpointTests
         uploadResponse.Should().NotBeNull();
         uploadResponse!.FileName.Should().Be(FileName);
         uploadResponse.ExternalS3Bucket.Should().Be(TestS3Constants.TestCadsBridgeExternalBucketName);
-        uploadResponse.ExternalS3Key.Should().Be(FileName);
+        var prefix = request.DataSource.GetAttribute<DataSourceTypeInfoAttribute>()!.Prefix;
+        var key = $"{prefix}/{FileName}";
+        uploadResponse.ExternalS3Key.Should().Be(key);
         uploadResponse.SizeBytes.Should().BeGreaterThan(0);
 
         await AsyncAssert.WaitForAssertion(async () =>
@@ -51,7 +55,7 @@ public class CreateTestFileEndpointTests
                 new GetObjectRequest
                 {
                     BucketName = TestS3Constants.TestCadsBridgeExternalBucketName,
-                    Key = FileName
+                    Key = key
                 },
                 TestContext.Current.CancellationToken);
 

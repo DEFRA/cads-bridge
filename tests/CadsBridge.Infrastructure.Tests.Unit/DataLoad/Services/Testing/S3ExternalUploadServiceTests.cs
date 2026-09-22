@@ -13,10 +13,12 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services.Testing;
 
-public class S3UploadServiceTests
+public class S3ExternalUploadServiceTests
 {
     private const string Bucket = "external-bucket";
     private const string Key = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
@@ -48,7 +50,8 @@ public class S3UploadServiceTests
 
         var result = await sut.UploadAsync(Key, "some data", DataSourceType.CtsBulk, overwriteExisting: false, CancellationToken.None);
 
-        result.Key.Should().Be(Key);
+        var prefix = DataSourceType.CtsBulk.GetAttribute<DataSourceTypeInfoAttribute>()!.Prefix;
+        result.Key.Should().Be($"{prefix}/{Key}");
         result.BucketName.Should().Be(Bucket);
         result.Size.Should().BeGreaterThan(0);
 
@@ -76,7 +79,8 @@ public class S3UploadServiceTests
 
         var result = await sut.UploadAsync(Key, "some data", DataSourceType.CtsBulk, overwriteExisting: true, CancellationToken.None);
 
-        result.Key.Should().Be(Key);
+        var prefix = DataSourceType.CtsBulk.GetAttribute<DataSourceTypeInfoAttribute>()!.Prefix;
+        result.Key.Should().Be($"{prefix}/{Key}");
         s3.Verify(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -128,7 +132,7 @@ public class S3UploadServiceTests
                 It.IsAny<long?>(), It.IsAny<ProgressCallback?>(), It.IsAny<CancellationToken>()))
            .ThrowsAsync(new InvalidOperationException("encryption failure"));
 
-        var logger = new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
+        var logger = new Mock<ILogger<S3ExternalUploadService<ExternalStorageClient>>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var sut = CreateSut(s3.Object, aes.Object, logger);
@@ -164,7 +168,7 @@ public class S3UploadServiceTests
                 It.IsAny<long?>(), It.IsAny<ProgressCallback?>(), It.IsAny<CancellationToken>()))
            .Returns(Task.CompletedTask);
 
-        var logger = new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
+        var logger = new Mock<ILogger<S3ExternalUploadService<ExternalStorageClient>>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var sut = CreateSut(s3.Object, aes.Object, logger);
@@ -181,21 +185,21 @@ public class S3UploadServiceTests
             Times.Once);
     }
 
-    private static S3UploadService<ExternalStorageClient> CreateSut(
+    private static S3ExternalUploadService<ExternalStorageClient> CreateSut(
         IAmazonS3 s3,
         IAesCryptoTransform aes,
-        Mock<ILogger<S3UploadService<ExternalStorageClient>>>? logger = null)
+        Mock<ILogger<S3ExternalUploadService<ExternalStorageClient>>>? logger = null)
     {
         var factory = new Mock<IS3ClientFactory>();
 
         factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                .Returns(new S3ClientFactory.ClientInfo(s3, Bucket));
 
-        logger ??= new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
+        logger ??= new Mock<ILogger<S3ExternalUploadService<ExternalStorageClient>>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var config = new DataLoadConfiguration { Salt = Salt };
 
-        return new S3UploadService<ExternalStorageClient>(factory.Object, aes, config, logger.Object);
+        return new S3ExternalUploadService<ExternalStorageClient>(factory.Object, aes, config, logger.Object);
     }
 }

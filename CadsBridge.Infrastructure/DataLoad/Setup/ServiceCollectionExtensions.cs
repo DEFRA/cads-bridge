@@ -49,7 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
         services.AddTransient<IFileImportStore, FileImportStore>();
         services.AddTransient<IFileDiscoveryService, S3FileDiscoveryService<ExternalStorageClient>>();
-        services.AddTransient<IS3UploadService, S3UploadService<ExternalStorageClient>>();
+        services.AddTransient<IS3UploadService, S3ExternalUploadService<ExternalStorageClient>>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

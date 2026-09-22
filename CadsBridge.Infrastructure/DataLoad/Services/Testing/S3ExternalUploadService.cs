@@ -1,6 +1,8 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Application.DataLoad.Services.Testing;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
@@ -11,11 +13,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services.Testing;
 
-public class S3UploadService<TClient>(
+public class S3ExternalUploadService<TClient>(
     IS3ClientFactory s3ClientFactory,
     IAesCryptoTransform aesCryptoTransform,
     DataLoadConfiguration config,
-    ILogger<S3UploadService<TClient>> logger) : IS3UploadService where TClient : IStorageClient, new()
+    ILogger<S3ExternalUploadService<TClient>> logger) : IS3UploadService where TClient : IStorageClient, new()
 {
     private readonly S3ClientFactory.ClientInfo _clientInfo = s3ClientFactory.GetClientInfo<TClient>();
 
@@ -28,7 +30,7 @@ public class S3UploadService<TClient>(
 
         var encryptedStream = await GetEncryptedStream(data, key, dataSource, cancellationToken);
 
-        var uploadDetails = await UploadStreamToS3(encryptedStream, key, cancellationToken);
+        var uploadDetails = await UploadStreamToS3(encryptedStream, key, dataSource, cancellationToken);
 
         return uploadDetails;
     }
@@ -69,12 +71,13 @@ public class S3UploadService<TClient>(
         }
     }
 
-    private async Task<UploadDetails> UploadStreamToS3(Stream stream, string key, CancellationToken cancellationToken)
+    private async Task<UploadDetails> UploadStreamToS3(Stream stream, string fileName, DataSourceType dataSource, CancellationToken cancellationToken)
     {
         try
         {
             var streamLength = stream.Length;
-
+            var prefix = dataSource.GetAttribute<DataSourceTypeInfoAttribute>()!.Prefix;
+            var key = $"{prefix}/{fileName}";
             var request = new PutObjectRequest
             {
                 BucketName = _clientInfo.BucketName,
@@ -90,7 +93,7 @@ public class S3UploadService<TClient>(
         {
             if (logger.IsEnabled(LogLevel.Error))
             {
-                logger.LogError(e, "Error uploading stream to S3 for key '{Key}'", key);
+                logger.LogError(e, "Error uploading stream to S3 for file '{FileName}'", fileName);
             }
             throw;
         }
