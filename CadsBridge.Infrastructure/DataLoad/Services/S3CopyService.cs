@@ -14,6 +14,7 @@ using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Infrastructure.Storage.Factories;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
+using CadsBridge.Infrastructure.DataLoad.Helpers;
 
 namespace CadsBridge.Infrastructure.DataLoad.Services;
 
@@ -26,7 +27,6 @@ public class S3CopyService(
     ILogger<S3CopyService> logger) : IS3CopyService
 {
     private readonly int _maxRetries = 3;
-    private const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
     private const long MaxSingleFileSize = 100L * 1024 * 1024;
 
     public async Task<long> ExecAsync(CsvDataFileImportJob job, CancellationToken cancellationToken = default)
@@ -159,8 +159,7 @@ public class S3CopyService(
             using var decryptor = AesCryptoTransform.CreateDecryptor(password, config.Salt);
             using var cryptoStream = new CryptoStream(encryptedStream, decryptor, CryptoStreamMode.Read);
 
-            var partitionSize = CalculateOptimalPartSize(fileSize);
-
+            var partitionSize = S3Utility.CalculateOptimalPartSize(fileSize);
             var transferUtilityUploadRequest = new TransferUtilityUploadRequest
             {
                 InputStream = cryptoStream,
@@ -181,37 +180,6 @@ public class S3CopyService(
         }
 
         return targetKey;
-    }
-
-    private static long CalculateOptimalPartSize(long fileSizeBytes)
-    {
-        // AWS recommendation:
-        // For files< 100 MB: Single PUT(no multipart needed).
-        // For files 100 MB – 5 GB: Multipart with 8–64 MB parts.
-        // For files > 5 GB: Larger part sizes(e.g., 64–128 MB) to reduce part count.
-
-        if (fileSizeBytes <= 0)
-            throw new ArgumentException("File size must be greater than zero.", nameof(fileSizeBytes));
-
-        const long RecommendedMin = 8L * 1024 * 1024; // 8 MB (better performance)
-        const long RecommendedMax = 128L * 1024 * 1024; // 128 MB (avoid huge retries)
-        const int MaxParts = 10_000;
-
-        // Calculate minimum size to not exceed 10,000 parts
-        var requiredPartSize = (long)Math.Ceiling((double)fileSizeBytes / MaxParts);
-
-        // Ensure part size is at least the S3 minimum
-        var optimalPartSize = Math.Max(MinPartitionSize, requiredPartSize);
-
-        // Apply recommended lower bound for performance
-        if (optimalPartSize < RecommendedMin)
-            optimalPartSize = RecommendedMin;
-
-        // Cap at recommended max unless file is extremely large
-        if (optimalPartSize > RecommendedMax && fileSizeBytes < (RecommendedMax * MaxParts))
-            optimalPartSize = RecommendedMax;
-
-        return optimalPartSize;
     }
 
     private static async Task<long> GetRemoteFileSizeAsync(IAmazonS3 s3Client, string bucketName, string key, CancellationToken cancellationToken = default)
