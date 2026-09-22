@@ -18,7 +18,7 @@ namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services.Testing;
 
 public class S3UploadServiceTests
 {
-    private const string Bucket = "internal-bucket";
+    private const string Bucket = "external-bucket";
     private const string Key = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
     private const string Salt = "salt";
 
