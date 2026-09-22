@@ -16,8 +16,14 @@ public class CreateTestFileRequestTests
         {
             ["EnableTestEndpoints"] = "true"
         };
+
+        var request = new CreateTestFileRequest(
+            "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv",
+            "some content",
+            DataSourceType.CtsBulk
+        );
         await using var factory = new CadsBridgeWebAppFactory(configOverrides);
-        var response = await TriggerImportJob(factory);
+        var response = await TriggerImportJob(factory, request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

@@ -2,6 +2,7 @@ using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Messaging;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Application.DataLoad.Services.Testing;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Services;
@@ -9,6 +10,7 @@ using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 using CadsBridge.Infrastructure.DataLoad.Messaging;
 using CadsBridge.Infrastructure.DataLoad.Persistence;
 using CadsBridge.Infrastructure.DataLoad.Services;
+using CadsBridge.Infrastructure.DataLoad.Services.Testing;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISplitMessageProducer, SplitMessageProducer>();
         services.AddTransient<IFileImportStore, FileImportStore>();
         services.AddTransient<IFileDiscoveryService, S3FileDiscoveryService<ExternalStorageClient>>();
+        services.AddTransient<IS3UploadService, S3ExternalUploadService<ExternalStorageClient>>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

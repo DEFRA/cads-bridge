@@ -3,6 +3,7 @@ using CadsBridge.Endpoints.Testing.Models;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using CadsBridge.Application.DataLoad.Services.Testing;
 
 namespace CadsBridge.Endpoints.Testing;
 
@@ -18,6 +19,7 @@ public static class EndpointExtensions
     private static async Task<IResult> UploadTestFiles(
         [FromBody] CreateTestFileRequest request,
         IValidator<CreateTestFileRequest> validator,
+        IS3UploadService s3UploadService,
         CancellationToken cancellationToken)
     {
         await validator.ValidateAndThrowAsync(request, cancellationToken);
@@ -28,7 +30,9 @@ public static class EndpointExtensions
                 $"Content exceeds the maximum allowed size of {MaxContentSizeBytes} bytes for test file uploads.");
         }
 
-        // Implementation for uploading test files
-        return Results.Ok();
+        var uploadDetails = await s3UploadService.UploadAsync(request.FileName, request.Content, request.DataSource, request.OverwriteExisting, cancellationToken);
+
+        var result = new CreateTestFileResponse(request.FileName, uploadDetails.BucketName, uploadDetails.Key, uploadDetails.Size, uploadDetails.UploadTime);
+        return Results.Ok(result);
     }
 }
