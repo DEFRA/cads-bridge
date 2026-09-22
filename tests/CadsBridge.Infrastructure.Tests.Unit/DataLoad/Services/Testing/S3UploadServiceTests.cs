@@ -188,7 +188,7 @@ public class S3UploadServiceTests
     {
         var factory = new Mock<IS3ClientFactory>();
 
-        factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+        factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                .Returns(new S3ClientFactory.ClientInfo(s3, Bucket));
 
         logger ??= new Mock<ILogger<S3UploadService<ExternalStorageClient>>>();
