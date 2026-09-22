@@ -73,6 +73,8 @@ public class S3UploadService<TClient>(
     {
         try
         {
+            var streamLength = stream.Length;
+
             var request = new PutObjectRequest
             {
                 BucketName = _clientInfo.BucketName,
@@ -82,7 +84,7 @@ public class S3UploadService<TClient>(
             };
 
             await _clientInfo.Client.PutObjectAsync(request, cancellationToken);
-            return new UploadDetails(key, stream.Length, _clientInfo.BucketName, DateTimeOffset.UtcNow);
+            return new UploadDetails(key, streamLength, _clientInfo.BucketName, DateTimeOffset.UtcNow);
         }
         catch (Exception e)
         {
