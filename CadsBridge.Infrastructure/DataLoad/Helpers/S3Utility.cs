@@ -1,6 +1,6 @@
 namespace CadsBridge.Infrastructure.DataLoad.Helpers;
 
-public class S3Utility
+public static class S3Utility
 {
     private const long MinPartitionSize = 5L * 1024 * 1024; // 5 MB (S3 minimum)
 
