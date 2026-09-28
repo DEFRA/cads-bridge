@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
 using System.Text;
+using CadsBridge.Testing.Support.Utilities.Logging;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
 
@@ -299,10 +300,12 @@ public class S3FileMetaDataServiceTests
             factory.Setup(x => x.GetClientInfo<ExternalStorageClient>())
                    .Returns(new S3ClientFactory.ClientInfo(s3Client, Bucket));
 
+            var logger = new Mock<ILogger<S3FileMetaDataService<ExternalStorageClient>>>().EnableAllLogLevels();
+
             return new S3FileMetaDataService<ExternalStorageClient>(
                 factory.Object,
                 new CsvParser(),
-                Mock.Of<ILogger<S3FileMetaDataService<ExternalStorageClient>>>());
+                logger.Object);
         }
     }
 }
