@@ -16,9 +16,6 @@ public class S3FileMetaDataService<TClient>(
 {
     // 1 KB buffer for reading the trailer line
     private const int TailReadBytes = 1024;
-    private readonly IS3ClientFactory _s3ClientFactory = s3ClientFactory;
-    private readonly ICsvParser _csvParser = csvParser;
-    private readonly ILogger<S3FileMetaDataService<TClient>> _logger = logger;
 
     public async Task<long> GetRecordCountAsync(string s3Key, CancellationToken cancellationToken = default)
     {
@@ -40,19 +37,24 @@ public class S3FileMetaDataService<TClient>(
             throw new DomainException($"Could not locate a trailer line in '{s3Key}'.");
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("Trailer line read from '{Key}': {Line}", s3Key, trailerLine);
+            logger.LogDebug("Trailer line read from '{Key}': {Line}", s3Key, trailerLine);
+        }
+
+        if (!trailerLine.Contains('|'))
+        {
+            throw new NonRetryableException($"Trailer line in '{s3Key}' does not contain the expected delimiter '|'. Line: '{trailerLine}'");
         }
 
         // Parse and validate
-        var parts = _csvParser.ParseCsvLine(trailerLine, expectedCount: 4);
+        var parts = csvParser.ParseCsvLine(trailerLine, expectedCount: 4);
         return ParseTrailerLine([.. parts], s3Key);
     }
 
     private async Task<long> GetFileSize(string s3Key, CancellationToken cancellationToken)
     {
-        var clientInfo = _s3ClientFactory.GetClientInfo<TClient>();
+        var clientInfo = s3ClientFactory.GetClientInfo<TClient>();
 
         try
         {
@@ -68,7 +70,7 @@ public class S3FileMetaDataService<TClient>(
     private async Task<string> GetLastLine(string s3Key, long fileSize, CancellationToken cancellationToken)
     {
         var rangeStart = Math.Max(0L, fileSize - TailReadBytes);
-        var clientInfo = _s3ClientFactory.GetClientInfo<TClient>();
+        var clientInfo = s3ClientFactory.GetClientInfo<TClient>();
 
         var getRequest = new GetObjectRequest
         {

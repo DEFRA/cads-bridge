@@ -98,7 +98,7 @@ public class S3CopyService(
         {
             return await s3FileMetaDataService.GetRecordCountAsync(targetKey, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not NonRetryableException)
         {
             if (logger.IsEnabled(LogLevel.Warning))
             {
