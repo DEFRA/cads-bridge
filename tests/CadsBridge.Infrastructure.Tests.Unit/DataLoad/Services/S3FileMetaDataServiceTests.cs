@@ -221,6 +221,17 @@ public class S3FileMetaDataServiceTests
         }
 
         [Fact]
+        public async Task GetRecordCountAsync_Throws_NonRetryableException_WhenTrailerLineIsNotValidCsv()
+        {
+            var sut = CreateSut(fileSize: 200, tailContent: "<xml><not><csv></csv></not></xml>");
+
+            var act = async () =>
+                await sut.GetRecordCountAsync(S3Key, TestContext.Current.CancellationToken);
+
+            await act.Should().ThrowAsync<NonRetryableException>().WithMessage("Trailer line in 'imports/data/myfile.csv' does not contain the expected delimiter '|'. Line: '<xml><not><csv></csv></not></xml>'");
+        }
+
+        [Fact]
         public async Task GetRecordCountAsync_UsesRangedGet_ForLargeFile()
         {
             const long largeFileSize = 6L * 1024 * 1024 * 1024; // 6 GB
