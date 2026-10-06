@@ -54,6 +54,7 @@ public sealed class ExceptionHandlingMiddleware(
         string? title = null)
     {
         var errorId = Guid.NewGuid().ToString();
+        context.Response.StatusCode = statusCode;
 
         using (_logger.BeginScope(new Dictionary<string, object> { ["trace.id"] = correlationId, ["error.id"] = errorId }))
         {

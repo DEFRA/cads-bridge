@@ -415,4 +415,44 @@ public class ExceptionHandlingMiddlewareTests
         nextCalled.Should().BeTrue();
         context.Response.StatusCode.Should().Be(200);
     }
+
+    [Theory]
+    [InlineData("generic", 500)]
+    [InlineData("notfound", 404)]
+    public async Task InvokeAsync_WhenExceptionThrown_ResponseStatusCodeIsSetBeforeLogging(string kind, int expectedStatusCode)
+    {
+        // Arrange
+        var context = CreateHttpContext();
+        var logger = new StatusCapturingLogger<ExceptionHandlingMiddleware>(() => context.Response.StatusCode);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["TraceHeader"] = _traceHeader })
+            .Build();
+        Exception exception = kind == "notfound" ? new NotFoundException("Sheep", 42) : new Exception("boom");
+        var middleware = new ExceptionHandlingMiddleware(_ => throw exception, logger, config);
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert: ECS logging reads Response.StatusCode at log time (http.response.status_code)
+        logger.StatusCodesAtLogTime.Should().ContainSingle()
+            .Which.Should().Be(expectedStatusCode);
+    }
+
+    private sealed class StatusCapturingLogger<T>(Func<int> statusCodeAccessor) : ILogger<T>
+    {
+        public List<int> StatusCodesAtLogTime { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => StatusCodesAtLogTime.Add(statusCodeAccessor());
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+            public void Dispose() { }
+        }
+    }
 }
