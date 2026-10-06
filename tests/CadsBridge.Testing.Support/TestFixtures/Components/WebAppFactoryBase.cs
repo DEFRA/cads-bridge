@@ -22,12 +22,20 @@ using Microsoft.Extensions.Hosting;
 using Moq;
 using System.Globalization;
 using System.Net;
+using CadsBridge.Infrastructure.Authentication.Configuration;
+using CadsBridge.Infrastructure.Authentication.Handlers;
+using CadsBridge.Testing.Support.Fakes.Authentication;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 
 public abstract class WebAppFactoryBase<TStart>(
     IDictionary<string, string?>? configOverrides = null,
-    bool disableHostedServices = true) : WebApplicationFactory<TStart>
+    bool disableHostedServices = true,
+    bool useFakeAuth = false) : WebApplicationFactory<TStart>
     where TStart : class
 {
     public Mock<IAmazonS3> AmazonS3Mock { get; private set; } = new();
@@ -66,6 +74,11 @@ public abstract class WebAppFactoryBase<TStart>(
 
         builder.ConfigureTestServices(services =>
         {
+            ConfigureDefaultAuthorization(services);
+            if (useFakeAuth)
+            {
+                ConfigureFakeAuthorization(services);
+            }
             OverrideAmazonS3(services);
             OverrideAmazonSqs(services);
             ConfigureMessageConsumers(services);
@@ -80,6 +93,7 @@ public abstract class WebAppFactoryBase<TStart>(
             {
                 serviceOverride(services);
             }
+            services.AddTransient<IStartupFilter, TestEndpointStartupFilter>();
         });
     }
 
@@ -131,8 +145,38 @@ public abstract class WebAppFactoryBase<TStart>(
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_KEY", "test");
         Environment.SetEnvironmentVariable("IMB_S3_ACCESS_SECRET", "test");
 
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__ApiKey__Enabled", "true");
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__Enabled", "true");
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__Authority", TestAuthConstants.AzureAdFakeAuthority);
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__Audience", TestAuthConstants.AzureAdCadsCdsAudience);
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__MetadataAddress", "");
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__RequireHttpsMetadata", "false");
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__ValidateIssuer", "false");
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__ScopeClaimType", "scope");
+        Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__RoleClaimType", "role");
         Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Secret", "test-secret");
         Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Scopes__0", "access");
+    }
+
+    private static void ConfigureDefaultAuthorization(IServiceCollection services)
+    {
+        services.AddAuthorizationBuilder()
+            .SetDefaultPolicy(new AuthorizationPolicyBuilder()
+                .RequireAssertion(_ => true)
+                .Build());
+    }
+
+    private static void ConfigureFakeAuthorization(IServiceCollection services)
+    {
+        services.RemoveAll<IConfigureOptions<AuthenticationOptions>>();
+        services.RemoveAll<IConfigureNamedOptions<JwtBearerOptions>>();
+
+        services.RemoveAll<JwtBearerHandler>();
+        services.RemoveAll<BasicAuthenticationHandler>();
+
+        services.AddAuthentication()
+            .AddScheme<AuthenticationSchemeOptions, FakeJwtHandler>(AuthenticationConstants.AzureADSchemeName, _ => { })
+            .AddScheme<AuthenticationSchemeOptions, FakeApiKeyHandler>(AuthenticationConstants.ApiKeySchemeName, _ => { });
     }
 
     private void ResetInfrastructureMocks()
