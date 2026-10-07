@@ -27,6 +27,13 @@ services:
       - IMB_S3_ACCESS_KEY=test
       - IMB_S3_ACCESS_SECRET=test
       - DataLoad__Salt=${DataLoad__Salt:-test-salt}
+      - AuthenticationConfiguration__ApiKey__Enabled=true
+      - AuthenticationConfiguration__AzureAD__Enabled=true
+      - AuthenticationConfiguration__AzureAD__Authority=http://cads-oidc-mock
+      - AuthenticationConfiguration__AzureAD__Audience=api://local-cads-cds
+      - AuthenticationConfiguration__AzureAD__MetadataAddress=http://cads-oidc-mock/.well-known/openid-configuration
+      - AuthenticationConfiguration__AzureAD__RequireHttpsMetadata=false
+      - AuthenticationConfiguration__AzureAD__ValidateIssuer=false
       - Acl__Clients__TestClient__Secret=test-secret
       - Acl__Clients__TestClient__Scopes__0=access
     ports:
