@@ -32,6 +32,10 @@ public sealed class ExceptionHandlingMiddleware(
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.NotFound);
         }
+        catch (UnprocessableException ex)
+        {
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.UnprocessableEntity, "Unprocessable content");
+        }
         catch (PayloadTooLargeException ex)
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.RequestEntityTooLarge);

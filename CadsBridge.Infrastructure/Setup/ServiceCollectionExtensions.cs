@@ -28,6 +28,8 @@ public static class ServiceCollectionExtensions
 
         services.AddMessagingDependencies(config);
 
+        services.AddSqsAdmin(config);
+
         return services;
     }
 

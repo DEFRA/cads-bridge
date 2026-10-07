@@ -14,11 +14,24 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics.CodeAnalysis;
+using CadsBridge.Application.SqsAdmin.Services;
+using CadsBridge.Infrastructure.SqsAdmin.Configuration;
+using CadsBridge.Infrastructure.SqsAdmin.Services;
 
 namespace CadsBridge.Infrastructure.Storage.Setup;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddSqsAdmin(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<Dictionary<string, SqsAdminQueueOptions>>(
+            configuration.GetSection(SqsAdminQueueOptions.QueuesSectionName));
+
+        services.AddScoped<ISqsAdminService, SqsAdminService>();
+
+        return services;
+    }
+
     public static IServiceCollection AddStorage(
         this IServiceCollection services,
         IConfiguration configuration)
