@@ -77,7 +77,7 @@ public class CadsBridgeFifoQueueAdminService(
                 MessageGroupId = (message.Attributes ?? []).GetValueOrDefault("MessageGroupId", "dlq"),
                 MessageDeduplicationId = message.MessageId
             };
-            
+
             var sendResponse = await sqs.SendMessageAsync(sendRequest, cancellationToken);
             sendSucceeded = true;
 
