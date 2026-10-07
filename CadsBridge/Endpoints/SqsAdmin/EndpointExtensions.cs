@@ -48,7 +48,7 @@ public static class EndpointExtensions
         return Results.Ok(new GetQueuesResponse(queues));
     }
 
-        private static async Task<IResult> GetMetrics(
+    private static async Task<IResult> GetMetrics(
         [FromRoute] string queue,
         ISqsAdminService service,
         ILogger<GetQueuesResponse> logger,
