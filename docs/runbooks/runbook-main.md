@@ -57,8 +57,8 @@ All deployment operations driven through the CDP portal: https://portal.cdp-int.
 
 ### Health Check Endpoints
 
-- **Primary**: `GET /health` - Returns comprehensive system health
-- **Basic**: `GET /` - Simple aliveness check (returns "Alive!")
+- **Primary**: `GET /health/details` - Returns comprehensive system health
+- **Liveness**: `GET /health` - Simple aliveness check
 
 ### Alerts Configuration
 

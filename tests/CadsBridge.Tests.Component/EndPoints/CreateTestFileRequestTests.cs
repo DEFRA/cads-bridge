@@ -1,11 +1,11 @@
-using System.Net;
 using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Endpoints.Testing.Models;
 using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
+using System.Net;
 
-namespace CadsBridge.Tests.Component.EndPoints;
+namespace CadsBridge.Tests.Component.Endpoints;
 
 public class CreateTestFileRequestTests
 {

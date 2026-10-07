@@ -1,14 +1,14 @@
+using CadsBridge.Infrastructure.Authentication.Configuration;
+using CadsBridge.Infrastructure.Authentication.Handlers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.WebEncoders.Testing;
 using System.Security.Claims;
 using System.Text;
-using CadsBridge.Infrastructure.Authentication.Configuration;
-using CadsBridge.Infrastructure.Authentication.Handlers;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Authentication;
 

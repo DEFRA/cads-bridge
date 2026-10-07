@@ -1,17 +1,17 @@
+using CadsBridge.Application.Identity;
 using CadsBridge.Application.Setup;
 using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Infrastructure.Authentication.Handlers;
 using CadsBridge.Infrastructure.Configuration.Aws;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Setup;
+using CadsBridge.Utils.Http;
 using CadsBridge.Worker.Setup;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
-using System.IdentityModel.Tokens.Jwt;
-using CadsBridge.Application.Identity;
-using CadsBridge.Utils.Http;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace CadsBridge.Setup;
 

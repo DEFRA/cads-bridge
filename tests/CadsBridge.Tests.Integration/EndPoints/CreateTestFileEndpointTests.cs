@@ -1,6 +1,9 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Scanning;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 using CadsBridge.Endpoints.Testing.Models;
+using CadsBridge.Infrastructure.Json;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using CadsBridge.Testing.Support.Utilities.Assertions;
@@ -8,11 +11,8 @@ using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using System.Net;
 using System.Text.Json;
-using CadsBridge.Application.Extensions;
-using CadsBridge.Core.Attributes;
-using CadsBridge.Infrastructure.Json;
 
-namespace CadsBridge.Tests.Integration.EndPoints;
+namespace CadsBridge.Tests.Integration.Endpoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class CreateTestFileEndpointTests

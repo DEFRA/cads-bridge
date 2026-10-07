@@ -1,3 +1,4 @@
+using CadsBridge.Infrastructure.Authentication.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +8,6 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
-using CadsBridge.Infrastructure.Authentication.Configuration;
 
 namespace CadsBridge.Infrastructure.Authentication.Handlers;
 
