@@ -153,4 +153,19 @@ public class BasicAuthenticationHandlerTests
         var result = await Authenticate(context);
         result.None.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData("Basic !!!not-base64!!!")]
+    [InlineData("Basic abc")]
+    [InlineData("Basic")]
+    [InlineData("Basic a b c")]
+    public async Task WhenMalformedAuthorizationHeader_ShouldFailWithoutThrowing(string headerValue)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers.Authorization = headerValue;
+
+        var result = await Authenticate(context);
+
+        result.Failure.Should().NotBeNull();
+    }
 }
