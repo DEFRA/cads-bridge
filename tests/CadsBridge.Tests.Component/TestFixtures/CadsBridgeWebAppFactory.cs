@@ -1,5 +1,6 @@
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Application.DataLoad.Services;
+using CadsBridge.Application.SqsAdmin.Services;
 using CadsBridge.Testing.Support.TestFixtures.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -11,16 +12,27 @@ namespace CadsBridge.Tests.Component.TestFixtures;
 
 public class CadsBridgeWebAppFactory(
     IDictionary<string, string?>? configOverrides = null,
-    bool disableHostedServices = true)
+    bool disableHostedServices = true,
+    bool useFakeAuth = false)
     : WebAppFactoryBase<Program>(
-        configOverrides,
-        disableHostedServices)
+        configOverrides: MergeConfigOverrides(configOverrides),
+        disableHostedServices,
+        useFakeAuth)
 {
+    private static Dictionary<string, string?> MergeConfigOverrides(IDictionary<string, string?>? overrides)
+    {
+        var merged = new Dictionary<string, string?>(overrides ?? new Dictionary<string, string?>());
+        // Ensure DB admin endpoints are mapped for tests, since the production default is now false.
+        merged.TryAdd("EnableAdminEndpoints", "true");
+        return merged;
+    }
+
     public CadsBridgeWebAppFactory() : this(null) { }
 
     public Mock<IDataSeedFileLoadService> DataSeedFileLoaderMock { get; } = new();
     public Mock<IS3FileMetaDataService> S3FileMetaDataServiceMock { get; } = CreateDefaultS3FileMetaDataServiceMock();
     public Mock<IFileImportStore> FileImportStoreMock { get; } = CreateDefaultFileImportStoreMock();
+    public Mock<ISqsAdminService> SqsAdminServiceMock { get; } = new();
 
     private readonly List<Action<IServiceCollection>> _testServiceOverrides = [];
 
@@ -50,6 +62,9 @@ public class CadsBridgeWebAppFactory(
         {
             services.RemoveAll<IDataSeedFileLoadService>();
             services.AddSingleton(DataSeedFileLoaderMock.Object);
+
+            services.RemoveAll<ISqsAdminService>();
+            services.AddSingleton(SqsAdminServiceMock.Object);
 
             OverrideFileImportStatusStore(services);
 
