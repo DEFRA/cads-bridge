@@ -1,7 +1,7 @@
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using FluentAssertions;
 
-namespace CadsBridge.Tests.Integration.EndPoints;
+namespace CadsBridge.Tests.Integration.Endpoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class HealthcheckEndpointTests(ApiContainerFixture apiContainerFixture)
@@ -11,7 +11,7 @@ public class HealthcheckEndpointTests(ApiContainerFixture apiContainerFixture)
     [Fact]
     public async Task GivenValidHealthCheckRequest_ShouldSucceed()
     {
-        var response = await _apiContainerFixture.HttpClient!.GetAsync("health", TestContext.Current.CancellationToken);
+        var response = await _apiContainerFixture.HttpClient!.GetAsync("health/details", TestContext.Current.CancellationToken);
         var responseBody = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         response.EnsureSuccessStatusCode();

@@ -1,11 +1,11 @@
-using System.Security.Claims;
-using System.Text.Encodings.Web;
 using CadsBridge.Application.Identity;
 using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Testing.Support.Constants;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 
 namespace CadsBridge.Testing.Support.Fakes.Authentication;
 

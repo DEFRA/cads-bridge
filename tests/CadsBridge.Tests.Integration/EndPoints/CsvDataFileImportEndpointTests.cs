@@ -8,7 +8,7 @@ using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using System.Net;
 
-namespace CadsBridge.Tests.Integration.EndPoints;
+namespace CadsBridge.Tests.Integration.Endpoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixture)

@@ -1,14 +1,14 @@
+using CadsBridge.Infrastructure.Authentication.Configuration;
+using CadsBridge.Infrastructure.Authentication.Handlers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.WebEncoders.Testing;
 using System.Security.Claims;
 using System.Text;
-using CadsBridge.Infrastructure.Authentication.Configuration;
-using CadsBridge.Infrastructure.Authentication.Handlers;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Authentication;
 
@@ -152,5 +152,20 @@ public class BasicAuthenticationHandlerTests
 
         var result = await Authenticate(context);
         result.None.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("Basic !!!not-base64!!!")]
+    [InlineData("Basic abc")]
+    [InlineData("Basic")]
+    [InlineData("Basic a b c")]
+    public async Task WhenMalformedAuthorizationHeader_ShouldFailWithoutThrowing(string headerValue)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers.Authorization = headerValue;
+
+        var result = await Authenticate(context);
+
+        result.Failure.Should().NotBeNull();
     }
 }

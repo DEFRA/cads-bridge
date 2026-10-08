@@ -30,6 +30,8 @@ public sealed class S3DistributedLock(
 {
     private readonly ConcurrentDictionary<string, HeldLock> _heldLocks = new();
 
+    public TimeSpan LeaseDuration => options.LeaseDuration;
+
     public async Task<bool> TryAcquireAsync(string lockName, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(lockName);
@@ -51,7 +53,7 @@ public sealed class S3DistributedLock(
             {
                 // Atomic create-if-absent: succeeds only when no object exists for this key.
                 var etag = await ConditionalPutAsync(client, bucket, key, entry, ifNoneMatch: "*", ifMatch: null, cancellationToken);
-                _heldLocks[lockName] = new HeldLock(entry.Owner, etag);
+                _heldLocks[lockName] = new HeldLock(entry.Owner, entry.AcquiredAtUtc, etag);
                 return true;
             }
             catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
@@ -84,6 +86,39 @@ public sealed class S3DistributedLock(
                 options.MaxAcquireAttempts);
         }
         return false;
+    }
+
+    public async Task<bool> TryRenewAsync(string lockName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockName);
+
+        if (!_heldLocks.TryGetValue(lockName, out var held))
+        {
+            return false;
+        }
+
+        var (client, bucket) = s3ClientFactory.GetClientInfo<InternalStorageClient>();
+        var key = BuildKey(lockName);
+        var now = timeProvider.GetUtcNow();
+        var entry = new LockEntry(held.Owner, held.AcquiredAtUtc, now.Add(options.LeaseDuration));
+
+        try
+        {
+            // ETag-guarded overwrite: succeeds only while the object is still the one we wrote.
+            var etag = await ConditionalPutAsync(client, bucket, key, entry, ifNoneMatch: null, ifMatch: held.ETag, cancellationToken);
+            _heldLocks[lockName] = held with { ETag = etag };
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("Renewed distributed lock {LockName} until {Expiry}", lockName, entry.ExpiresAtUtc);
+            }
+            return true;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode is HttpStatusCode.PreconditionFailed or HttpStatusCode.NotFound)
+        {
+            // Taken over or deleted - we no longer hold the lock.
+            _heldLocks.TryRemove(lockName, out _);
+            return false;
+        }
     }
 
     public async Task ReleaseAsync(string lockName, CancellationToken cancellationToken = default)
@@ -136,7 +171,7 @@ public sealed class S3DistributedLock(
         try
         {
             var etag = await ConditionalPutAsync(client, bucket, key, entry, ifNoneMatch: null, ifMatch: existingETag, cancellationToken);
-            _heldLocks[lockName] = new HeldLock(entry.Owner, etag);
+            _heldLocks[lockName] = new HeldLock(entry.Owner, entry.AcquiredAtUtc, etag);
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation("Took over stale distributed lock {LockName}", lockName);
@@ -198,5 +233,5 @@ public sealed class S3DistributedLock(
 
     private string BuildKey(string lockName) => $"{options.KeyPrefix.TrimEnd('/')}/{lockName}.lock";
 
-    private readonly record struct HeldLock(string Owner, string ETag);
+    private readonly record struct HeldLock(string Owner, DateTimeOffset AcquiredAtUtc, string ETag);
 }

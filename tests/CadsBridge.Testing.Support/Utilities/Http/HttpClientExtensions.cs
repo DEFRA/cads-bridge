@@ -1,7 +1,7 @@
-using System.Net.Http.Headers;
-using System.Text;
 using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Testing.Support.Constants;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace CadsBridge.Testing.Support.Utilities.Http;
 

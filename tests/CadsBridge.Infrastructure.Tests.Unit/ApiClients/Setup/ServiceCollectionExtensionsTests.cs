@@ -104,7 +104,7 @@ public class ServiceCollectionExtensionsTests
         var stub = new StubHttpMessageHandler(statusCode);
         var client = BuildResilientClient(stub, retries: 2);
 
-        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/health/details", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(statusCode);
         stub.Requests.Should().HaveCount(3); // 1 initial attempt + 2 retries
@@ -116,7 +116,7 @@ public class ServiceCollectionExtensionsTests
         var stub = new StubHttpMessageHandler(new HttpRequestException("boom"));
         var client = BuildResilientClient(stub, retries: 2);
 
-        var act = async () => await client.GetAsync("/health", TestContext.Current.CancellationToken);
+        var act = async () => await client.GetAsync("/health/details", TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<HttpRequestException>();
         stub.Requests.Should().HaveCount(3);
@@ -131,7 +131,7 @@ public class ServiceCollectionExtensionsTests
         var stub = new StubHttpMessageHandler(statusCode);
         var client = BuildResilientClient(stub, retries: 2);
 
-        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/health/details", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(statusCode);
         stub.Requests.Should().ContainSingle(); // no retries

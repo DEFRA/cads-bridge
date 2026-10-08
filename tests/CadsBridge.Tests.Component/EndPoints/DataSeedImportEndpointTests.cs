@@ -1,13 +1,12 @@
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Core.DataLoad.Seeds;
+using CadsBridge.Testing.Support.Utilities.Http;
 using CadsBridge.Tests.Component.TestFixtures;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Channels;
-using CadsBridge.Testing.Support.Utilities.Http;
 
 namespace CadsBridge.Tests.Component.Endpoints;
 

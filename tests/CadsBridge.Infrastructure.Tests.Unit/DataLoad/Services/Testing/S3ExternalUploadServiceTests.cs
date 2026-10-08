@@ -1,10 +1,11 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Scanning;
+using CadsBridge.Application.Extensions;
+using CadsBridge.Core.Attributes;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
-using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.DataLoad.Services.Testing;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
@@ -13,8 +14,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
-using CadsBridge.Application.Extensions;
-using CadsBridge.Core.Attributes;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services.Testing;
 

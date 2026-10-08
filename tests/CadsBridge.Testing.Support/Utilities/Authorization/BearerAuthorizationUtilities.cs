@@ -1,5 +1,5 @@
-using System.Net.Http.Headers;
 using CadsBridge.Testing.Support.Constants;
+using System.Net.Http.Headers;
 
 namespace CadsBridge.Testing.Support.Utilities.Authorization;
 

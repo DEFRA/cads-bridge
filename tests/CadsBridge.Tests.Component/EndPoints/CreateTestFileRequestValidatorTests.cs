@@ -3,7 +3,7 @@ using CadsBridge.Endpoints.Testing.Models;
 using CadsBridge.Endpoints.Testing.Validators;
 using FluentAssertions;
 
-namespace CadsBridge.Tests.Component.EndPoints;
+namespace CadsBridge.Tests.Component.Endpoints;
 
 public class CreateTestFileRequestValidatorTests
 {
