@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\CadsBridge\CadsBridge.csproj" />
     <ProjectReference Include="..\..\CadsBridge.Worker\CadsBridge.Worker.csproj" />
     <ProjectReference Include="..\CadsBridge.Testing.Support\CadsBridge.Testing.Support.csproj" />
+    <ProjectReference Include="..\CadsBridge.Tests.Unit\CadsBridge.Tests.Unit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
