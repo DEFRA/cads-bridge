@@ -1,4 +1,9 @@
+using System.Net;
+using System.Net.Http.Headers;
 using CadsBridge.Testing.Support.Constants;
+using CadsBridge.Testing.Support.Fakes.Authentication;
+using CadsBridge.Testing.Support.TestFixtures.Containers.Configuration;
+using CadsBridge.Testing.Support.Utilities.Authorization;
 using CadsBridge.Testing.Support.Utilities.Http;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -16,16 +21,23 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
     public IContainer? ApiContainer { get; private set; } = null;
     public HttpClient? HttpClient { get; private set; } = null;
     public LocalStackFixture LocalStackFixture { get; }
+    public OidcMockFixture OidcMockFixture { get; }
+    public TestAzureAdConfiguration? AzureAdConfig { get; set; }
+
 
     public ApiContainerFixtureBase(IDictionary<string, string>? extraEnvironment = null)
     {
         _extraEnvironment = extraEnvironment;
         LocalStackFixture = new LocalStackFixture(_networkName);
+        OidcMockFixture = new OidcMockFixture(_networkName);
     }
 
     public async ValueTask InitializeAsync()
     {
         await LocalStackFixture.InitializeAsync();
+        await OidcMockFixture.InitializeAsync();
+
+        AzureAdConfig = new TestAzureAdConfiguration(OidcMockFixture);
 
         var builder = new ContainerBuilder("cads_bridge:latest")
             .WithImagePullPolicy(PullPolicy.Never)
@@ -40,8 +52,18 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("Storage__External__AccessKeySecretName", "IMB_S3_ACCESS_KEY")
             .WithEnvironment("Storage__External__SecretKeySecretName", "IMB_S3_SECRET_KEY")
             .WithEnvironment("Storage__External__EnvironmentName", "PreProd")
-            .WithEnvironment("Messaging__Queues__CadsBridgeFifo__QueueUrl", TestSqsConstants.CadsBridgeFifoQueueName)
-            .WithEnvironment("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", TestSqsConstants.CadsBridgeFifoDeadLetterQueueName)
+            .WithEnvironment("Messaging__Queues__CadsBridgeFifo__QueueUrl", LocalStackFixture.CadsBridgeFifoQueueUrl)
+            .WithEnvironment("Messaging__Queues__CadsBridgeFifo__DlqQueueUrl", LocalStackFixture.CadsBridgeFifoDeadLetterQueueUrl)
+            // The config section *key* here ("cads-bridge-admin-queue") is what SqsAdminService
+            // reports back as each queue's "Name" (it returns the dictionary key, not a "Name"
+            // property) - it must match the literal queue name the tests assert against.
+            .WithEnvironment($"Messaging__Queues__{TestSqsConstants.CadsBridgeStandardQueueName}__QueueUrl", LocalStackFixture.CadsStandardQueueUrl)
+            .WithEnvironment($"Messaging__Queues__{TestSqsConstants.CadsBridgeStandardQueueName}__DlqQueueUrl", LocalStackFixture.CadsStandardDeadLetterQueueUrl)
+            // "Name" is required by QueuePublisherOptions, which binds against this same
+            // "Messaging:Queues" section (shared with SqsAdminQueueOptions).
+            // Without it, config binding for this entry throws at startup, breaking the
+            // SystemAdmin FIFO queue publisher used elsewhere (e.g. FileImport processing).
+            .WithEnvironment($"Messaging__Queues__{TestSqsConstants.CadsBridgeStandardQueueName}__Name", "CadsBridgeStandardTestClient")
             .WithEnvironment("Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled", "true")
             .WithEnvironment("ApiClients__CdsApi__BaseUrl", "http://localhost:5555/")
             .WithEnvironment("ApiClients__CdsApi__BasicApiKey", "")
@@ -50,6 +72,16 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("ApiClients__CdsApi__UseFakeClient", "true")
             .WithEnvironment("IMB_S3_ACCESS_KEY", "test")
             .WithEnvironment("IMB_S3_SECRET_KEY", "test")
+            .WithEnvironment("AuthenticationConfiguration__ApiKey__Enabled", "true")
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__Enabled", "true")
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__Authority", AzureAdConfig.ContainerAuthority)
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__Audience", AzureAdConfig.Audience)
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__MetadataAddress", AzureAdConfig.ContainerMetadataAddress)
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__RequireHttpsMetadata", AzureAdConfig.RequireHttpsMetadata.ToString())
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__ValidateIssuer", "false")
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__ScopeClaimType", "scope")
+            .WithEnvironment("AuthenticationConfiguration__AzureAD__RoleClaimType", "role")
+            .WithEnvironment("EnableAdminEndpoints", "true")
             .WithEnvironment("DataLoad__Salt", "test-salt")
             .WithEnvironment("DataLoad__SplitValue", "5")
             .WithEnvironment("LOCALSTACK_ENDPOINT", LocalStackFixture.NetworkServiceUrl)
@@ -72,7 +104,17 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
                 builder = builder.WithEnvironment(key, value);
 
         ApiContainer = builder.Build();
-        await ApiContainer.StartAsync();
+        try
+        {
+            await ApiContainer.StartAsync();
+        }
+        catch (Exception e)
+        {
+            var (stdout, stderr) = await ApiContainer.GetLogsAsync();
+            throw new InvalidOperationException(
+                $"cads_bridge container failed to become healthy.{Environment.NewLine}--- stdout ---{Environment.NewLine}{stdout}{Environment.NewLine}--- stderr ---{Environment.NewLine}{stderr}",
+                e);
+        }
 
         HttpClient = new HttpClient
         {
@@ -80,6 +122,22 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
         };
         HttpClient.AddBasicTestApiKey();
     }
+
+    public async Task<HttpClient> CreateAzureAdClientAsync(TestTokenRequest request)
+    {
+        var token = await OidcMockFixture.CreateTokenAsync(request);
+
+        var client = new HttpClient
+        {
+            BaseAddress = HttpClient.BaseAddress
+        };
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        return client;
+    }
+
 
     public async ValueTask DisposeAsync()
     {
