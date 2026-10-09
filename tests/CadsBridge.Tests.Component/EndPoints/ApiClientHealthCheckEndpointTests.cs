@@ -16,7 +16,9 @@ public class ApiClientHealthCheckEndpointTests
     private static Dictionary<string, string?> EnableApiClient(bool healthcheckEnabled) => new()
     {
         [$"ApiClients:{ClientName}:BaseUrl"] = "http://downstream-api",
-        [$"ApiClients:{ClientName}:HealthcheckEnabled"] = healthcheckEnabled.ToString()
+        [$"ApiClients:{ClientName}:HealthcheckEnabled"] = healthcheckEnabled.ToString(),
+        [$"ApiClients:{ClientName}:ResiliencePolicy:Retries"] = "1",
+        [$"ApiClients:{ClientName}:ResiliencePolicy:BaseDelaySeconds"] = "0"
     };
 
     [Fact]
@@ -24,9 +26,9 @@ public class ApiClientHealthCheckEndpointTests
     {
         await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(true));
         factory.OverrideHttpClientHandler(ClientName, new StubHttpMessageHandler(HttpStatusCode.OK));
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().AddBasicTestApiKey();
 
-        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/health/details", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var doc = JsonDocument.Parse(
@@ -36,16 +38,14 @@ public class ApiClientHealthCheckEndpointTests
         entry.GetProperty("data").GetProperty("client-name").GetString().Should().Be(ClientName);
     }
 
-#pragma warning disable xUnit1004 // Test methods should not be skipped
-    [Fact(Skip = "To investigate")]
-#pragma warning restore xUnit1004 // Test methods should not be skipped
+    [Fact]
     public async Task Health_WhenApiClientDegraded_OverallStaysOk_ButEntryDegraded()
     {
         await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(true));
         factory.OverrideHttpClientHandler(ClientName, new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable));
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().AddBasicTestApiKey();
 
-        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/health/details", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.OK); // Degraded -> 200
 
         using var doc = JsonDocument.Parse(
@@ -60,9 +60,9 @@ public class ApiClientHealthCheckEndpointTests
     {
         await using var factory = new CadsBridgeWebAppFactory(EnableApiClient(true));
         factory.OverrideHttpClientHandler(ClientName, new StubHttpMessageHandler(new HttpRequestException("refused")));
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().AddBasicTestApiKey();
 
-        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/health/details", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
 
         using var doc = JsonDocument.Parse(

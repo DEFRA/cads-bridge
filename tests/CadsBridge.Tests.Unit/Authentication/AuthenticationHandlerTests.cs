@@ -1,8 +1,8 @@
-using System.Net;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Utilities.Authorization;
 using CadsBridge.Tests.Unit.TestFixtures;
 using FluentAssertions;
+using System.Net;
 namespace CadsBridge.Tests.Unit.Authentication;
 
 public class AuthenticationHandlerTests

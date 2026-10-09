@@ -24,6 +24,7 @@ public class AuthenticationProviderConfiguration : AuthenticationStateConfigurat
 
 public static class AuthenticationConstants
 {
+    public const string DiagnosticsPolicyName = "Diagnostics";
     public const string ApiKeySchemeName = "Basic";
     public const string AzureADSchemeName = "AzureAd";
 

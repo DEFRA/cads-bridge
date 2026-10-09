@@ -1,3 +1,4 @@
+using CadsBridge.Infrastructure.Authentication.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -5,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
-using CadsBridge.Infrastructure.Authentication.Configuration;
 
 namespace CadsBridge.Infrastructure.Authentication.Handlers;
 
@@ -29,13 +30,19 @@ public class BasicAuthenticationHandler(
         if (!Request.Headers.TryGetValue("Authorization", out var headerValue))
             return NoResult();
 
-        var header = AuthenticationHeaderValue.Parse(headerValue!);
+        if (!AuthenticationHeaderValue.TryParse(headerValue, out var header))
+            return Fail();
+
         if (!string.Equals(header.Scheme, AuthenticationConstants.ApiKeySchemeName, StringComparison.OrdinalIgnoreCase))
             return NoResult();
 
         // Decode Basic credentials
-        var bytes = Convert.FromBase64String(header.Parameter ?? string.Empty);
-        var parts = Encoding.UTF8.GetString(bytes).Split(':', 2);
+        var parameter = header.Parameter ?? string.Empty;
+        var bytes = new byte[parameter.Length];
+        if (!Convert.TryFromBase64String(parameter, bytes, out var written))
+            return Fail();
+
+        var parts = Encoding.UTF8.GetString(bytes, 0, written).Split(':', 2);
 
         if (parts.Length != 2)
             return Fail();
@@ -47,7 +54,7 @@ public class BasicAuthenticationHandler(
         if (!aclOptions.Value.Clients.TryGetValue(clientId, out var client))
             return Fail();
 
-        if (client.Secret != secret)
+        if (!SecretsMatch(client.Secret, secret))
             return Fail();
 
         // Build claims
@@ -73,4 +80,9 @@ public class BasicAuthenticationHandler(
 
     private static Task<AuthenticateResult> Success(AuthenticationTicket ticket) =>
         Task.FromResult(AuthenticateResult.Success(ticket));
+
+    private static bool SecretsMatch(string expected, string supplied) =>
+        CryptographicOperations.FixedTimeEquals(
+            SHA256.HashData(Encoding.UTF8.GetBytes(expected)),
+            SHA256.HashData(Encoding.UTF8.GetBytes(supplied)));
 }

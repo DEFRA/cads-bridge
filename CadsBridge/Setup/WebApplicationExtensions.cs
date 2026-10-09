@@ -1,5 +1,7 @@
 using CadsBridge.Core.Correlation;
 using CadsBridge.Endpoints;
+using CadsBridge.Endpoints.Testing;
+using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Middleware;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -41,9 +43,16 @@ public static class WebApplicationExtensions
 
         app.MapControllers();
 
-        app.MapGet("/", () => "Alive!").AllowAnonymous();
+        app.MapGet("/", () => "OK").AllowAnonymous();
 
-        app.MapHealthChecks("/health", new HealthCheckOptions()
+        // Liveness only: used by the platform container health check.
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            Predicate = _ => false
+        }).AllowAnonymous();
+
+        // Diagnostics: runs every registered check. Requires an API key.
+        app.MapHealthChecks("/health/details", new HealthCheckOptions()
         {
             Predicate = _ => true,
             ResponseWriter = (context, healthReport) =>
@@ -61,7 +70,7 @@ public static class WebApplicationExtensions
                 [HealthStatus.Degraded] = StatusCodes.Status200OK,
                 [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
             }
-        }).AllowAnonymous();
+        }).RequireAuthorization(AuthenticationConstants.DiagnosticsPolicyName);
 
         app.CreateEndpoints();
 

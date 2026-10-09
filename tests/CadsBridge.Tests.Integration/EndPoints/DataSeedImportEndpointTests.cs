@@ -2,7 +2,7 @@ using CadsBridge.Testing.Support.TestFixtures.Containers;
 using FluentAssertions;
 using System.Net;
 
-namespace CadsBridge.Tests.Integration.EndPoints;
+namespace CadsBridge.Tests.Integration.Endpoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class DataSeedImportEndpointTests

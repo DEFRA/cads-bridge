@@ -32,7 +32,14 @@ public class CtsBulkScanJob(
                 logger.LogInformation("Bulk scan job started");
             }
 
-            await bulkScanTask.RunAsync(context.CancellationToken);
+            var completed = await distributedLock.RunWithRenewalAsync(
+                LockName, logger, bulkScanTask.RunAsync, context.CancellationToken);
+
+            if (!completed)
+            {
+                logger.LogWarning("Delta scan job aborted - lock {LockName} lease was lost", LockName);
+                return;
+            }
 
             if (logger.IsEnabled(LogLevel.Information))
             {

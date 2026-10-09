@@ -1,17 +1,17 @@
+using CadsBridge.Application.Identity;
 using CadsBridge.Application.Setup;
 using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Infrastructure.Authentication.Handlers;
 using CadsBridge.Infrastructure.Configuration.Aws;
 using CadsBridge.Infrastructure.Json;
 using CadsBridge.Infrastructure.Setup;
+using CadsBridge.Utils.Http;
 using CadsBridge.Worker.Setup;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
-using System.IdentityModel.Tokens.Jwt;
-using CadsBridge.Application.Identity;
-using CadsBridge.Utils.Http;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace CadsBridge.Setup;
 
@@ -44,6 +44,8 @@ public static class ServiceCollectionExtensions
 
     private static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
+        var schemes = new List<string>();
+
         var authConfig = configuration.GetSection(nameof(AuthenticationConfiguration)).Get<AuthenticationConfiguration>()!;
 
         services.Configure<AclOptions>(
@@ -63,13 +65,27 @@ public static class ServiceCollectionExtensions
         {
             authenticationBuilder.AddApiKeyScheme();
             authorizationBuilder.AddApiKeyPolicy();
+            schemes.Add(AuthenticationConstants.ApiKeySchemeName);
         }
 
         if (authConfig.AzureAD.Enabled)
         {
             authenticationBuilder.AddAzureAdScheme(authConfig.AzureAD);
             authorizationBuilder.AddAzureAdPolicies(authConfig);
+            schemes.Add(AuthenticationConstants.AzureADSchemeName);
         }
+
+        if (schemes.Count == 0)
+            throw new InvalidOperationException("At least one authentication scheme must be enabled.");
+
+        authorizationBuilder.AddPolicy(AuthenticationConstants.DiagnosticsPolicyName, p => p
+            .AddAuthenticationSchemes([.. schemes])
+            .RequireAuthenticatedUser());
+
+        authorizationBuilder.SetFallbackPolicy(new AuthorizationPolicyBuilder()
+            .AddAuthenticationSchemes([.. schemes])
+            .RequireAuthenticatedUser()
+            .Build());
     }
 
     private static void AddApiKeyScheme(this AuthenticationBuilder authenticationBuilder)
@@ -86,7 +102,6 @@ public static class ServiceCollectionExtensions
             .Build();
 
         authorizationBuilder.AddPolicy(AuthenticationConstants.ApiKeyPolicyName, apiKeyPolicy);
-        authorizationBuilder.SetFallbackPolicy(apiKeyPolicy);
     }
 
     private static void AddAzureAdScheme(this AuthenticationBuilder authenticationBuilder, AuthenticationProviderConfiguration authenticationProviderConfiguration)
