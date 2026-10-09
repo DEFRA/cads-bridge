@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics.CodeAnalysis;
 using CadsBridge.Endpoints.SqsAdmin;
-using CadsBridge.Endpoints.Testing;
 
 namespace CadsBridge.Setup;
 
