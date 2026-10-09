@@ -1,9 +1,7 @@
-using System.Net;
 using System.Net.Http.Headers;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Fakes.Authentication;
 using CadsBridge.Testing.Support.TestFixtures.Containers.Configuration;
-using CadsBridge.Testing.Support.Utilities.Authorization;
 using CadsBridge.Testing.Support.Utilities.Http;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -129,7 +127,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
 
         var client = new HttpClient
         {
-            BaseAddress = HttpClient.BaseAddress
+            BaseAddress = HttpClient!.BaseAddress
         };
 
         client.DefaultRequestHeaders.Authorization =
