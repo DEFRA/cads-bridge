@@ -15,7 +15,7 @@
       <PackageReference Include="AWSSDK.S3" Version="4.0.19.1" />
       <PackageReference Include="AWSSDK.SQS" Version="4.0.2.14" />
       <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.5.13" />
-      <PackageReference Include="MediatR" Version="14.1.0" />
+      <PackageReference Include="MediatR" Version="12.5.0" />
       <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
       <PackageReference Include="Serilog.Enrichers.ClientInfo" Version="2.9.0" />
       <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
