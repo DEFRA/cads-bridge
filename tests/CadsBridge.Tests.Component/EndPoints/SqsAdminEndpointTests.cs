@@ -478,4 +478,127 @@ public class SqsAdminEndpointTests(CadsBridgeTestFixture testFixture) : IClassFi
             It.Is<ReplayDlqRequestDto>(r => r.Queue == "CadsCds" && r.BatchSize == 7),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // ReplayDlqMessage
+
+    [Fact]
+    public async Task GivenValidRequest_WhenReplaySingleMessageRequested_ShouldReturnOkWithResult()
+    {
+        testFixture.Factory.SqsAdminServiceMock
+            .Setup(x => x.ReplayDlqMessageAsync(
+                It.Is<ReplayDlqMessageRequestDto>(r => r.Queue == "CadsCds" && r.MessageId == "m-ok"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ReplayResultDto(1, 0, []));
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(_httpClient, "CadsCds", "m-ok", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var dto = await SqsAdminTestClient.ReadReplayMessageDtoAsync(response, TestContext.Current.CancellationToken);
+        dto.Should().NotBeNull();
+        dto!.Queue.Should().Be("CadsCds");
+        dto.MessageId.Should().Be("m-ok");
+        dto.Moved.Should().Be(1);
+        dto.Failed.Should().Be(0);
+        dto.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GivenMessageNotOnDlq_WhenReplaySingleMessageRequested_ShouldReturnNotFound()
+    {
+        testFixture.Factory.SqsAdminServiceMock
+            .Setup(x => x.ReplayDlqMessageAsync(
+                It.Is<ReplayDlqMessageRequestDto>(r => r.Queue == "CadsCds" && r.MessageId == "missing"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("DLQ message", "missing"));
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(_httpClient, "CadsCds", "missing", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GivenUnknownQueue_WhenReplaySingleMessageRequested_ShouldReturnNotFound()
+    {
+        testFixture.Factory.SqsAdminServiceMock
+            .Setup(x => x.ReplayDlqMessageAsync(
+                It.Is<ReplayDlqMessageRequestDto>(r => r.Queue == "unknown-queue"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("Queue", "unknown-queue"));
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(_httpClient, "unknown-queue", "m1", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GivenQueueWithoutDlq_WhenReplaySingleMessageRequested_ShouldReturnUnprocessable()
+    {
+        testFixture.Factory.SqsAdminServiceMock
+            .Setup(x => x.ReplayDlqMessageAsync(
+                It.Is<ReplayDlqMessageRequestDto>(r => r.Queue == "NoDlq"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnprocessableException("Queue 'NoDlq' does not have a configured DLQ."));
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(_httpClient, "NoDlq", "m1", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task GivenNoToken_WhenReplaySingleMessageRequested_ShouldReturnUnauthorized()
+    {
+        var client = testFixture.Factory.CreateClient();
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(client, "CadsCds", "m-unauthorized", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GivenScopeClaimMissing_WhenReplaySingleMessageRequested_ShouldReturnForbidden()
+    {
+        var client = testFixture.Factory.CreateClient();
+        client.AddJwt(TestAuthConstants.FakeJwtMissingSqsAdminScope);
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(client, "CadsCds", "m-forbidden", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GivenSqsAdminEndpointsDisabled_WhenReplaySingleMessageRequested_ShouldReturnNotFound()
+    {
+        await using var factory = new CadsBridgedWebApplicationFactory(
+            configOverrides: new Dictionary<string, string?>
+            {
+                ["EnableAdminEndpoints"] = "false"
+            },
+            useFakeAuth: true);
+
+        var client = factory.CreateClient();
+        client.AddJwt();
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(client, "CadsCds", "m-disabled", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GivenValidRequest_WhenReplaySingleMessageRequested_ShouldInvokeServiceOnce()
+    {
+        testFixture.Factory.SqsAdminServiceMock
+            .Setup(x => x.ReplayDlqMessageAsync(
+                It.Is<ReplayDlqMessageRequestDto>(r => r.Queue == "CadsCds" && r.MessageId == "m-invoke-once"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ReplayResultDto(1, 0, []));
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(_httpClient, "CadsCds", "m-invoke-once", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        testFixture.Factory.SqsAdminServiceMock.Verify(x => x.ReplayDlqMessageAsync(
+            It.Is<ReplayDlqMessageRequestDto>(r => r.Queue == "CadsCds" && r.MessageId == "m-invoke-once"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

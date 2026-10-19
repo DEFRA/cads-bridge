@@ -16,6 +16,10 @@ public class SqsAdminService(
 {
     private const int MaxMessagesPerSqsRequest = 10;
 
+    // Upper bound on how many batches we'll scan through when searching the DLQ for a
+    // specific MessageId, so a missing message can't cause an unbounded loop.
+    private const int MaxSingleMessageSearchAttempts = 20;
+
     private static readonly string[] MetricAttributeNames =
     [
         "ApproximateNumberOfMessages",
@@ -38,14 +42,9 @@ public class SqsAdminService(
 
     public async Task<QueueMetricsDto> GetDlqMetricsAsync(string queue, CancellationToken cancellationToken = default)
     {
-        var queueOptions = ResolveQueueOptions(queue);
+        var queueOptions = ResolveDlqQueueOptions(queue);
 
-        if (string.IsNullOrWhiteSpace(queueOptions.DlqQueueUrl))
-        {
-            throw new UnprocessableException($"Queue '{queue}' does not have a configured DLQ.");
-        }
-
-        return await GetMetricsForUrlAsync(queueOptions.DlqQueueUrl, $"{queue} DLQ", cancellationToken);
+        return await GetMetricsForUrlAsync(queueOptions.DlqQueueUrl!, $"{queue} DLQ", cancellationToken);
     }
 
     private async Task<QueueMetricsDto> GetMetricsForUrlAsync(string queueUrl, string queue, CancellationToken cancellationToken)
@@ -91,19 +90,14 @@ public class SqsAdminService(
         PeekMessagesRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var queueOptions = ResolveQueueOptions(request.Queue);
-
-        if (string.IsNullOrWhiteSpace(queueOptions.DlqQueueUrl))
-        {
-            throw new UnprocessableException($"Queue '{request.Queue}' does not have a configured DLQ.");
-        }
+        var queueOptions = ResolveDlqQueueOptions(request.Queue);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("[SqsAdminService] Peeking DLQ messages for queue {Queue}", request.Queue);
         }
 
-        return await PeekFromUrlAsync(queueOptions.DlqQueueUrl, request.MaxMessages, cancellationToken);
+        return await PeekFromUrlAsync(queueOptions.DlqQueueUrl!, request.MaxMessages, cancellationToken);
     }
 
     private async Task<IReadOnlyList<QueueMessageDto>> PeekFromUrlAsync(string queueUrl, int maxMessages, CancellationToken cancellationToken)
@@ -140,14 +134,9 @@ public class SqsAdminService(
 
     public async Task<ReplayResultDto> ReplayDlqAsync(ReplayDlqRequestDto request, CancellationToken cancellationToken = default)
     {
-        var queueOptions = ResolveQueueOptions(request.Queue);
+        var queueOptions = ResolveDlqQueueOptions(request.Queue);
 
-        if (string.IsNullOrWhiteSpace(queueOptions.DlqQueueUrl))
-        {
-            throw new UnprocessableException($"Queue '{request.Queue}' does not have a configured DLQ.");
-        }
-
-        var dlqUrl = queueOptions.DlqQueueUrl;
+        var dlqUrl = queueOptions.DlqQueueUrl!;
         var mainQueueUrl = queueOptions.QueueUrl;
         var batchSize = request.BatchSize > 0 ? request.BatchSize : queueOptions.DefaultReplayBatchSize;
 
@@ -167,46 +156,104 @@ public class SqsAdminService(
 
             foreach (var message in receiveResponse.Messages)
             {
-                try
+                var (success, error) = await TryReplayMessageAsync(message, dlqUrl, mainQueueUrl, cancellationToken);
+
+                if (success)
                 {
-                    await sqs.SendMessageAsync(
-                        new SendMessageRequest
-                        {
-                            QueueUrl = mainQueueUrl,
-                            MessageGroupId = message.Attributes?.GetValueOrDefault("MessageGroupId"),
-                            MessageDeduplicationId = message.Attributes?.GetValueOrDefault("MessageDeduplicationId"),
-                            MessageBody = message.Body,
-                            MessageAttributes = message.MessageAttributes
-                        },
-                        cancellationToken);
-
-                    await sqs.DeleteMessageAsync(dlqUrl, message.ReceiptHandle, cancellationToken);
-
                     moved++;
-
-                    if (logger.IsEnabled(LogLevel.Information))
-                    {
-                        logger.LogInformation(
-                            "DLQ replay: moved MessageId={MessageId} from {DlqUrl} to {MainQueueUrl}",
-                            message.MessageId, dlqUrl, mainQueueUrl);
-                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    // Graceful partial replay: leave the message on the DLQ (its visibility
-                    // timeout will expire, allowing a later retry) and keep processing the batch.
-                    errors.Add($"MessageId '{message.MessageId}': {ex.Message}");
-
-                    logger.LogError(
-                        ex,
-                        "DLQ replay failed for MessageId={MessageId} on {DlqUrl}",
-                        message.MessageId, dlqUrl);
+                    errors.Add(error!);
                 }
             }
         }
 
         return new ReplayResultDto(moved, errors.Count, errors);
     }
+
+    public async Task<ReplayResultDto> ReplayDlqMessageAsync(ReplayDlqMessageRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var queueOptions = ResolveDlqQueueOptions(request.Queue);
+
+        var dlqUrl = queueOptions.DlqQueueUrl!;
+        var mainQueueUrl = queueOptions.QueueUrl;
+
+        for (var attempt = 0; attempt < MaxSingleMessageSearchAttempts; attempt++)
+        {
+            var receiveResponse = await GetMessagesFromQueue(dlqUrl, MaxMessagesPerSqsRequest, visibilityTimeout: 30, cancellationToken: cancellationToken);
+
+            if (receiveResponse.Messages.Count == 0)
+            {
+                break;
+            }
+
+            var message = receiveResponse.Messages.FirstOrDefault(m => m.MessageId == request.MessageId);
+
+            if (message != null)
+            {
+                var (success, error) = await TryReplayMessageAsync(message, dlqUrl, mainQueueUrl, cancellationToken);
+
+                return success
+                    ? new ReplayResultDto(1, 0, [])
+                    : new ReplayResultDto(0, 1, [error!]);
+            }
+        }
+
+        throw new NotFoundException("DLQ message", request.MessageId);
+    }
+
+    private async Task<(bool Success, string? Error)> TryReplayMessageAsync(
+        Message message,
+        string dlqUrl,
+        string mainQueueUrl,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await sqs.SendMessageAsync(
+                new SendMessageRequest
+                {
+                    QueueUrl = mainQueueUrl,
+                    MessageGroupId = ResolveMessageAttribute(message, "MessageGroupId"),
+                    MessageDeduplicationId = ResolveMessageAttribute(message, "MessageDeduplicationId"),
+                    MessageBody = message.Body,
+                    MessageAttributes = message.MessageAttributes
+                },
+                cancellationToken);
+
+            await sqs.DeleteMessageAsync(dlqUrl, message.ReceiptHandle, cancellationToken);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "DLQ replay: moved MessageId={MessageId} from {DlqUrl} to {MainQueueUrl}",
+                    message.MessageId, dlqUrl, mainQueueUrl);
+            }
+
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            // Graceful partial replay: leave the message on the DLQ (its visibility
+            // timeout will expire, allowing a later retry) and keep processing the batch.
+            logger.LogError(
+                ex,
+                "DLQ replay failed for MessageId={MessageId} on {DlqUrl}",
+                message.MessageId, dlqUrl);
+
+            return (false, $"MessageId '{message.MessageId}': {ex.Message}");
+        }
+    }
+
+    // System attributes (requested via MessageSystemAttributeNames on ReceiveMessage) are
+    // preferred, but LocalStack's FIFO queue emulation doesn't reliably return them, so we
+    // fall back to the custom message attribute of the same name if the message was
+    // published with one (as our own producers/tests do).
+    private static string? ResolveMessageAttribute(Message message, string attributeName) =>
+        message.Attributes?.GetValueOrDefault(attributeName)
+        ?? message.MessageAttributes?.GetValueOrDefault(attributeName)?.StringValue;
+
 
     private async Task<long> GetOldestMessageAgeSecondsAsync(string queueUrl, CancellationToken cancellationToken)
     {
@@ -261,6 +308,18 @@ public class SqsAdminService(
         if (!queues.TryGetValue(queue, out var queueOptions))
         {
             throw new NotFoundException("Queue", queue);
+        }
+
+        return queueOptions;
+    }
+
+    private SqsAdminQueueOptions ResolveDlqQueueOptions(string queue)
+    {
+        var queueOptions = ResolveQueueOptions(queue);
+
+        if (string.IsNullOrWhiteSpace(queueOptions.DlqQueueUrl))
+        {
+            throw new UnprocessableException($"Queue '{queue}' does not have a configured DLQ.");
         }
 
         return queueOptions;

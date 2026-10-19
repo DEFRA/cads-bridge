@@ -331,6 +331,123 @@ public class SqsAdminEndpointTests(ApiContainerFixture apiContainerFixture)
         }
     }
 
+    // ReplayDlqMessage
+
+    [Fact]
+    public async Task GivenMessageOnDlq_WhenReplaySingleMessageRequested_ShouldMoveOnlyThatMessageToMainQueue()
+    {
+        var client = await apiContainerFixture.CreateAzureAdClientAsync(TestSqsAdminExecuteTokenFactory.ValidUserToken());
+
+        await DrainQueueAsync(MainQueueUrl);
+        await DrainQueueAsync(DlqUrl);
+
+        var targetDedupId = Guid.NewGuid().ToString("N");
+        var otherDedupId = Guid.NewGuid().ToString("N");
+
+        await Sqs.SendMessageAsync(new SendMessageRequest
+        {
+            QueueUrl = DlqUrl,
+            MessageBody = JsonSerializer.Serialize(new { test = targetDedupId })
+        }, TestContext.Current.CancellationToken);
+
+        await Sqs.SendMessageAsync(new SendMessageRequest
+        {
+            QueueUrl = DlqUrl,
+            MessageBody = JsonSerializer.Serialize(new { test = otherDedupId })
+        }, TestContext.Current.CancellationToken);
+
+        var messagesDto = await PollUntilAsync(
+            async () =>
+            {
+                var response = await SqsAdminTestClient.GetDlqMessagesAsync(client, QueueName, maxMessages: 10, TestContext.Current.CancellationToken);
+                response.IsSuccessStatusCode.Should().BeTrue();
+                return await SqsAdminTestClient.ReadMessagesDtoAsync(response, TestContext.Current.CancellationToken);
+            },
+            result => result?.Messages.Any(m => m.Body.Contains(targetDedupId)) == true
+                && result.Messages.Any(m => m.Body.Contains(otherDedupId)));
+
+        var targetMessageId = messagesDto!.Messages.Single(m => m.Body.Contains(targetDedupId)).MessageId;
+
+        ReplayDlqMessageResponse? dto = null;
+
+        await PollUntilAsync(
+            async () =>
+            {
+                var response = await SqsAdminTestClient.ReplayDlqMessageAsync(client, QueueName, targetMessageId, TestContext.Current.CancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+                    throw new InvalidOperationException(
+                        $"Replay request failed with status {(int)response.StatusCode} ({response.StatusCode}): {body}");
+                }
+
+                dto = await SqsAdminTestClient.ReadReplayMessageDtoAsync(response, TestContext.Current.CancellationToken);
+                return dto?.Moved >= 1;
+            },
+            moved => moved);
+
+        dto.Should().NotBeNull();
+        dto!.Moved.Should().Be(1);
+        dto.Failed.Should().Be(0);
+        dto.MessageId.Should().Be(targetMessageId);
+
+        var receive = await PollUntilAsync(
+            async () => await Sqs.ReceiveMessageAsync(new ReceiveMessageRequest
+            {
+                QueueUrl = MainQueueUrl,
+                MaxNumberOfMessages = 10,
+                MessageAttributeNames = ["All"]
+            }, TestContext.Current.CancellationToken),
+            result => (result.Messages ?? []).Any(m => m.Body.Contains(targetDedupId)));
+
+        (receive.Messages ?? []).Should().Contain(m => m.Body.Contains(targetDedupId));
+        (receive.Messages ?? []).Should().NotContain(m => m.Body.Contains(otherDedupId));
+
+        // The non-targeted message should still be on the DLQ. Note that the replay search
+        // receives messages with a 30s visibility timeout while scanning for the target
+        // MessageId, so the untouched sibling message may remain temporarily invisible -
+        // poll for long enough to allow that timeout to expire.
+        var remainingDlqDto = await PollUntilAsync(
+            async () =>
+            {
+                var response = await SqsAdminTestClient.GetDlqMessagesAsync(client, QueueName, maxMessages: 10, TestContext.Current.CancellationToken);
+                return await SqsAdminTestClient.ReadMessagesDtoAsync(response, TestContext.Current.CancellationToken);
+            },
+            result => result?.Messages.Any(m => m.Body.Contains(otherDedupId)) == true,
+            maxAttempts: 40,
+            delayMilliseconds: 1000);
+
+        remainingDlqDto!.Messages.Should().Contain(m => m.Body.Contains(otherDedupId));
+
+        await DrainQueueAsync(MainQueueUrl);
+        await DrainQueueAsync(DlqUrl);
+    }
+
+    [Fact]
+    public async Task GivenMessageNotOnDlq_WhenReplaySingleMessageRequested_ShouldReturnNotFound()
+    {
+        var client = await apiContainerFixture.CreateAzureAdClientAsync(TestSqsAdminExecuteTokenFactory.ValidUserToken());
+
+        await DrainQueueAsync(DlqUrl);
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(
+            client, QueueName, Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GivenUnknownQueue_WhenReplaySingleMessageRequested_ShouldReturnNotFound()
+    {
+        var client = await apiContainerFixture.CreateAzureAdClientAsync(TestSqsAdminExecuteTokenFactory.ValidUserToken());
+
+        var response = await SqsAdminTestClient.ReplayDlqMessageAsync(
+            client, "unknown-queue", Guid.NewGuid().ToString(), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     /// <summary>
     /// SQS (including LocalStack) does not guarantee that a message is immediately
     /// receivable after SendMessageAsync returns. Polls the given operation until the

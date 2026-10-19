@@ -15,4 +15,7 @@ public interface ISqsAdminService
     Task<IReadOnlyList<QueueMessageDto>> PeekDlqMessagesAsync(PeekMessagesRequestDto request, CancellationToken cancellationToken = default);
 
     Task<ReplayResultDto> ReplayDlqAsync(ReplayDlqRequestDto request, CancellationToken cancellationToken = default);
+
+    Task<ReplayResultDto> ReplayDlqMessageAsync(ReplayDlqMessageRequestDto request, CancellationToken cancellationToken = default);
+
 }
