@@ -469,6 +469,141 @@ public class SqsAdminServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+        [Fact]
+    public async Task ReplayDlqAsync_ShouldFallBackToMessageAttributes_WhenSystemAttributesMissingFifoFields()
+    {
+        var sut = CreateSut();
+
+        var message = new Message
+        {
+            MessageId = "m1",
+            Body = "b1",
+            ReceiptHandle = "r1",
+            // No system Attributes populated - simulating LocalStack's unreliable FIFO support.
+            MessageAttributes = new Dictionary<string, MessageAttributeValue>
+            {
+                ["MessageGroupId"] = new() { DataType = "String", StringValue = "group-1" },
+                ["MessageDeduplicationId"] = new() { DataType = "String", StringValue = "dedup-1" }
+            }
+        };
+
+        SetupSingleReceiveThenEmpty([message]);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(It.IsAny<SendMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SendMessageResponse());
+
+        _sqsMock
+            .Setup(x => x.DeleteMessageAsync(DlqUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteMessageResponse());
+
+        var result = await sut.ReplayDlqAsync(new ReplayDlqRequestDto(QueueName, 1), CancellationToken.None);
+
+        result.Moved.Should().Be(1);
+
+        _sqsMock.Verify(x => x.SendMessageAsync(
+            It.Is<SendMessageRequest>(r => r.MessageGroupId == "group-1" && r.MessageDeduplicationId == "dedup-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ReplayDlqMessageAsync
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldThrowUnprocessableException_WhenNoDlqConfigured()
+    {
+        _queues = new Dictionary<string, SqsAdminQueueOptions>
+        {
+            [QueueName] = new() { QueueUrl = QueueUrl, DlqQueueUrl = null }
+        };
+        var sut = CreateSut();
+
+        var action = () => sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "m1"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<UnprocessableException>();
+    }
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldThrowNotFoundException_WhenQueueNotConfigured()
+    {
+        var sut = CreateSut();
+
+        var action = () => sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto("unknown-queue", "m1"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldMoveOnlyTheMatchingMessage()
+    {
+        var sut = CreateSut();
+
+        var messages = new List<Message>
+        {
+            new() { MessageId = "m1", Body = "b1", ReceiptHandle = "r1" },
+            new() { MessageId = "m2", Body = "b2", ReceiptHandle = "r2" }
+        };
+
+        SetupSingleReceiveThenEmpty(messages);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(It.IsAny<SendMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SendMessageResponse());
+
+        _sqsMock
+            .Setup(x => x.DeleteMessageAsync(DlqUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteMessageResponse());
+
+        var result = await sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "m2"), CancellationToken.None);
+
+        result.Moved.Should().Be(1);
+        result.Failed.Should().Be(0);
+
+        _sqsMock.Verify(x => x.SendMessageAsync(
+            It.Is<SendMessageRequest>(r => r.MessageBody == "b2"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _sqsMock.Verify(x => x.DeleteMessageAsync(DlqUrl, "r2", It.IsAny<CancellationToken>()), Times.Once);
+        _sqsMock.Verify(x => x.SendMessageAsync(
+            It.Is<SendMessageRequest>(r => r.MessageBody == "b1"),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldReturnFailure_WhenSendFails()
+    {
+        var sut = CreateSut();
+
+        var messages = new List<Message>
+        {
+            new() { MessageId = "m1", Body = "b1", ReceiptHandle = "r1" }
+        };
+
+        SetupSingleReceiveThenEmpty(messages);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(It.IsAny<SendMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonSQSException("boom"));
+
+        var result = await sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "m1"), CancellationToken.None);
+
+        result.Moved.Should().Be(0);
+        result.Failed.Should().Be(1);
+        result.Errors.Should().ContainSingle(e => e.Contains("m1"));
+
+        _sqsMock.Verify(x => x.DeleteMessageAsync(DlqUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldThrowNotFoundException_WhenMessageNotPresentInDlq()
+    {
+        var sut = CreateSut();
+
+        SetupSingleReceiveThenEmpty([new Message { MessageId = "other", Body = "b1", ReceiptHandle = "r1" }]);
+
+        var action = () => sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "missing"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<NotFoundException>();
+    }
+
     private void SetupSingleReceiveThenEmpty(List<Message> messages)
     {
         _sqsMock
