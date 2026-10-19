@@ -30,7 +30,7 @@ public static class EndpointExtensions
         app.MapPost($"{SqsAdminEndpointsConstants.ApiRoutePrefix}/queues/{{queue}}/dlq/replay", ReplayMessagesToQueue)
             .RequireAuthorization(AuthenticationConstants.AadSqsAdminExecutePolicy);
 
-        app.MapPost($"{SqsAdminEndpointsConstants.ApiRoutePrefix}/sqs/queues/{{queue}}/dlq/replay/{{messageId}}", ReplayMessageToQueue)
+        app.MapPost($"{SqsAdminEndpointsConstants.ApiRoutePrefix}/queues/{{queue}}/dlq/replay/{{messageId}}", ReplayMessageToQueue)
             .RequireAuthorization(AuthenticationConstants.AadSqsAdminExecutePolicy);
     }
 
