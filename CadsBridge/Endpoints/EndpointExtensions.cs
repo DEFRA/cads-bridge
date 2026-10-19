@@ -21,8 +21,7 @@ public static class EndpointsExtensions
 
     private static async Task<IResult> GetDataSeed(Channel<DataSeedFileLoadJob> channel, IConfiguration configuration, IDataSeedFileLoadService dataSeedFileLoader)
     {
-        var dataSeedingImportEnabled = configuration.GetValue<bool>("DataSeedingImportEnabled");
-        if (!dataSeedingImportEnabled)
+        if (!configuration.GetValue<bool>("EnableDataSeedingImportEndpoints", false))
         {
             return Results.Ok("Data seeding import is disabled.");
         }

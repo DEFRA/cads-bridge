@@ -13,7 +13,7 @@ namespace CadsBridge.Tests.Component.Endpoints;
 public class DataSeedImportEndpointTests
 {
     private static CadsBridgeWebAppFactory CreateFactory(bool dataSeedingEnabled) =>
-        new(new Dictionary<string, string?> { ["DataSeedingImportEnabled"] = dataSeedingEnabled.ToString() });
+        new(new Dictionary<string, string?> { ["EnableDataSeedingImportEndpoints"] = dataSeedingEnabled.ToString() });
 
     [Fact]
     public async Task GetDataSeedImport_WhenDisabled_Returns200WithDisabledMessage()

@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Fakes.Authentication;
 using CadsBridge.Testing.Support.TestFixtures.Containers.Configuration;
@@ -6,6 +5,7 @@ using CadsBridge.Testing.Support.Utilities.Http;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
+using System.Net.Http.Headers;
 using Xunit;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Containers;
@@ -79,7 +79,6 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("AuthenticationConfiguration__AzureAD__ValidateIssuer", "false")
             .WithEnvironment("AuthenticationConfiguration__AzureAD__ScopeClaimType", "scope")
             .WithEnvironment("AuthenticationConfiguration__AzureAD__RoleClaimType", "role")
-            .WithEnvironment("EnableAdminEndpoints", "true")
             .WithEnvironment("DataLoad__Salt", "test-salt")
             .WithEnvironment("DataLoad__SplitValue", "5")
             .WithEnvironment("LOCALSTACK_ENDPOINT", LocalStackFixture.NetworkServiceUrl)

@@ -1,4 +1,3 @@
-using System.Net;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using CadsBridge.Endpoints.SqsAdmin.Responses;
@@ -6,6 +5,7 @@ using CadsBridge.Testing.Support.ApiClients;
 using CadsBridge.Testing.Support.Factories.Authorization;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using FluentAssertions;
+using System.Net;
 using System.Text.Json;
 
 namespace CadsBridge.Tests.Integration.EndPoints;

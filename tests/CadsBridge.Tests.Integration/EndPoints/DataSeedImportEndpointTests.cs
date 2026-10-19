@@ -12,7 +12,7 @@ public class DataSeedImportEndpointTests
     {
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
-            ["DataSeedingImportEnabled"] = "false"
+            ["EnableDataSeedingImportEndpoints"] = "false"
         });
         await fixture.InitializeAsync();
 
@@ -28,7 +28,7 @@ public class DataSeedImportEndpointTests
     {
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
-            ["DataSeedingImportEnabled"] = "true"
+            ["EnableDataSeedingImportEndpoints"] = "true"
         });
         await fixture.InitializeAsync();
 

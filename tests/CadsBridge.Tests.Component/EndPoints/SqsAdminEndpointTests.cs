@@ -1,4 +1,3 @@
-using System.Net;
 using CadsBridge.Core.DTOs.SqsAdmin;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Testing.Support.ApiClients;
@@ -8,6 +7,7 @@ using CadsBridge.Tests.Component.TestFixtures;
 using CadsBridge.Tests.Unit.TestFixtures;
 using FluentAssertions;
 using Moq;
+using System.Net;
 
 namespace CadsBridge.Tests.Component.EndPoints;
 

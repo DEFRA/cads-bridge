@@ -14,7 +14,7 @@ public class CreateTestFileRequestTests
     {
         var configOverrides = new Dictionary<string, string?>
         {
-            ["EnableTestEndpoints"] = "true"
+            ["EnableTestSupportEndpoints"] = "true"
         };
 
         var request = new CreateTestFileRequest(
@@ -32,7 +32,7 @@ public class CreateTestFileRequestTests
     {
         var configOverrides = new Dictionary<string, string?>
         {
-            ["EnableTestEndpoints"] = "true"
+            ["EnableTestSupportEndpoints"] = "true"
         };
         await using var factory = new CadsBridgeWebAppFactory(configOverrides);
         var response = await TriggerImportJob(factory, new CreateTestFileRequest(
@@ -48,7 +48,7 @@ public class CreateTestFileRequestTests
     {
         var configOverrides = new Dictionary<string, string?>
         {
-            ["EnableTestEndpoints"] = "true"
+            ["EnableTestSupportEndpoints"] = "true"
         };
         await using var factory = new CadsBridgeWebAppFactory(configOverrides);
 
@@ -66,7 +66,7 @@ public class CreateTestFileRequestTests
     {
         var configOverrides = new Dictionary<string, string?>
         {
-            ["EnableTestEndpoints"] = "true"
+            ["EnableTestSupportEndpoints"] = "true"
         };
         var characterCount = 64 * 1024 + 1;
         var largeString = new string('A', characterCount);
