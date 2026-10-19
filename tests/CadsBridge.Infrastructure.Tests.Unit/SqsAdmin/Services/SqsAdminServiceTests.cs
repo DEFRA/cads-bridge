@@ -469,7 +469,7 @@ public class SqsAdminServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-        [Fact]
+    [Fact]
     public async Task ReplayDlqAsync_ShouldFallBackToMessageAttributes_WhenSystemAttributesMissingFifoFields()
     {
         var sut = CreateSut();
