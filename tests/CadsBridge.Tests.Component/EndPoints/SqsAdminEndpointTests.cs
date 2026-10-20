@@ -568,7 +568,7 @@ public class SqsAdminEndpointTests(CadsBridgeTestFixture testFixture) : IClassFi
     [Fact]
     public async Task GivenSqsAdminEndpointsDisabled_WhenReplaySingleMessageRequested_ShouldReturnNotFound()
     {
-        await using var factory = new CadsBridgedWebApplicationFactory(
+        await using var factory = new CadsBridgeWebAppFactory(
             configOverrides: new Dictionary<string, string?>
             {
                 ["EnableAdminEndpoints"] = "false"
