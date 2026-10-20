@@ -4,7 +4,6 @@ using CadsBridge.Testing.Support.ApiClients;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Utilities.Authorization;
 using CadsBridge.Tests.Component.TestFixtures;
-using CadsBridge.Tests.Unit.TestFixtures;
 using FluentAssertions;
 using Moq;
 using System.Net;
@@ -62,7 +61,7 @@ public class SqsAdminEndpointTests(CadsBridgeTestFixture testFixture) : IClassFi
     [Fact]
     public async Task GivenSqsAdminEndpointsDisabled_WhenGetQueuesRequested_ShouldReturnNotFound()
     {
-        await using var factory = new CadsBridgedWebApplicationFactory(
+        await using var factory = new CadsBridgeWebAppFactory(
             configOverrides: new Dictionary<string, string?>
             {
                 ["EnableAdminEndpoints"] = "false"
@@ -204,7 +203,7 @@ public class SqsAdminEndpointTests(CadsBridgeTestFixture testFixture) : IClassFi
     [Fact]
     public async Task GivenSqsAdminEndpointsDisabled_WhenGetDlqMetricsRequested_ShouldReturnNotFound()
     {
-        await using var factory = new CadsBridgedWebApplicationFactory(
+        await using var factory = new CadsBridgeWebAppFactory(
             configOverrides: new Dictionary<string, string?>
             {
                 ["EnableAdminEndpoints"] = "false"
@@ -314,7 +313,7 @@ public class SqsAdminEndpointTests(CadsBridgeTestFixture testFixture) : IClassFi
     [Fact]
     public async Task GivenSqsAdminEndpointsDisabled_WhenGetDlqMessagesRequested_ShouldReturnNotFound()
     {
-        await using var factory = new CadsBridgedWebApplicationFactory(
+        await using var factory = new CadsBridgeWebAppFactory(
             configOverrides: new Dictionary<string, string?>
             {
                 ["EnableAdminEndpoints"] = "false"
