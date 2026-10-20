@@ -1,8 +1,11 @@
 using Amazon;
 using Amazon.S3;
+using CadsBridge.Application.SqsAdmin.Services;
 using CadsBridge.Application.Storage.Transfer;
 using CadsBridge.Core.Locking;
 using CadsBridge.Infrastructure.Locking;
+using CadsBridge.Infrastructure.SqsAdmin.Configuration;
+using CadsBridge.Infrastructure.SqsAdmin.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Configuration;
 using CadsBridge.Infrastructure.Storage.Factories;
@@ -14,9 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics.CodeAnalysis;
-using CadsBridge.Application.SqsAdmin.Services;
-using CadsBridge.Infrastructure.SqsAdmin.Configuration;
-using CadsBridge.Infrastructure.SqsAdmin.Services;
 
 namespace CadsBridge.Infrastructure.Storage.Setup;
 

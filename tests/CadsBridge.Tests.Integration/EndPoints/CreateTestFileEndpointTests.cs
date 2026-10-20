@@ -24,7 +24,7 @@ public class CreateTestFileEndpointTests
     {
         await using var fixture = new ApiContainerWithEnvsFixture(new Dictionary<string, string>
         {
-            ["EnableTestEndpoints"] = "true"
+            ["EnableTestSupportEndpoints"] = "true"
         });
         await fixture.InitializeAsync();
 

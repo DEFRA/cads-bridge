@@ -7,9 +7,9 @@ namespace CadsBridge.Tests.Unit.Authentication;
 
 public class AuthenticationHandlerTests
 {
-    private static CadsBridgedWebApplicationFactory GetFactory(bool useFakeAuth = false)
+    private static UnitWebApplicationFactory GetFactory(bool useFakeAuth = false)
     {
-        var factory = new CadsBridgedWebApplicationFactory(useFakeAuth: useFakeAuth);
+        var factory = new UnitWebApplicationFactory(useFakeAuth: useFakeAuth);
         return factory;
     }
 

@@ -11,7 +11,7 @@ public static class EndpointExtensions
 {
     private const int MaxContentSizeBytes = 64 * 1024;
 
-    public static void CreateTestEndpoints(this IEndpointRouteBuilder app)
+    public static void CreateTestSupportEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/v1/test-support/files", UploadTestFiles);
     }

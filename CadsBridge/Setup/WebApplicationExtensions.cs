@@ -1,12 +1,12 @@
 using CadsBridge.Core.Correlation;
 using CadsBridge.Endpoints;
+using CadsBridge.Endpoints.SqsAdmin;
 using CadsBridge.Endpoints.Testing;
 using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Middleware;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics.CodeAnalysis;
-using CadsBridge.Endpoints.SqsAdmin;
 
 namespace CadsBridge.Setup;
 
@@ -73,14 +73,12 @@ public static class WebApplicationExtensions
 
         app.CreateEndpoints();
 
-        var testEndpointsEnabled = configuration.GetValue<bool>("EnableTestEndpoints");
-        if (testEndpointsEnabled)
+        if (configuration.GetValue<bool>("EnableTestSupportEndpoints", false))
         {
-            app.CreateTestEndpoints();
+            app.CreateTestSupportEndpoints();
         }
 
-        var adminEndpointsEnabled = configuration.GetValue<bool>("EnableAdminEndpoints");
-        if (adminEndpointsEnabled)
+        if (configuration.GetValue<bool>("EnableAdminEndpoints", false))
         {
             app.CreateSqsAdminEndpoints();
         }

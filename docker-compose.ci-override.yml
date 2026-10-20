@@ -6,6 +6,9 @@ services:
       - AWS__ServiceURL=http://cads-localstack:4566
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS="http://0.0.0.0:5550"
+      - EnableAdminEndpoints=true
+      - EnableDataSeedingImportEndpoints=true
+      - EnableTestSupportEndpoints=true
       - Kestrel__Certificates__Default__Path=
       - Kestrel__Certificates__Default__Password=
       - Storage__Internal__BucketName=cads-internal-bucket
