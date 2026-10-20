@@ -83,6 +83,17 @@ public static class SqsAdminTestClient
             cancellationToken);
     }
 
+    public static async Task<HttpResponseMessage> ReplayDlqMessageAsync(
+        HttpClient client,
+        string queue,
+        string messageId,
+        CancellationToken cancellationToken)
+    {
+        var endpoint = string.Format(TestEndpointConstants.SqsAdminReplayDlqMessageEndpoint, queue, messageId);
+
+        return await client.PostAsync(endpoint, content: null, cancellationToken);
+    }
+
     public static async Task<GetQueuesResponse?> ReadQueuesDtoAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken)
@@ -115,6 +126,15 @@ public static class SqsAdminTestClient
         CancellationToken cancellationToken)
     {
         return await response.Content.ReadFromJsonAsync<ReplayDlqResponse>(
+            JsonDefaults.DefaultOptionsWithStringEnumConversion,
+            cancellationToken);
+    }
+
+    public static async Task<ReplayDlqMessageResponse?> ReadReplayMessageDtoAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        return await response.Content.ReadFromJsonAsync<ReplayDlqMessageResponse>(
             JsonDefaults.DefaultOptionsWithStringEnumConversion,
             cancellationToken);
     }

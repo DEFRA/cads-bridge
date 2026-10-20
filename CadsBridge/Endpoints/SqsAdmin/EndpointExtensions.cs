@@ -29,6 +29,9 @@ public static class EndpointExtensions
 
         app.MapPost($"{SqsAdminEndpointsConstants.ApiRoutePrefix}/queues/{{queue}}/dlq/replay", ReplayMessagesToQueue)
             .RequireAuthorization(AuthenticationConstants.AadSqsAdminExecutePolicy);
+
+        app.MapPost($"{SqsAdminEndpointsConstants.ApiRoutePrefix}/queues/{{queue}}/dlq/replay/{{messageId}}", ReplayMessageToQueue)
+            .RequireAuthorization(AuthenticationConstants.AadSqsAdminExecutePolicy);
     }
 
     private static async Task<IResult> GetQueues(
@@ -154,5 +157,28 @@ public static class EndpointExtensions
             cancellationToken);
 
         return Results.Ok(new ReplayDlqResponse(queue, result.Moved, result.Failed, result.Errors));
+    }
+
+    private static async Task<IResult> ReplayMessageToQueue(
+        [FromRoute] string queue,
+        [FromRoute] string messageId,
+        ISqsAdminService service,
+        HttpContext httpContext,
+        ILogger<ReplayDlqRequest> logger,
+        CancellationToken cancellationToken)
+    {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            var user = httpContext.User.Identity!.Name;
+            logger.LogInformation(
+                "User {User}: Replaying DLQ message {MessageId} for queue {Queue}",
+                user, messageId, queue);
+        }
+
+        var result = await service.ReplayDlqMessageAsync(
+            new ReplayDlqMessageRequestDto(queue, messageId),
+            cancellationToken);
+
+        return Results.Ok(new ReplayDlqMessageResponse(queue, messageId, result.Moved, result.Failed, result.Errors));
     }
 }

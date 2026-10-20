@@ -22,4 +22,7 @@ public static class TestEndpointConstants
 
     // SqsAdmin - ReplayDlq
     public const string SqsAdminReplayDlqEndpoint = SqsAdminQueuesRoot + "/{0}/dlq/replay";
+
+    // SqsAdmin - ReplayDlqMessage
+    public const string SqsAdminReplayDlqMessageEndpoint = SqsAdminQueuesRoot + "/{0}/dlq/replay/{1}";
 }
