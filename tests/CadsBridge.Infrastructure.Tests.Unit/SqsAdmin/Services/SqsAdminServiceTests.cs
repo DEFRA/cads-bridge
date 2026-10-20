@@ -604,6 +604,101 @@ public class SqsAdminServiceTests
         await action.Should().ThrowAsync<NotFoundException>();
     }
 
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldReleaseSkippedMessages_SoTheyBecomeVisibleImmediately()
+    {
+        var sut = CreateSut();
+
+        var messages = new List<Message>
+        {
+            new() { MessageId = "m1", Body = "b1", ReceiptHandle = "r1" },
+            new() { MessageId = "m2", Body = "b2", ReceiptHandle = "r2" },
+            new() { MessageId = "m3", Body = "b3", ReceiptHandle = "r3" }
+        };
+
+        SetupSingleReceiveThenEmpty(messages);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(It.IsAny<SendMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SendMessageResponse());
+
+        _sqsMock
+            .Setup(x => x.DeleteMessageAsync(DlqUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteMessageResponse());
+
+        _sqsMock
+            .Setup(x => x.ChangeMessageVisibilityBatchAsync(It.IsAny<ChangeMessageVisibilityBatchRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChangeMessageVisibilityBatchResponse());
+
+        var result = await sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "m2"), CancellationToken.None);
+
+        result.Moved.Should().Be(1);
+
+        _sqsMock.Verify(x => x.ChangeMessageVisibilityBatchAsync(
+            It.Is<ChangeMessageVisibilityBatchRequest>(r =>
+                r.QueueUrl == DlqUrl
+                && r.Entries.Count == 2
+                && r.Entries.All(e => e.VisibilityTimeout == 0)
+                && r.Entries.Any(e => e.ReceiptHandle == "r1")
+                && r.Entries.Any(e => e.ReceiptHandle == "r3")
+                && r.Entries.All(e => e.ReceiptHandle != "r2")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldReleaseSkippedMessages_WhenMessageNotFoundInDlq()
+    {
+        var sut = CreateSut();
+
+        SetupSingleReceiveThenEmpty([new Message { MessageId = "other", Body = "b1", ReceiptHandle = "r1" }]);
+
+        _sqsMock
+            .Setup(x => x.ChangeMessageVisibilityBatchAsync(It.IsAny<ChangeMessageVisibilityBatchRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChangeMessageVisibilityBatchResponse());
+
+        var action = () => sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "missing"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<NotFoundException>();
+
+        _sqsMock.Verify(x => x.ChangeMessageVisibilityBatchAsync(
+            It.Is<ChangeMessageVisibilityBatchRequest>(r =>
+                r.QueueUrl == DlqUrl
+                && r.Entries.Count == 1
+                && r.Entries.Single().ReceiptHandle == "r1"
+                && r.Entries.Single().VisibilityTimeout == 0),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReplayDlqMessageAsync_ShouldNotThrow_WhenReleasingSkippedMessagesFails()
+    {
+        var sut = CreateSut();
+
+        var messages = new List<Message>
+        {
+            new() { MessageId = "m1", Body = "b1", ReceiptHandle = "r1" },
+            new() { MessageId = "m2", Body = "b2", ReceiptHandle = "r2" }
+        };
+
+        SetupSingleReceiveThenEmpty(messages);
+
+        _sqsMock
+            .Setup(x => x.SendMessageAsync(It.IsAny<SendMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SendMessageResponse());
+
+        _sqsMock
+            .Setup(x => x.DeleteMessageAsync(DlqUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteMessageResponse());
+
+        _sqsMock
+            .Setup(x => x.ChangeMessageVisibilityBatchAsync(It.IsAny<ChangeMessageVisibilityBatchRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonSQSException("boom"));
+
+        var result = await sut.ReplayDlqMessageAsync(new ReplayDlqMessageRequestDto(QueueName, "m2"), CancellationToken.None);
+
+        result.Moved.Should().Be(1);
+    }
+
     private void SetupSingleReceiveThenEmpty(List<Message> messages)
     {
         _sqsMock

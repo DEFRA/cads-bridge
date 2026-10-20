@@ -179,28 +179,89 @@ public class SqsAdminService(
         var dlqUrl = queueOptions.DlqQueueUrl!;
         var mainQueueUrl = queueOptions.QueueUrl;
 
-        for (var attempt = 0; attempt < MaxSingleMessageSearchAttempts; attempt++)
+        // Messages we received while searching for the target but didn't end up replaying.
+        // Receiving them hides them (via the visibility timeout below) even though they're
+        // not being actioned, so we must make them visible again as soon as we're done
+        // searching rather than leaving them hidden from other consumers/metrics for the
+        // full 30s visibility timeout.
+        var skippedReceiptHandles = new List<string>();
+
+        try
         {
-            var receiveResponse = await GetMessagesFromQueue(dlqUrl, MaxMessagesPerSqsRequest, visibilityTimeout: 30, cancellationToken: cancellationToken);
-
-            if (receiveResponse.Messages.Count == 0)
+            for (var attempt = 0; attempt < MaxSingleMessageSearchAttempts; attempt++)
             {
-                break;
+                var receiveResponse = await GetMessagesFromQueue(dlqUrl, MaxMessagesPerSqsRequest, visibilityTimeout: 30, cancellationToken: cancellationToken);
+
+                if (receiveResponse.Messages.Count == 0)
+                {
+                    break;
+                }
+
+                var message = receiveResponse.Messages.FirstOrDefault(m => m.MessageId == request.MessageId);
+
+                skippedReceiptHandles.AddRange(receiveResponse.Messages
+                    .Where(m => m != message)
+                    .Select(m => m.ReceiptHandle));
+
+                if (message != null)
+                {
+                    var (success, error) = await TryReplayMessageAsync(message, dlqUrl, mainQueueUrl, cancellationToken);
+
+                    return success
+                        ? new ReplayResultDto(1, 0, [])
+                        : new ReplayResultDto(0, 1, [error!]);
+                }
             }
 
-            var message = receiveResponse.Messages.FirstOrDefault(m => m.MessageId == request.MessageId);
+            throw new NotFoundException("DLQ message", request.MessageId);
+        }
+        finally
+        {
+            await ReleaseSkippedMessagesAsync(dlqUrl, skippedReceiptHandles, cancellationToken);
+        }
+    }
 
-            if (message != null)
-            {
-                var (success, error) = await TryReplayMessageAsync(message, dlqUrl, mainQueueUrl, cancellationToken);
-
-                return success
-                    ? new ReplayResultDto(1, 0, [])
-                    : new ReplayResultDto(0, 1, [error!]);
-            }
+    // Immediately resets the visibility timeout of messages that were incidentally hidden
+    // while searching for a single target message, so they re-appear on the queue (and in
+    // metrics) straight away instead of staying hidden for the full visibility timeout.
+    // Best-effort: if this fails, the messages simply remain hidden until the timeout
+    // naturally expires, which is not fatal.
+    private async Task ReleaseSkippedMessagesAsync(string queueUrl, IReadOnlyCollection<string> receiptHandles, CancellationToken cancellationToken)
+    {
+        if (receiptHandles.Count == 0)
+        {
+            return;
         }
 
-        throw new NotFoundException("DLQ message", request.MessageId);
+        foreach (var batch in receiptHandles.Chunk(MaxMessagesPerSqsRequest))
+        {
+            try
+            {
+                var entries = batch
+                    .Select((receiptHandle, index) => new ChangeMessageVisibilityBatchRequestEntry
+                    {
+                        Id = index.ToString(),
+                        ReceiptHandle = receiptHandle,
+                        VisibilityTimeout = 0
+                    })
+                    .ToList();
+
+                await sqs.ChangeMessageVisibilityBatchAsync(
+                    new ChangeMessageVisibilityBatchRequest
+                    {
+                        QueueUrl = queueUrl,
+                        Entries = entries
+                    },
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Failed to release {Count} skipped DLQ messages early on {QueueUrl}",
+                    batch.Length, queueUrl);
+            }
+        }
     }
 
     private async Task<(bool Success, string? Error)> TryReplayMessageAsync(
