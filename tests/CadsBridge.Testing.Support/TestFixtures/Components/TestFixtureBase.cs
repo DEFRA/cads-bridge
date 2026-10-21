@@ -1,4 +1,5 @@
 using CadsBridge.Testing.Support.Utilities.Authorization;
+using CadsBridge.Testing.Support.Utilities.Http;
 
 namespace CadsBridge.Testing.Support.TestFixtures.Components;
 
@@ -16,5 +17,7 @@ public abstract class TestFixtureBase<TStart, TFactory>
 
         if (useFakeAuth)
             HttpClient.AddJwt();
+        else
+            HttpClient.AddBasicTestApiKey();
     }
 }

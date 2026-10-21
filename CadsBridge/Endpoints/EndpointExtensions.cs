@@ -3,6 +3,7 @@ using CadsBridge.Application.DataLoad.Scanning;
 using CadsBridge.Application.DataLoad.Services;
 using CadsBridge.Core.Correlation;
 using CadsBridge.Endpoints.Requests;
+using CadsBridge.Infrastructure.Authentication.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Channels;
 
@@ -12,11 +13,14 @@ public static class EndpointsExtensions
 {
     public static void CreateEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("import", Import);
+        app.MapPost("import", Import)
+            .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
 
-        app.MapPost("split", Split);
+        app.MapPost("split", Split)
+            .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
 
-        app.MapGet("data-seed/import", GetDataSeed);
+        app.MapGet("data-seed/import", GetDataSeed)
+            .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
     }
 
     private static async Task<IResult> GetDataSeed(Channel<DataSeedFileLoadJob> channel, IConfiguration configuration, IDataSeedFileLoadService dataSeedFileLoader)
