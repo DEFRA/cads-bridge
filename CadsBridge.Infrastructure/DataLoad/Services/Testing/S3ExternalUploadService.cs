@@ -23,7 +23,7 @@ public class S3ExternalUploadService<TClient>(
 
     public async Task<UploadDetails> UploadAsync(string key, string data, DataSourceType dataSource, bool overwriteExisting, CancellationToken cancellationToken = default)
     {
-        if (!overwriteExisting && CheckIfFileExists(key, cancellationToken))
+        if (!overwriteExisting && await CheckIfFileExists(key, dataSource, cancellationToken))
         {
             throw new ConflictException($"File with key '{key}' already exists and overwriteExisting is set to false.");
         }
@@ -35,11 +35,12 @@ public class S3ExternalUploadService<TClient>(
         return uploadDetails;
     }
 
-    private bool CheckIfFileExists(string key, CancellationToken cancellationToken)
+    private async Task<bool> CheckIfFileExists(string key, DataSourceType dataSource, CancellationToken cancellationToken)
     {
         try
         {
-            var metadata = _clientInfo.Client.GetObjectMetadataAsync(_clientInfo.BucketName, key, cancellationToken).GetAwaiter().GetResult();
+            var prefix = dataSource.GetAttribute<DataSourceTypeInfoAttribute>()!.Prefix;
+            var metadata = await _clientInfo.Client.GetObjectMetadataAsync(_clientInfo.BucketName, $"{prefix}/{key}", cancellationToken);
             return metadata != null;
         }
         catch (Amazon.S3.AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -60,6 +61,14 @@ public class S3ExternalUploadService<TClient>(
             encryptedStream.Position = 0;
             await aesCryptoTransform.EncryptStreamAsync(inputStream, encryptedStream, password, salt, cancellationToken: cancellationToken);
             return encryptedStream;
+        }
+        catch (FormatException)
+        {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError("Error encrypting data for key '{Key}' and data source '{DataSource}'", key, dataSource);
+            }
+            throw;
         }
         catch (Exception e)
         {

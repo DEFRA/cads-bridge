@@ -28,6 +28,10 @@ public sealed class ExceptionHandlingMiddleware(
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.BadRequest, "Validation errors");
         }
+        catch (FormatException ex)
+        {
+            await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.BadRequest, "Format error");
+        }
         catch (NotFoundException ex)
         {
             await HandleExceptionAsync(context, ex, correlationId, (int)HttpStatusCode.NotFound);

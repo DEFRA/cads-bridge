@@ -33,6 +33,6 @@ public static class EndpointExtensions
         var uploadDetails = await s3UploadService.UploadAsync(request.FileName, request.Content, request.DataSource, request.OverwriteExisting, cancellationToken);
 
         var result = new CreateTestFileResponse(request.FileName, uploadDetails.BucketName, uploadDetails.Key, uploadDetails.Size, uploadDetails.UploadTime);
-        return Results.Ok(result);
+        return Results.Created(uploadDetails.Key, result);
     }
 }
