@@ -87,8 +87,6 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("AWS_ACCESS_KEY_ID", LocalStackFixture.AwsAccessKeyId)
             .WithEnvironment("AWS_SECRET_ACCESS_KEY", LocalStackFixture.AwsSecretAccessKey)
             .WithEnvironment("DOTNET_SYSTEM_NET_SOCKETS_HTTP_USEIPV6", "false")
-            .WithEnvironment("Acl__Clients__TestClient__Secret", TestAuthConstants.BasicSecret)
-            .WithEnvironment("Acl__Clients__TestClient__Scopes__0", "access")
             .WithNetwork(_networkName)
             .WithNetworkAliases("cads_bridge")
             .WithWaitStrategy(Wait.ForUnixContainer()
@@ -134,7 +132,6 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
 
         return client;
     }
-
 
     public async ValueTask DisposeAsync()
     {
