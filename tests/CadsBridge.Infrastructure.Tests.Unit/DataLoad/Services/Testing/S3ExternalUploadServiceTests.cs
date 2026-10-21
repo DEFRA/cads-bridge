@@ -103,6 +103,23 @@ public class S3ExternalUploadServiceTests
     }
 
     [Fact]
+    public async Task Throws_FormatException_when_file_name_invalid()
+    {
+        var s3 = new Mock<IAmazonS3>();
+
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse());
+
+        var aes = new Mock<IAesCryptoTransform>();
+
+        var sut = CreateSut(s3.Object, aes.Object);
+
+        await Assert.ThrowsAsync<FormatException>(() =>
+            sut.UploadAsync("invalid_file_name", "some data", DataSourceType.CtsBulk, overwriteExisting: true, CancellationToken.None));
+    }
+
+
+    [Fact]
     public async Task Rethrows_non_NotFound_AmazonS3Exception_from_metadata_check()
     {
         var s3 = new Mock<IAmazonS3>();
