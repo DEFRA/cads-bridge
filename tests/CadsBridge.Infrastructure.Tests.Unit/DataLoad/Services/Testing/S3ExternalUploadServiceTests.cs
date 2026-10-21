@@ -21,6 +21,7 @@ public class S3ExternalUploadServiceTests
 {
     private const string Bucket = "external-bucket";
     private const string Key = "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv";
+    private static readonly string PrefixedKey = $"{DataSourceType.CtsBulk.GetAttribute<DataSourceTypeInfoAttribute>()!.Prefix}/{Key}";
     private const string Salt = "salt";
 
     [Fact]
@@ -28,7 +29,7 @@ public class S3ExternalUploadServiceTests
     {
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, Key, It.IsAny<CancellationToken>()))
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
           .ThrowsAsync(new AmazonS3Exception("not found") { StatusCode = HttpStatusCode.NotFound });
 
         s3.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
@@ -62,7 +63,7 @@ public class S3ExternalUploadServiceTests
     {
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, Key, It.IsAny<CancellationToken>()))
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
           .ReturnsAsync(new GetObjectMetadataResponse());
 
         s3.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
@@ -88,7 +89,7 @@ public class S3ExternalUploadServiceTests
     {
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, Key, It.IsAny<CancellationToken>()))
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
           .ReturnsAsync(new GetObjectMetadataResponse());
 
         var aes = new Mock<IAesCryptoTransform>();
@@ -106,7 +107,7 @@ public class S3ExternalUploadServiceTests
     {
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, Key, It.IsAny<CancellationToken>()))
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
           .ThrowsAsync(new AmazonS3Exception("forbidden") { StatusCode = HttpStatusCode.Forbidden });
 
         var aes = new Mock<IAesCryptoTransform>();
@@ -122,7 +123,7 @@ public class S3ExternalUploadServiceTests
     {
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, Key, It.IsAny<CancellationToken>()))
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
           .ThrowsAsync(new AmazonS3Exception("not found") { StatusCode = HttpStatusCode.NotFound });
 
         var aes = new Mock<IAesCryptoTransform>();
@@ -155,7 +156,7 @@ public class S3ExternalUploadServiceTests
     {
         var s3 = new Mock<IAmazonS3>();
 
-        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, Key, It.IsAny<CancellationToken>()))
+        s3.Setup(x => x.GetObjectMetadataAsync(Bucket, PrefixedKey, It.IsAny<CancellationToken>()))
           .ThrowsAsync(new AmazonS3Exception("not found") { StatusCode = HttpStatusCode.NotFound });
 
         s3.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))

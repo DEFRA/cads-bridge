@@ -24,7 +24,7 @@ public class CreateTestFileRequestTests
         );
         await using var factory = new CadsBridgeWebAppFactory(configOverrides);
         var response = await TriggerImportJob(factory, request);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
 
     [Fact]
