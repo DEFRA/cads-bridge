@@ -36,7 +36,7 @@ public class CreateTestFileEndpointTests
             "/api/v1/test-support/files", content, TestContext.Current.CancellationToken);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var responseBody = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var uploadResponse = JsonSerializer.Deserialize<CreateTestFileResponse>(responseBody, JsonDefaults.DefaultOptions);

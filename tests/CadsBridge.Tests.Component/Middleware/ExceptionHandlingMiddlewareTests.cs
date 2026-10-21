@@ -218,6 +218,21 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
+    public async Task FormatException_returns_400()
+    {
+        var context = CreateHttpContext();
+        var middleware = CreateMiddleware(_ => throw new FormatException("Format error"));
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.StatusCode.Should().Be(400);
+
+        var problem = await GetProblemDetailsFromResponse(context);
+        problem.Status.Should().Be(400);
+        problem.Title.Should().Be("Format error");
+    }
+
+    [Fact]
     public async Task Response_has_correct_content_type()
     {
         var context = CreateHttpContext();
