@@ -154,6 +154,7 @@ public abstract class WebAppFactoryBase<TStart>(
         Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__ValidateIssuer", "false");
         Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__ScopeClaimType", "scope");
         Environment.SetEnvironmentVariable("AuthenticationConfiguration__AzureAD__RoleClaimType", "role");
+
         Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Secret", "test-secret");
         Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Scopes__0", "access");
     }

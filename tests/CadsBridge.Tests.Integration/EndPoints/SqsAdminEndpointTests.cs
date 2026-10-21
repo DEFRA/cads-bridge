@@ -8,7 +8,7 @@ using FluentAssertions;
 using System.Net;
 using System.Text.Json;
 
-namespace CadsBridge.Tests.Integration.EndPoints;
+namespace CadsBridge.Tests.Integration.Endpoints;
 
 [Collection("CadsBridgeIntegration"), Trait("Dependence", "testcontainers")]
 public class SqsAdminEndpointTests(ApiContainerFixture apiContainerFixture)

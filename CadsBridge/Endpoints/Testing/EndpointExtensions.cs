@@ -1,6 +1,7 @@
 using CadsBridge.Application.DataLoad.Services.Testing;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Endpoints.Testing.Models;
+using CadsBridge.Infrastructure.Authentication.Configuration;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
@@ -13,7 +14,8 @@ public static class EndpointExtensions
 
     public static void CreateTestSupportEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/v1/test-support/files", UploadTestFiles);
+        app.MapPost("/api/v1/test-support/files", UploadTestFiles)
+            .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
     }
 
     private static async Task<IResult> UploadTestFiles(

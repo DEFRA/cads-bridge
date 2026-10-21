@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace CadsBridge.Setup;
 
@@ -59,49 +60,31 @@ public static class ServiceCollectionExtensions
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
         var authenticationBuilder = services.AddAuthentication();
-        var authorizationBuilder = services.AddAuthorizationBuilder();
 
         if (authConfig.ApiKey.Enabled)
         {
             authenticationBuilder.AddApiKeyScheme();
-            authorizationBuilder.AddApiKeyPolicy();
             schemes.Add(AuthenticationConstants.ApiKeySchemeName);
         }
 
         if (authConfig.AzureAD.Enabled)
         {
             authenticationBuilder.AddAzureAdScheme(authConfig.AzureAD);
-            authorizationBuilder.AddAzureAdPolicies(authConfig);
             schemes.Add(AuthenticationConstants.AzureADSchemeName);
         }
 
         if (schemes.Count == 0)
+        {
             throw new InvalidOperationException("At least one authentication scheme must be enabled.");
+        }
 
-        authorizationBuilder.AddPolicy(AuthenticationConstants.DiagnosticsPolicyName, p => p
-            .AddAuthenticationSchemes([.. schemes])
-            .RequireAuthenticatedUser());
-
-        authorizationBuilder.SetFallbackPolicy(new AuthorizationPolicyBuilder()
-            .AddAuthenticationSchemes([.. schemes])
-            .RequireAuthenticatedUser()
-            .Build());
+        services.AddAuthorisationPolicies(authConfig, schemes);
     }
 
     private static void AddApiKeyScheme(this AuthenticationBuilder authenticationBuilder)
     {
         authenticationBuilder.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(
             AuthenticationConstants.ApiKeySchemeName, _ => { });
-    }
-
-    private static void AddApiKeyPolicy(this AuthorizationBuilder authorizationBuilder)
-    {
-        var apiKeyPolicy = new AuthorizationPolicyBuilder()
-            .AddAuthenticationSchemes(AuthenticationConstants.ApiKeySchemeName)
-            .RequireAuthenticatedUser()
-            .Build();
-
-        authorizationBuilder.AddPolicy(AuthenticationConstants.ApiKeyPolicyName, apiKeyPolicy);
     }
 
     private static void AddAzureAdScheme(this AuthenticationBuilder authenticationBuilder, AuthenticationProviderConfiguration authenticationProviderConfiguration)
@@ -138,30 +121,69 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    private static void AddAzureAdPolicies(this AuthorizationBuilder authorizationBuilder, AuthenticationConfiguration authenticationConfiguration)
+    private static void AddAuthorisationPolicies(
+        this IServiceCollection services,
+        AuthenticationConfiguration authConfig,
+        List<string> schemes)
     {
-        // Admin policies all same shape: Azure AD only, a specific scope, and the superuser role
-        // We are just using the one at this time but leaving the structure in place for future expansion
-        (string Policy, string Scope)[] adminPolicies =
+        var builder = services.AddAuthorizationBuilder();
+
+        builder.AddPolicy(AuthenticationConstants.DefaultPolicy, p => p
+            .AddAuthenticationSchemes([.. schemes])
+            .RequireAuthenticatedUser());
+
+        (string Policy, string Scope)[] customScopePolicies =
         [
             (AuthenticationConstants.AadSqsAdminExecutePolicy, ScopeNames.SqsAdminManager)
         ];
 
-        var scopeClaim = authenticationConfiguration.AzureAD.ScopeClaimType;
-
-        foreach (var (name, scope) in adminPolicies)
+        foreach (var (name, scope) in customScopePolicies)
         {
-            authorizationBuilder.AddPolicy(name, policy => policy
-                .AddAuthenticationSchemes(AuthenticationConstants.AzureADSchemeName)
-                .RequireAuthenticatedUser()
-                .RequireScope(scopeClaim, scope));
+            builder.AddPolicy(name, policy => policy.RequireEnabledSchemes(authConfig)
+                .RequireScopeFromEnabledSchemes(authConfig, scope));
         }
+
+        builder.SetFallbackPolicy(new AuthorizationPolicyBuilder()
+            .AddAuthenticationSchemes([.. schemes])
+            .RequireAuthenticatedUser()
+            .Build());
     }
 
-    private static void RequireScope(
-        this AuthorizationPolicyBuilder policy, string scopeClaimType, string scope) =>
-        policy.RequireAssertion(ctx => ctx.User.Claims
-            .Where(c => c.Type == scopeClaimType)
+    private static AuthorizationPolicyBuilder RequireEnabledSchemes(
+        this AuthorizationPolicyBuilder policy,
+        AuthenticationConfiguration config)
+    {
+        return policy
+            .AddSchemeIf(config.ApiKey.Enabled, AuthenticationConstants.ApiKeySchemeName)
+            .AddSchemeIf(config.AzureAD.Enabled, AuthenticationConstants.AzureADSchemeName)
+            .RequireAuthenticatedUser();
+    }
+
+    private static AuthorizationPolicyBuilder AddSchemeIf(
+        this AuthorizationPolicyBuilder policy, bool enabled, string scheme) =>
+        enabled ? policy.AddAuthenticationSchemes(scheme) : policy;
+
+    private static AuthorizationPolicyBuilder RequireScopeFromEnabledSchemes(
+        this AuthorizationPolicyBuilder policy,
+        AuthenticationConfiguration config,
+        string scope)
+    {
+        return policy.RequireAssertion(ctx =>
+        {
+            var user = ctx.User;
+
+            // Azure AD scopes
+            if (config.AzureAD.Enabled &&
+                HasScope(user, config.AzureAD.ScopeClaimType, scope))
+                return true;
+
+            return false;
+        });
+    }
+
+    private static bool HasScope(ClaimsPrincipal user, string claimType, string scope) =>
+        user.Claims
+            .Where(c => c.Type == claimType)
             .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            .Contains(scope, StringComparer.Ordinal));
+            .Contains(scope, StringComparer.Ordinal);
 }
