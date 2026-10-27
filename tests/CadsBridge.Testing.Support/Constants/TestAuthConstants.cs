@@ -38,4 +38,9 @@ public static class TestAuthConstants
     // ## cads-admin-frontend test user
     public const string AzureAdCadsAdminEmail = "cads-admin-user@internal.test";
     public const string AzureAdCadsAdminUsername = "cads-admin-user";
+
+    // # AWS STS mock
+    public const string StsAudience = "https://cads-bridge.test";
+    public const string StsTrustedOrgId = "o-test";
+    public const string StsEnvironment = "Test";
 }
