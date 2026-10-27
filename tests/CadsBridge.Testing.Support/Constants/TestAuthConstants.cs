@@ -38,4 +38,17 @@ public static class TestAuthConstants
     // ## cads-admin-frontend test user
     public const string AzureAdCadsAdminEmail = "cads-admin-user@internal.test";
     public const string AzureAdCadsAdminUsername = "cads-admin-user";
+
+    // # AWS STS mock
+    public const string StsAudience = "https://cads-bridge.test";
+    public const string StsTrustedOrgId = "o-test";
+    public const string StsEnvironment = "Test";
+    public const string StsAwsAccount = "123456789012";
+
+    // ## Callers (keys of Acl:StsClients)
+    public const string StsServiceName = "cads-data-service";
+    public const string StsRoleArn = "arn:aws:iam::123456789012:role/cads-data-service";
+
+    // On the ACL, but not granted the SQS admin scope
+    public const string StsNoScopeServiceName = "cads-sts-no-scope-service";
 }

@@ -73,6 +73,12 @@ public static class ServiceCollectionExtensions
             schemes.Add(AuthenticationConstants.AzureADSchemeName);
         }
 
+        if (authConfig.AwsSts.Enabled)
+        {
+            authenticationBuilder.AddAwsStsScheme();
+            schemes.Add(AuthenticationConstants.AwsStsSchemeName);
+        }
+
         if (schemes.Count == 0)
         {
             throw new InvalidOperationException("At least one authentication scheme must be enabled.");
@@ -85,6 +91,12 @@ public static class ServiceCollectionExtensions
     {
         authenticationBuilder.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(
             AuthenticationConstants.ApiKeySchemeName, _ => { });
+    }
+
+    private static void AddAwsStsScheme(this AuthenticationBuilder authenticationBuilder)
+    {
+        authenticationBuilder.AddScheme<AuthenticationSchemeOptions, AwsStsAuthenticationHandler>(
+            AuthenticationConstants.AwsStsSchemeName, _ => { });
     }
 
     private static void AddAzureAdScheme(this AuthenticationBuilder authenticationBuilder, AuthenticationProviderConfiguration authenticationProviderConfiguration)
@@ -156,6 +168,7 @@ public static class ServiceCollectionExtensions
         return policy
             .AddSchemeIf(config.ApiKey.Enabled, AuthenticationConstants.ApiKeySchemeName)
             .AddSchemeIf(config.AzureAD.Enabled, AuthenticationConstants.AzureADSchemeName)
+            .AddSchemeIf(config.AwsSts.Enabled, AuthenticationConstants.AwsStsSchemeName)
             .RequireAuthenticatedUser();
     }
 
@@ -175,6 +188,13 @@ public static class ServiceCollectionExtensions
             // Azure AD scopes
             if (config.AzureAD.Enabled &&
                 HasScope(user, config.AzureAD.ScopeClaimType, scope))
+                return true;
+
+            // AWS STS scopes, granted per caller by Acl:StsClients. Only the STS identity is checked:
+            // ApiKey identities use the same literal "scope" claim type.
+            if (config.AwsSts.Enabled &&
+                user.Identities.Any(i => i.AuthenticationType == AuthenticationConstants.AwsStsSchemeName &&
+                                         HasScope(new ClaimsPrincipal(i), "scope", scope)))
                 return true;
 
             return false;
