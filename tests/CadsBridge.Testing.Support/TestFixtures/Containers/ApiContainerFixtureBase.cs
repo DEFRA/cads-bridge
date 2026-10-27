@@ -20,7 +20,9 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
     public HttpClient? HttpClient { get; private set; } = null;
     public LocalStackFixture LocalStackFixture { get; }
     public OidcMockFixture OidcMockFixture { get; }
+    public StsMockFixture StsMockFixture { get; }
     public TestAzureAdConfiguration? AzureAdConfig { get; set; }
+    public TestAwsStsConfiguration? AwsStsConfig { get; set; }
 
 
     public ApiContainerFixtureBase(IDictionary<string, string>? extraEnvironment = null)
@@ -28,14 +30,17 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
         _extraEnvironment = extraEnvironment;
         LocalStackFixture = new LocalStackFixture(_networkName);
         OidcMockFixture = new OidcMockFixture(_networkName);
+        StsMockFixture = new StsMockFixture(_networkName);
     }
 
     public async ValueTask InitializeAsync()
     {
         await LocalStackFixture.InitializeAsync();
         await OidcMockFixture.InitializeAsync();
+        await StsMockFixture.InitializeAsync();
 
         AzureAdConfig = new TestAzureAdConfiguration(OidcMockFixture);
+        AwsStsConfig = new TestAwsStsConfiguration();
 
         var builder = new ContainerBuilder("cads_bridge:latest")
             .WithImagePullPolicy(PullPolicy.Never)
@@ -79,6 +84,11 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("AuthenticationConfiguration__AzureAD__ValidateIssuer", "false")
             .WithEnvironment("AuthenticationConfiguration__AzureAD__ScopeClaimType", "scope")
             .WithEnvironment("AuthenticationConfiguration__AzureAD__RoleClaimType", "role")
+            .WithEnvironment("AuthenticationConfiguration__AwsOutboundFederation__Enabled", "true")
+            .WithEnvironment("AuthenticationConfiguration__AwsOutboundFederation__Audience", AwsStsConfig.Audience)
+            .WithEnvironment("AuthenticationConfiguration__AwsOutboundFederation__TrustedOrgId", AwsStsConfig.TrustedOrgId)
+            .WithEnvironment("AuthenticationConfiguration__AwsOutboundFederation__Environment", AwsStsConfig.Environment)
+            .WithEnvironment("AuthenticationConfiguration__AwsOutboundFederation__RequireHttpsMetadata", AwsStsConfig.RequireHttpsMetadata.ToString())
             .WithEnvironment("DataLoad__Salt", "test-salt")
             .WithEnvironment("DataLoad__SplitValue", "5")
             .WithEnvironment("LOCALSTACK_ENDPOINT", LocalStackFixture.NetworkServiceUrl)
@@ -133,6 +143,21 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
         return client;
     }
 
+    public async Task<HttpClient> CreateStsClientAsync(StsTokenRequest request)
+    {
+        var token = await StsMockFixture.CreateTokenAsync(request);
+
+        var client = new HttpClient
+        {
+            BaseAddress = HttpClient!.BaseAddress
+        };
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        return client;
+    }
+
     public async ValueTask DisposeAsync()
     {
         Exception? error = null;
@@ -143,6 +168,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
         }
 
         await Safe(() => LocalStackFixture.DisposeAsync());
+        await Safe(() => StsMockFixture.DisposeAsync());
         try { HttpClient?.Dispose(); } catch (Exception ex) { error ??= ex; }
         await Safe(() => ApiContainer?.DisposeAsync() ?? default);
         await Safe(() => DockerNetworkHelper.DeleteNetwork(_networkName));
