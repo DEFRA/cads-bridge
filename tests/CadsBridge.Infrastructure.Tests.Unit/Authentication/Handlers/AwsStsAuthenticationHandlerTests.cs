@@ -52,9 +52,7 @@ public class AwsStsAuthenticationHandlerTests
     [Theory]
     [InlineData(HttpStatusCode.InternalServerError, "InternalFailure")]
     [InlineData(HttpStatusCode.ServiceUnavailable, "ServiceUnavailable")]
-    [InlineData(HttpStatusCode.TooManyRequests, "TooManyRequestsException")]
-    [InlineData(HttpStatusCode.BadRequest, "Throttling")]
-    [InlineData(HttpStatusCode.BadRequest, "RequestLimitExceeded")]
+    [InlineData(HttpStatusCode.BadRequest, "ThrottlingException")]
     public async Task SendAsync_ShouldThrowRetryable_WhenStsFailureIsTransient(HttpStatusCode statusCode, string errorCode)
     {
         var stsException = StsException(statusCode, errorCode);
@@ -68,9 +66,25 @@ public class AwsStsAuthenticationHandlerTests
     }
 
     [Theory]
-    [InlineData(HttpStatusCode.Forbidden, "AccessDenied")]
+    [InlineData("Throttling")]
+    [InlineData("RequestLimitExceeded")]
+    [InlineData("TooManyRequestsException")]
+    public async Task SendAsync_ShouldThrowRetryable_WhenErrorCodeIsThrottling(string errorCode)
+    {
+        SetupProviderThrows(StsException(HttpStatusCode.BadRequest, errorCode));
+        using var invoker = CreateInvoker();
+
+        var act = () => invoker.SendAsync(new HttpRequestMessage(HttpMethod.Get, "http://test-api/resource"), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<RetryableException>();
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden, "AccessDeniedException")]
     [InlineData(HttpStatusCode.BadRequest, "ValidationError")]
     [InlineData(HttpStatusCode.Forbidden, "OutboundWebIdentityFederationDisabledException")]
+    [InlineData(HttpStatusCode.Forbidden, "SessionDurationEscalationException")]
+    [InlineData(HttpStatusCode.BadRequest, "JWTPayloadSizeExceededException")]
     public async Task SendAsync_ShouldThrowNonRetryable_WhenStsRejectsRequest(HttpStatusCode statusCode, string errorCode)
     {
         SetupProviderThrows(StsException(statusCode, errorCode));
