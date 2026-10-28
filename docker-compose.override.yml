@@ -21,6 +21,8 @@ services:
       - ApiClients__CdsApi__XApiKey=
       - ApiClients__CdsApi__HealthcheckEnabled=true
       - ApiClients__CdsApi__UseFakeClient=${ApiClients__CdsApi__UseFakeClient:-true}
+      - ApiClients__CdsApi__Sts__Enabled=false
+      - ApiClients__CdsApi__Sts__Audience=cads-data-service
       - Messaging__Queues__CadsBridgeFifo__QueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue.fifo
       - Messaging__Queues__CadsBridgeFifo__DlqQueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue-deadletter.fifo
       - Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled=true

@@ -4,6 +4,8 @@ using CadsBridge.Utils.Logging;
 using FluentValidation;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
+using Amazon.SecurityToken;
+using CadsBridge.Infrastructure.Authentication.Providers;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();
@@ -36,6 +38,9 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
     builder.Services.AddHttpContextAccessor();
     builder.Host.UseSerilog((context, services, config) =>
         CdpLogging.Configuration(context, services.GetRequiredService<IHttpContextAccessor>(), config));
+
+    builder.Services.AddAWSService<IAmazonSecurityTokenService>();
+    builder.Services.AddSingleton<IAwsStsProvider, AwsStsProvider>();
 
     // Default HTTP Client
     builder.Services

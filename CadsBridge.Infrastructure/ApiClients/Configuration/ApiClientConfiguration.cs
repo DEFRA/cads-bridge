@@ -7,4 +7,5 @@ public class ApiClientConfiguration
     public string? XApiKey { get; set; } = string.Empty;
     public bool HealthcheckEnabled { get; set; } = false;
     public ResiliencePolicy ResiliencePolicy { get; set; } = new();
+    public StsConfig Sts { get; set; } = new();
 }
