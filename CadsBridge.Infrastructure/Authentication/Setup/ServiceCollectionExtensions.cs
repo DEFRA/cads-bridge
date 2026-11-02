@@ -1,4 +1,4 @@
-﻿using Amazon.SecurityToken;
+using Amazon.SecurityToken;
 using CadsBridge.Infrastructure.Authentication.Fakes;
 using CadsBridge.Infrastructure.Authentication.Providers;
 using Microsoft.Extensions.Configuration;
