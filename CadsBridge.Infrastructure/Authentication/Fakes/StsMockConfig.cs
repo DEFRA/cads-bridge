@@ -1,4 +1,4 @@
-namespace CadsBridge.Infrastructure.ApiClients.Configuration;
+namespace CadsBridge.Infrastructure.Authentication.Fakes;
 
 public class StsMockConfig
 {

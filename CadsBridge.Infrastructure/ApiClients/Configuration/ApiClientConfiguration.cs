@@ -1,3 +1,5 @@
+using CadsBridge.Infrastructure.Authentication.Configuration;
+
 namespace CadsBridge.Infrastructure.ApiClients.Configuration;
 
 public class ApiClientConfiguration

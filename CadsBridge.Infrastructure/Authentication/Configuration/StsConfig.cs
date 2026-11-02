@@ -1,4 +1,6 @@
-namespace CadsBridge.Infrastructure.ApiClients.Configuration;
+using CadsBridge.Infrastructure.Authentication.Fakes;
+
+namespace CadsBridge.Infrastructure.Authentication.Configuration;
 
 public class StsConfig
 {
