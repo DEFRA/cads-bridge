@@ -4,6 +4,10 @@ using CadsBridge.Utils.Logging;
 using FluentValidation;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
+using Amazon.SecurityToken;
+using CadsBridge.Infrastructure.ApiClients.Configuration;
+using CadsBridge.Infrastructure.Authentication.Fakes;
+using CadsBridge.Infrastructure.Authentication.Providers;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();
@@ -36,6 +40,21 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
     builder.Services.AddHttpContextAccessor();
     builder.Host.UseSerilog((context, services, config) =>
         CdpLogging.Configuration(context, services.GetRequiredService<IHttpContextAccessor>(), config));
+
+    var stsMockConfig = builder.Configuration.GetSection("ApiClients:CdsApi:Sts:Mock").Get<StsMockConfig>() ?? new StsMockConfig();
+    if (stsMockConfig.Enabled)
+    {
+        builder.Services.AddHttpClient(MockSecurityTokenServiceClient.HttpClientName);
+        builder.Services.AddSingleton<IAmazonSecurityTokenService>(sp => new MockSecurityTokenServiceClient(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            stsMockConfig,
+            sp.GetRequiredService<TimeProvider>()));
+    }
+    else
+    {
+        builder.Services.AddAWSService<IAmazonSecurityTokenService>();
+    }
+    builder.Services.AddSingleton<IAwsStsProvider, AwsStsProvider>();
 
     // Default HTTP Client
     builder.Services

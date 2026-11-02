@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using System.Net;
+using CadsBridge.Infrastructure.Authentication.Handlers;
+using CadsBridge.Infrastructure.Authentication.Providers;
 
 namespace CadsBridge.Infrastructure.ApiClients.Setup;
 
@@ -78,33 +80,46 @@ public static class ServiceCollectionExtensions
         string clientName,
         ApiClientConfiguration clientConfig)
     {
-        services.AddHttpClient(clientName, client =>
+        var httpClientBuilder = services.AddHttpClient(clientName, client =>
         {
             client.BaseAddress = new Uri(clientConfig.BaseUrl.TrimEnd('/'));
-            if (clientConfig.BasicApiKey != null)
+            if (!clientConfig.Sts.Enabled && !string.IsNullOrWhiteSpace(clientConfig.BasicApiKey))
             {
                 client.DefaultRequestHeaders.Add("Authorization", $"Basic {clientConfig.BasicApiKey}");
             }
+
             if (!string.IsNullOrWhiteSpace(clientConfig.XApiKey))
             {
                 client.DefaultRequestHeaders.Add("x-api-key", clientConfig.XApiKey);
             }
-        })
-        .AddHttpMessageHandler<CorrelationIdHandler>()
-        .AddResilienceHandler(clientName, (builder, context) =>
-        {
-            var resilienceConfig = clientConfig.ResiliencePolicy;
-            builder.AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+        });
+
+        httpClientBuilder
+            .AddHttpMessageHandler<CorrelationIdHandler>()
+            .AddResilienceHandler(clientName, (builder, context) =>
             {
-                MaxRetryAttempts = resilienceConfig.Retries,
-                Delay = TimeSpan.FromSeconds(resilienceConfig.BaseDelaySeconds),
-                UseJitter = resilienceConfig.UseJitter,
-                BackoffType = DelayBackoffType.Exponential,
-                ShouldHandle = DefaultRetryPredicate
+                var resilienceConfig = clientConfig.ResiliencePolicy;
+                builder.AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+                {
+                    MaxRetryAttempts = resilienceConfig.Retries,
+                    Delay = TimeSpan.FromSeconds(resilienceConfig.BaseDelaySeconds),
+                    UseJitter = resilienceConfig.UseJitter,
+                    BackoffType = DelayBackoffType.Exponential,
+                    ShouldHandle = DefaultRetryPredicate
+                });
+
+                builder.AddTimeout(TimeSpan.FromSeconds(resilienceConfig.TimeoutPeriodSeconds));
             });
 
-            builder.AddTimeout(TimeSpan.FromSeconds(resilienceConfig.TimeoutPeriodSeconds));
-        });
+        if (clientConfig.Sts.Enabled)
+        {
+            httpClientBuilder.AddHttpMessageHandler(provider =>
+            {
+                var stsProvider = provider.GetRequiredService<IAwsStsProvider>();
+                var audience = clientConfig.Sts.Audience;
+                return new AwsStsAuthenticationHandler(stsProvider, audience);
+            });
+        }
     }
 
     private static ValueTask<bool> DefaultRetryPredicate(RetryPredicateArguments<HttpResponseMessage> args)

@@ -24,6 +24,13 @@ services:
       - ApiClients__CdsApi__XApiKey=
       - ApiClients__CdsApi__HealthcheckEnabled=true
       - ApiClients__CdsApi__UseFakeClient=${ApiClients__CdsApi__UseFakeClient:-true}
+      - ApiClients__CdsApi__Sts__Enabled=false
+      - ApiClients__CdsApi__Sts__Audience=https://cads-data-service.dev.cdp-int.defra.cloud
+      - ApiClients__CdsApi__Sts__Mock__Enabled=${ApiClients__CdsApi__Sts__Mock__Enabled:-false}
+      - ApiClients__CdsApi__Sts__Mock__TokenEndpoint=http://cads-sts-mock/connect/token
+      - ApiClients__CdsApi__Sts__Mock__ClientId=${ApiClients__CdsApi__Sts__Mock__ClientId:-local-sts-cads-bridge}
+      - ApiClients__CdsApi__Sts__Mock__ClientSecret=local-mock-secret
+      - ApiClients__CdsApi__Sts__Mock__Scope=sts.cads-data-service
       - Messaging__Queues__CadsBridgeFifo__QueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue.fifo
       - Messaging__Queues__CadsBridgeFifo__DlqQueueUrl=http://cads-localstack:4566/000000000000/cads-bridge-queue-deadletter.fifo
       - Messaging__Queues__CadsBridgeFifo__HealthcheckEnabled=true
