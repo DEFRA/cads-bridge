@@ -1,3 +1,5 @@
+using CadsBridge.Infrastructure.Authentication.Configuration;
+
 namespace CadsBridge.Infrastructure.ApiClients.Configuration;
 
 public class ApiClientConfiguration
@@ -7,4 +9,5 @@ public class ApiClientConfiguration
     public string? XApiKey { get; set; } = string.Empty;
     public bool HealthcheckEnabled { get; set; } = false;
     public ResiliencePolicy ResiliencePolicy { get; set; } = new();
+    public StsConfig Sts { get; set; } = new();
 }

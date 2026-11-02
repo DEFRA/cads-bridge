@@ -1,11 +1,14 @@
 using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Setup;
+using CadsBridge.Infrastructure.Authentication.DTOs;
+using CadsBridge.Infrastructure.Authentication.Providers;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Moq;
 using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.ApiClients.Setup;
@@ -135,6 +138,80 @@ public class ServiceCollectionExtensionsTests
 
         response.StatusCode.Should().Be(statusCode);
         stub.Requests.Should().ContainSingle(); // no retries
+    }
+
+    [Fact]
+    public async Task AddApiClients_WhenStsEnabled_SendsBearerTokenInsteadOfBasicHeader()
+    {
+        var stub = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var stsProvider = StsProviderReturning("jwt-token");
+        var client = BuildClient(stub, stsProvider, stsEnabled: true);
+
+        await client.GetAsync("/resource", TestContext.Current.CancellationToken);
+
+        var authorization = stub.Requests.Should().ContainSingle().Which.Headers.Authorization;
+        authorization!.Scheme.Should().Be("Bearer");
+        authorization.Parameter.Should().Be("jwt-token");
+        stsProvider.Verify(x => x.GetCredentialsAsync("cads-data-service", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddApiClients_WhenStsDisabled_SendsBasicHeaderAndDoesNotRequestToken()
+    {
+        var stub = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var stsProvider = StsProviderReturning("jwt-token");
+        var client = BuildClient(stub, stsProvider, stsEnabled: false);
+
+        await client.GetAsync("/resource", TestContext.Current.CancellationToken);
+
+        var authorization = stub.Requests.Should().ContainSingle().Which.Headers.Authorization;
+        authorization!.Scheme.Should().Be("Basic");
+        authorization.Parameter.Should().Be("basic-key");
+        stsProvider.Verify(x => x.GetCredentialsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResilienceHandler_WhenStsEnabled_RequestsTokenOnEveryAttempt()
+    {
+        var stub = new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable);
+        var stsProvider = StsProviderReturning("jwt-token");
+        var client = BuildClient(stub, stsProvider, stsEnabled: true, retries: 2);
+
+        await client.GetAsync("/resource", TestContext.Current.CancellationToken);
+
+        stub.Requests.Should().HaveCount(3).And.AllSatisfy(r => r.Headers.Authorization!.Scheme.Should().Be("Bearer"));
+        stsProvider.Verify(x => x.GetCredentialsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    private static Mock<IAwsStsProvider> StsProviderReturning(string token)
+    {
+        var provider = new Mock<IAwsStsProvider>();
+        provider.Setup(x => x.GetCredentialsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IdentityToken(token, DateTimeOffset.UtcNow.AddMinutes(5)));
+        return provider;
+    }
+
+    private static HttpClient BuildClient(HttpMessageHandler primaryHandler, Mock<IAwsStsProvider> stsProvider, bool stsEnabled, int retries = 1)
+    {
+        var services = CreateServices();
+        var config = BuildConfig(new Dictionary<string, string?>
+        {
+            [$"ApiClients:{ClientName}:BaseUrl"] = "http://test-api",
+            [$"ApiClients:{ClientName}:BasicApiKey"] = "basic-key",
+            [$"ApiClients:{ClientName}:Sts:Enabled"] = stsEnabled.ToString(),
+            [$"ApiClients:{ClientName}:Sts:Audience"] = "cads-data-service",
+            [$"ApiClients:{ClientName}:ResiliencePolicy:Retries"] = retries.ToString(),
+            [$"ApiClients:{ClientName}:ResiliencePolicy:BaseDelaySeconds"] = "0",
+            [$"ApiClients:{ClientName}:ResiliencePolicy:UseJitter"] = "false",
+            [$"ApiClients:{ClientName}:ResiliencePolicy:TimeoutPeriodSeconds"] = "30"
+        });
+
+        services.AddSingleton(stsProvider.Object);
+        services.AddApiClients(config);
+        services.AddHttpClient(ClientName).ConfigurePrimaryHttpMessageHandler(() => primaryHandler);
+
+        var sp = services.BuildServiceProvider();
+        return sp.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
     }
 
     private static HttpClient BuildResilientClient(HttpMessageHandler primaryHandler, int retries)
