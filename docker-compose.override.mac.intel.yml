@@ -25,7 +25,7 @@ services:
       - ApiClients__CdsApi__HealthcheckEnabled=true
       - ApiClients__CdsApi__UseFakeClient=${ApiClients__CdsApi__UseFakeClient:-true}
       - ApiClients__CdsApi__Sts__Enabled=false
-      - ApiClients__CdsApi__Sts__Audience=https://localhost:5555
+      - ApiClients__CdsApi__Sts__Audience=https://localhost:5556
       - ApiClients__CdsApi__Sts__Mock__Enabled=${ApiClients__CdsApi__Sts__Mock__Enabled:-false}
       - ApiClients__CdsApi__Sts__Mock__TokenEndpoint=http://cads-sts-mock/connect/token
       - ApiClients__CdsApi__Sts__Mock__ClientId=${ApiClients__CdsApi__Sts__Mock__ClientId:-local-sts-cads-bridge}
