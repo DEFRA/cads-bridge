@@ -43,7 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddApplicationLayer();
     }
 
-    private static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
+    internal static void ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         var schemes = new List<string>();
 
@@ -67,6 +67,12 @@ public static class ServiceCollectionExtensions
             schemes.Add(AuthenticationConstants.ApiKeySchemeName);
         }
 
+        if (authConfig.AwsSts.Enabled)
+        {
+            authenticationBuilder.AddAwsStsScheme();
+            schemes.Add(AuthenticationConstants.AwsStsSchemeName);
+        }
+
         if (authConfig.AzureAD.Enabled)
         {
             authenticationBuilder.AddAzureAdScheme(authConfig.AzureAD);
@@ -85,6 +91,12 @@ public static class ServiceCollectionExtensions
     {
         authenticationBuilder.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(
             AuthenticationConstants.ApiKeySchemeName, _ => { });
+    }
+
+    private static void AddAwsStsScheme(this AuthenticationBuilder authenticationBuilder)
+    {
+        authenticationBuilder.AddScheme<AuthenticationSchemeOptions, AwsStsInboundAuthenticationHandler>(
+            AuthenticationConstants.AwsStsSchemeName, _ => { });
     }
 
     private static void AddAzureAdScheme(this AuthenticationBuilder authenticationBuilder, AuthenticationProviderConfiguration authenticationProviderConfiguration)
