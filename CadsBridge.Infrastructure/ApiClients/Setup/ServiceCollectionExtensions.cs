@@ -117,7 +117,7 @@ public static class ServiceCollectionExtensions
             {
                 var stsProvider = provider.GetRequiredService<IAwsStsProvider>();
                 var audience = clientConfig.Sts.Audience;
-                return new AwsStsAuthenticationHandler(stsProvider, audience);
+                return new AwsStsOutboundAuthenticationHandler(stsProvider, audience);
             });
         }
     }

@@ -11,7 +11,7 @@ using System.Net;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Authentication.Handlers;
 
-public class AwsStsAuthenticationHandlerTests
+public class AwsStsOutboundAuthenticationHandlerTests
 {
     private const string Audience = "cads-data-service";
 
@@ -19,7 +19,7 @@ public class AwsStsAuthenticationHandlerTests
     private readonly StubHttpMessageHandler _inner = new(HttpStatusCode.OK);
 
     private HttpMessageInvoker CreateInvoker() =>
-        new(new AwsStsAuthenticationHandler(_provider.Object, Audience) { InnerHandler = _inner });
+        new(new AwsStsOutboundAuthenticationHandler(_provider.Object, Audience) { InnerHandler = _inner });
 
     [Fact]
     public async Task SendAsync_ShouldAttachBearerToken_FromProvider()

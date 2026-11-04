@@ -7,7 +7,7 @@ using CadsBridge.Infrastructure.Authentication.Providers;
 
 namespace CadsBridge.Infrastructure.Authentication.Handlers;
 
-public class AwsStsAuthenticationHandler(IAwsStsProvider awsStsProvider, string audience) : DelegatingHandler
+public class AwsStsOutboundAuthenticationHandler(IAwsStsProvider awsStsProvider, string audience) : DelegatingHandler
 {
     private static readonly HashSet<string> s_throttlingErrorCodes = ["Throttling", "ThrottlingException", "RequestLimitExceeded", "TooManyRequestsException"];
 
