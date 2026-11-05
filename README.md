@@ -42,6 +42,18 @@ Used for internal service‑to‑service calls.
 ### AWS STS
 Used for internal service‑to‑service calls.
 
+Settings (`AuthenticationConfiguration:AwsSts`), set per environment in `cdp-app-config` (locally in `docker-compose.override.yml`):
+
+| Setting | Meaning |
+|---|---|
+| `Enabled` | Feature flag for the scheme |
+| `Audience` | This service's own identity; tokens for another service are rejected |
+| `TrustedOrgId` | AWS Organization ID the caller must belong to |
+| `Environment` | Must match the caller's `principal_tags.Environment` |
+| `RequireHttpsMetadata` | `false` only for a local http mock |
+
+Allowed callers and their scopes are listed in `Acl:StsClients`, keyed by the caller's `ServiceName`.
+
 ### Azure AD
 Used for internal staff / enterprise users.
 

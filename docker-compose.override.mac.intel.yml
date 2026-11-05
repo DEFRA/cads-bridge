@@ -38,6 +38,11 @@ services:
       - IMB_S3_ACCESS_SECRET=test
       - DataLoad__Salt=${DataLoad__Salt:-test-salt}
       - AuthenticationConfiguration__ApiKey__Enabled=true
+      - AuthenticationConfiguration__AwsSts__Enabled=false
+      - AuthenticationConfiguration__AwsSts__Audience=https://cads-bridge.local
+      - AuthenticationConfiguration__AwsSts__TrustedOrgId=o-local
+      - AuthenticationConfiguration__AwsSts__Environment=local
+      - AuthenticationConfiguration__AwsSts__RequireHttpsMetadata=false
       - AuthenticationConfiguration__AzureAD__Enabled=true
       - AuthenticationConfiguration__AzureAD__Authority=http://cads-oidc-mock
       - AuthenticationConfiguration__AzureAD__Audience=api://local-cads-cds
