@@ -176,12 +176,12 @@ public static class ServiceCollectionExtensions
         this AuthorizationPolicyBuilder policy, bool enabled, string scheme) =>
         enabled ? policy.AddAuthenticationSchemes(scheme) : policy;
 
-    private static AuthorizationPolicyBuilder RequireScopeFromEnabledSchemes(
+    private static void RequireScopeFromEnabledSchemes(
         this AuthorizationPolicyBuilder policy,
         AuthenticationConfiguration config,
         string scope)
     {
-        return policy.RequireAssertion(ctx =>
+        policy.RequireAssertion(ctx =>
         {
             var user = ctx.User;
 
