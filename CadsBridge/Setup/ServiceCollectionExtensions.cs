@@ -167,6 +167,7 @@ public static class ServiceCollectionExtensions
     {
         return policy
             .AddSchemeIf(config.ApiKey.Enabled, AuthenticationConstants.ApiKeySchemeName)
+            .AddSchemeIf(config.AwsSts.Enabled, AuthenticationConstants.AwsStsSchemeName)
             .AddSchemeIf(config.AzureAD.Enabled, AuthenticationConstants.AzureADSchemeName)
             .RequireAuthenticatedUser();
     }
