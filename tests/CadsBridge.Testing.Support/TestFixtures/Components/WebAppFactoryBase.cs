@@ -15,6 +15,7 @@ using CadsBridge.Infrastructure.Storage.Factories;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.Fakes.Authentication;
 using CadsBridge.Testing.Support.TestDoubles.Observers;
+using CadsBridge.Testing.Support.TestFixtures.Containers.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -157,6 +158,9 @@ public abstract class WebAppFactoryBase<TStart>(
 
         Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Secret", TestAuthConstants.BasicSecret);
         Environment.SetEnvironmentVariable("Acl__Clients__TestClient__Scopes__0", "access");
+
+        Environment.SetEnvironmentVariable("Encryption__CurrentKeyId", TestEncryptionConfiguration.CurrentKeyId);
+        Environment.SetEnvironmentVariable("Encryption__Keys__V1", TestEncryptionConfiguration.CurrentKeyBase64);
     }
 
     private static void ConfigureDefaultAuthorization(IServiceCollection services)

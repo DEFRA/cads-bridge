@@ -102,6 +102,8 @@ ENV=local
 ApiClients__CdsApi__BasicApiKey=****
 DataLoad__Salt=****
 ApiClients__CdsApi__UseFakeClient=false|true
+ENCRYPTION_CURRENTKEYID=V1
+ENCRYPTION_KEY==*****
 ```
 
 ### Running the Application
