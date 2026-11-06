@@ -23,6 +23,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
     public StsMockFixture StsMockFixture { get; }
     public TestAzureAdConfiguration? AzureAdConfig { get; set; }
     public TestAwsStsConfiguration? AwsStsConfig { get; set; }
+    public TestEncryptionConfiguration? EncryptionConfig { get; set; }
 
 
     public ApiContainerFixtureBase(IDictionary<string, string>? extraEnvironment = null)
@@ -41,6 +42,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
 
         AzureAdConfig = new TestAzureAdConfiguration(OidcMockFixture);
         AwsStsConfig = new TestAwsStsConfiguration();
+        EncryptionConfig = new TestEncryptionConfiguration();
 
         var builder = new ContainerBuilder("cads_bridge:latest")
             .WithImagePullPolicy(PullPolicy.Never)
@@ -97,6 +99,8 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("AWS_ACCESS_KEY_ID", LocalStackFixture.AwsAccessKeyId)
             .WithEnvironment("AWS_SECRET_ACCESS_KEY", LocalStackFixture.AwsSecretAccessKey)
             .WithEnvironment("DOTNET_SYSTEM_NET_SOCKETS_HTTP_USEIPV6", "false")
+            .WithEnvironment("Encryption__CurrentKeyId", TestEncryptionConfiguration.CurrentKeyId)
+            .WithEnvironment("Encryption__Keys__V1", TestEncryptionConfiguration.CurrentKeyBase64)
             .WithNetwork(_networkName)
             .WithNetworkAliases("cads_bridge")
             .WithWaitStrategy(Wait.ForUnixContainer()
