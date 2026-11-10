@@ -2,17 +2,23 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Encryption;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Services;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
+using CadsBridge.Infrastructure.Encryption;
+using CadsBridge.Infrastructure.Encryption.Configuration;
+using CadsBridge.Infrastructure.Encryption.Providers;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using CadsBridge.Testing.Support.TestDoubles.Storage;
+using CadsBridge.Testing.Support.Utilities.Encryption;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
@@ -253,26 +259,40 @@ public class CsvDataFileSplitterServiceTests
         s3.PutRequests.Should().BeEmpty();
     }
 
-    private static CsvDataFileSplitterService CreateSut(IAmazonS3 s3, SplitType splitType, int? splitValue)
+    private static CsvDataFileSplitterService CreateSut(IAmazonS3 s3, SplitType splitType, int? splitValue, bool encryptionEnabled = false)
     {
         var factory = new Mock<IS3ClientFactory>();
         factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
-            .Returns(new CadsBridge.Infrastructure.Storage.Factories.S3ClientFactory.ClientInfo(s3, BucketName));
+            .Returns(new Infrastructure.Storage.Factories.S3ClientFactory.ClientInfo(s3, BucketName));
 
-        var config = new DataLoadConfiguration { SplitType = splitType, SplitValue = splitValue };
+       var config = new DataLoadConfiguration { SplitType = splitType, SplitValue = splitValue };
+       var encryptionConfigOptions = Options.Create(new EncryptionConfig
+        {
+            CurrentKeyId = TestEncryptionKeyProvider.CurrentKeyId,
+            StorageEncryptionEnabled = encryptionEnabled,
+            Keys = new Dictionary<string, string>
+            {
+                [TestEncryptionKeyProvider.CurrentKeyId] = TestEncryptionKeyProvider.CurrentKeyBase64
+            },
+        });
+
+        var fileEncryptor = new FileEncryptor(
+            new InMemoryMasterKeyProvider(
+                TestEncryptionKeyProvider.CurrentKeyId,
+                TestEncryptionKeyProvider.Keys));
 
         var logger = new Mock<ILogger<CsvDataFileSplitterService>>();
         logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        var strategyFactory = new CsvDataFileSplitterFactory(CreateStrategies(factory.Object, config));
+        var strategyFactory = new CsvDataFileSplitterFactory(CreateStrategies(factory.Object, config, fileEncryptor, encryptionConfigOptions));
 
         return new CsvDataFileSplitterService(strategyFactory, config, logger.Object);
     }
 
-    private static ICsvDataFileSplitterStrategy[] CreateStrategies(IS3ClientFactory factory, DataLoadConfiguration config) =>
+    private static ICsvDataFileSplitterStrategy[] CreateStrategies(IS3ClientFactory factory, DataLoadConfiguration config, IFileEncryptor fileEncryptor, IOptions<EncryptionConfig> encryptionConfigOptions) =>
     [
-        new CsvDataFileSplitterStrategyNone(factory, Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
-        new CsvDataFileSplitterStrategyByLines(factory, config, Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
-        new CsvDataFileSplitterStrategyBySize(factory, config, Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+        new CsvDataFileSplitterStrategyNone(factory, fileEncryptor, encryptionConfigOptions, Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+        new CsvDataFileSplitterStrategyByLines(factory,config, fileEncryptor, encryptionConfigOptions, Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+        new CsvDataFileSplitterStrategyBySize(factory, config, fileEncryptor, encryptionConfigOptions, Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
     ];
 }

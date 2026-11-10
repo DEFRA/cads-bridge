@@ -1,4 +1,5 @@
 using CadsBridge.Application.Encryption;
+using System.Text;
 
 namespace CadsBridge.Application.Extensions;
 
@@ -31,5 +32,34 @@ public static class FileEncryptorExtensions
             try { File.Delete(tempPath); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             throw;
         }
+    }
+
+    public static async Task<Stream> EncryptAsync(this IFileEncryptor encryptor, Stream stream,
+       CancellationToken cancellationToken)
+    {
+        stream.Position = 0;
+
+        var encryptedStream = new MemoryStream();
+
+        await encryptor.EncryptAsync(
+            stream,
+            encryptedStream,
+            totalBytes: stream.Length,
+            cancellationToken: cancellationToken);
+
+        return encryptedStream;
+    }
+
+    public static async Task<StringBuilder> EncryptAsync(this IFileEncryptor encryptor, StringBuilder chunkBuilder, CancellationToken cancellationToken)
+    {
+        using var input = new MemoryStream(
+            Encoding.UTF8.GetBytes(chunkBuilder.ToString()),
+            writable: false);
+
+        using var output = new MemoryStream();
+
+        await encryptor.EncryptAsync(input, output, cancellationToken: cancellationToken);
+
+        return new StringBuilder(Encoding.UTF8.GetString(output.ToArray()));
     }
 }

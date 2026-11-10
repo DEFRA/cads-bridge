@@ -37,7 +37,7 @@ public class CtsBulkScanJob(
 
             if (!completed)
             {
-                logger.LogWarning("Delta scan job aborted - lock {LockName} lease was lost", LockName);
+                logger.LogWarning("Bulk scan job aborted - lock {LockName} lease was lost", LockName);
                 return;
             }
 

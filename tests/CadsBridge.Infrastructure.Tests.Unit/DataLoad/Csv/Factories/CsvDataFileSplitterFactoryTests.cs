@@ -1,11 +1,14 @@
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
+using CadsBridge.Application.Encryption;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Factories;
 using CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
+using CadsBridge.Infrastructure.Encryption.Configuration;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Csv.Factories;
@@ -40,9 +43,9 @@ public class CsvDataFileSplitterFactoryTests
 
         return
         [
-            new CsvDataFileSplitterStrategyNone(Mock.Of<IS3ClientFactory>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
-            new CsvDataFileSplitterStrategyByLines(Mock.Of<IS3ClientFactory>(), config, Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
-            new CsvDataFileSplitterStrategyBySize(Mock.Of<IS3ClientFactory>(), config, Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
+            new CsvDataFileSplitterStrategyNone(Mock.Of<IS3ClientFactory>(), Mock.Of<IFileEncryptor>(), Mock.Of<IOptions<EncryptionConfig>>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyNone>>()),
+            new CsvDataFileSplitterStrategyByLines(Mock.Of<IS3ClientFactory>(), config,  Mock.Of<IFileEncryptor>(), Mock.Of<IOptions<EncryptionConfig>>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyByLines>>()),
+            new CsvDataFileSplitterStrategyBySize(Mock.Of<IS3ClientFactory>(), config,  Mock.Of<IFileEncryptor>(), Mock.Of<IOptions<EncryptionConfig>>(), Mock.Of<ILogger<CsvDataFileSplitterStrategyBySize>>())
         ];
     }
 }

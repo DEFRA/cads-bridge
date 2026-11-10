@@ -1,12 +1,16 @@
 using Amazon.S3.Model;
 using CadsBridge.Endpoints.Requests;
+using CadsBridge.Infrastructure.Encryption;
+using CadsBridge.Infrastructure.Encryption.Providers;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using CadsBridge.Testing.Support.Utilities.Aws;
+using CadsBridge.Testing.Support.Utilities.Encryption;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using System.Net;
+using System.Text;
 
 namespace CadsBridge.Tests.Integration.Endpoints;
 
@@ -47,7 +51,7 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
             "D|9|Nine",
             "D|10|Ten",
             "D|11|Eleven",
-            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|3") + Environment.NewLine;
+            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|11") + Environment.NewLine;
 
         using var encryptedStream = await fileContents.Encrypt(TestDerivedValue, Salt, TestContext.Current.CancellationToken);
         await apiContainerFixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
@@ -84,6 +88,29 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv").Should().NotBeNull();
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv").Should().NotBeNull();
         });
+
+        var decryptedPayload1 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv");
+
+        decryptedPayload1.Should().Contain("C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO");
+        decryptedPayload1.Should().Contain("D|1|One");
+        decryptedPayload1.Should().Contain("D|1|Two");
+        decryptedPayload1.Should().Contain("D|1|Three");
+        decryptedPayload1.Should().Contain("D|1|Four");
+        decryptedPayload1.Should().Contain("D|1|Five");
+
+        var decryptedPayload2 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv");
+
+        decryptedPayload2.Should().Contain("C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO");
+        decryptedPayload2.Should().Contain("D|1|Six");
+        decryptedPayload2.Should().Contain("D|1|Seven");
+        decryptedPayload2.Should().Contain("D|1|Eight");
+        decryptedPayload2.Should().Contain("D|1|Nine");
+        decryptedPayload2.Should().Contain("D|1|Ten");
+
+        var decryptedPayload3 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv");
+
+        decryptedPayload3.Should().Contain("C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO");
+        decryptedPayload3.Should().Contain("D|1|Eleven");
     }
 
     private sealed record ImportJobResponse(string JobId);
@@ -99,4 +126,39 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
 
     private static StringContent? EmptyImportRequest =>
         HttpContentUtility.CreateApplicationJsonAsStringContent(new CsvDataFileImportRequest([]));
+
+    private async Task<string> DownloadAndDecryptAsync(string key)
+    {
+        using var s3Object = await apiContainerFixture.LocalStackFixture.S3Client
+            .GetObjectAsync(
+                TestS3Constants.TestCadsBridgeInternalBucketName,
+                key,
+                TestContext.Current.CancellationToken);
+
+        await using var encryptedStream = new MemoryStream();
+        await s3Object.ResponseStream.CopyToAsync(
+            encryptedStream,
+            TestContext.Current.CancellationToken);
+
+        var encryptedBytes = encryptedStream.ToArray();
+
+        encryptedBytes.Should().NotBeEmpty();
+
+        encryptedStream.Position = 0;
+
+        await using var decryptedStream = new MemoryStream();
+
+        var encryptor = new FileEncryptor(
+            new InMemoryMasterKeyProvider(
+                TestEncryptionKeyProvider.CurrentKeyId,
+                TestEncryptionKeyProvider.Keys));
+
+        await encryptor.DecryptAsync(
+            encryptedStream,
+            decryptedStream,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        return Encoding.UTF8.GetString(decryptedStream.ToArray());
+    }
+
 }

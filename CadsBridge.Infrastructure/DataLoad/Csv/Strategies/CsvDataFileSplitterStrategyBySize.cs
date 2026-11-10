@@ -1,12 +1,16 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Encryption;
+using CadsBridge.Application.Extensions;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+using CadsBridge.Infrastructure.Encryption.Configuration;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
@@ -14,10 +18,14 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 public class CsvDataFileSplitterStrategyBySize(
     IS3ClientFactory s3ClientFactory,
     DataLoadConfiguration config,
+    IFileEncryptor fileEncryptor,
+    IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyBySize> logger) :
     ICsvDataFileSplitterStrategy
 {
     public SplitType SplitType => SplitType.BySize;
+
+    private readonly EncryptionConfig _encryptionConfig = encryptionOptions.Value;
 
     public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
@@ -52,8 +60,11 @@ public class CsvDataFileSplitterStrategyBySize(
 
         string? line = null;
 
+        Stream uploadStream;
+
         while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
         {
+            
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
@@ -63,13 +74,21 @@ public class CsvDataFileSplitterStrategyBySize(
 
             var lineBytes = Encoding.UTF8.GetBytes(line + Environment.NewLine);
 
+            uploadStream = chunkStream;
+
             // If adding this line exceeds chunk size, upload current chunk and start a new one
             if (bytesInChunk + lineBytes.Length > chunkSizeBytes)
             {
+                // encrypt the last chunk if encryption is enabled
+                if (_encryptionConfig.StorageEncryptionEnabled)
+                {
+                    uploadStream = await fileEncryptor.EncryptAsync(chunkStream, cancellationToken);
+                }
+
                 await s3.UploadChunkAsync(
                     internalS3Info.BucketName,
                     job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
-                    chunkStream,
+                    uploadStream,
                     cancellationToken: cancellationToken);
                 chunkNumber++;
                 await chunkStream.DisposeAsync();
@@ -88,11 +107,19 @@ public class CsvDataFileSplitterStrategyBySize(
         // Upload the last chunk if it has data
         if (bytesInChunk > 0)
         {
+            uploadStream = chunkStream;
+
+            // encrypt the last chunk if encryption is enabled
+            if (_encryptionConfig.StorageEncryptionEnabled)
+            {
+                uploadStream = await fileEncryptor.EncryptAsync(chunkStream, cancellationToken);
+            }
+
             totalBytesProcessed += bytesInChunk;
             await s3.UploadChunkAsync(
                 internalS3Info.BucketName,
                 job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
-                chunkStream,
+                uploadStream,
                 cancellationToken: cancellationToken);
         }
 

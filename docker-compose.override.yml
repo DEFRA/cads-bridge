@@ -48,8 +48,8 @@ services:
       - AuthenticationConfiguration__AzureAD__ValidateIssuer=false
       - Acl__Clients__TestClient__Secret=test-secret
       - Acl__Clients__TestClient__Scopes__0=access
-      - Encryption__CurrentKeyId=${ENCRYPTION_CURRENTKEYID:-V1},
-      - Encryption__Keys__${ENCRYPTION_CURRENTKEYID:-V1}=${ENCRYPTION_KEY:-dGVzdC1lbmNyeXB0aW9uLWtleQ==}
+      - Encryption__CurrentKeyId=${ENCRYPTION_CURRENTKEYID:-V1}
+      - Encryption__Keys__V1=${ENCRYPTION_KEY:-dGVzdC1lbmNyeXB0aW9uLWtleQ==}
     ports:
       - "5550"
     env_file:

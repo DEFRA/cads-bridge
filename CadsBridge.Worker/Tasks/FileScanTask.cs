@@ -78,7 +78,7 @@ public abstract class FileScanTask(
         return keysToProcess;
     }
 
-    private bool ValidateFileKey(DataSourceType dataSourceType, string objectKey)
+    private static bool ValidateFileKey(DataSourceType dataSourceType, string objectKey)
     {
         var name = dataSourceType.GetAttribute<DataSourceTypeInfoAttribute>()?.Name
             ?? throw new InvalidOperationException($"Data source type '{dataSourceType}' has no name configured.");

@@ -2,13 +2,17 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Encryption;
+using CadsBridge.Application.Extensions;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+using CadsBridge.Infrastructure.Encryption.Configuration;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
@@ -16,6 +20,8 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 public class CsvDataFileSplitterStrategyByLines(
     IS3ClientFactory s3ClientFactory,
     DataLoadConfiguration config,
+    IFileEncryptor fileEncryptor,
+    IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyByLines> logger) :
     ICsvDataFileSplitterStrategy
 {
@@ -23,6 +29,8 @@ public class CsvDataFileSplitterStrategyByLines(
     private const char TerminatorRowIndicator = 'T';
 
     public SplitType SplitType => SplitType.ByLines;
+
+    private readonly EncryptionConfig _encryptionConfig = encryptionOptions.Value;
 
     public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
@@ -101,6 +109,12 @@ public class CsvDataFileSplitterStrategyByLines(
 
             if (lineCount >= config.SplitValue || (lineCount > 0 && isTerminatorLine)) // only upload if there are lines to upload
             {
+                // encrypt the last chunk if encryption is enabled
+                if (_encryptionConfig.StorageEncryptionEnabled)
+                {
+                    chunkBuilder = await fileEncryptor.EncryptAsync(chunkBuilder, cancellationToken);
+                }
+
                 await s3.UploadChunkAsync(
                     bucketName,
                     sourceKey.FormatSplitFileTargetKey(chunkNumber),
@@ -119,6 +133,12 @@ public class CsvDataFileSplitterStrategyByLines(
         if (lineCount > 0)
         {
             totalLinesProcessed += lineCount;
+
+            // encrypt the last chunk if encryption is enabled
+            if (_encryptionConfig.StorageEncryptionEnabled)
+            {
+                chunkBuilder = await fileEncryptor.EncryptAsync(chunkBuilder, cancellationToken);
+            }
 
             await s3.UploadChunkAsync(
                 bucketName,
