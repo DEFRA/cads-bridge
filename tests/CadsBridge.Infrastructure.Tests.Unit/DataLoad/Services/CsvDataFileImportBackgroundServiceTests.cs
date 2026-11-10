@@ -11,6 +11,7 @@ using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Newtonsoft.Json.Linq;
 using System.Threading.Channels;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.DataLoad.Services;
@@ -141,7 +142,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to import {job.SourceKey}")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to import {job.SourceKey}")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -174,7 +175,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Skipped import for {job.SourceKey}")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Skipped import for {job.SourceKey}")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -199,7 +200,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to import {job.SourceKey}")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to import {job.SourceKey}")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -226,7 +227,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to mark import {DefaultFileImportId} as failed")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to mark import {DefaultFileImportId} as failed")),
                 markEx,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -264,4 +265,7 @@ public class CsvDataFileImportBackgroundServiceTests : IAsyncDisposable
         _sut.Dispose();
         GC.SuppressFinalize(this);
     }
+
+    private static bool LogStateContains(object? value, string expected) =>
+        value?.ToString()?.Contains(expected) == true;
 }

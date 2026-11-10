@@ -120,7 +120,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to split file {job.SourceKey}")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to split file {job.SourceKey}")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -147,7 +147,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to mark split {job.FileImportId!.Value} as failed")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to mark split {job.FileImportId!.Value} as failed")),
                 markEx,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -184,4 +184,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _sut.Dispose();
         GC.SuppressFinalize(this);
     }
+
+    private static bool LogStateContains(object? value, string expected) =>
+        value?.ToString()?.Contains(expected) == true;
 }
