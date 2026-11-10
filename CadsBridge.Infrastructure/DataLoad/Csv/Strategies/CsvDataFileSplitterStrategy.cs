@@ -33,7 +33,7 @@ public abstract class CsvDataFileSplitterStrategy(
             uploadStream.Position = 0;
         }
 
-        var response = await s3.PutObjectAsync(
+        await s3.PutObjectAsync(
             new PutObjectRequest
             {
                 BucketName = bucketName,
