@@ -3,7 +3,6 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.Encryption;
-using CadsBridge.Application.Extensions;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
@@ -23,14 +22,12 @@ public class CsvDataFileSplitterStrategyByLines(
     IFileEncryptor fileEncryptor,
     IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyByLines> logger) :
-    ICsvDataFileSplitterStrategy
+    CsvDataFileSplitterStrategy(fileEncryptor, encryptionOptions), ICsvDataFileSplitterStrategy
 {
     private const char ColumnDelimiter = '|';
     private const char TerminatorRowIndicator = 'T';
 
     public SplitType SplitType => SplitType.ByLines;
-
-    private readonly EncryptionConfig _encryptionConfig = encryptionOptions.Value;
 
     public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
@@ -137,29 +134,5 @@ public class CsvDataFileSplitterStrategyByLines(
                 cancellationToken);
         }
         return totalLinesProcessed;
-    }
-
-    /// <summary>
-    /// Uploads a chunk, encrypting it first when storage encryption is enabled.
-    /// Encrypted data is binary, so it must be uploaded as a stream. Never convert it to a string: invalid UTF-8
-    /// sequences are replaced irreversibly and the file can no longer be decrypted.
-    /// </summary>
-    private async Task UploadChunkAsync(
-        IAmazonS3 s3,
-        string bucketName,
-        string key,
-        StringBuilder chunk,
-        CancellationToken cancellationToken)
-    {
-        if (!_encryptionConfig.StorageEncryptionEnabled)
-        {
-            await s3.UploadChunkAsync(bucketName, key, chunk.ToString(), cancellationToken: cancellationToken);
-            return;
-        }
-
-        await using var plaintext = new MemoryStream(Encoding.UTF8.GetBytes(chunk.ToString()));
-        await using var encrypted = await fileEncryptor.EncryptAsync(plaintext, cancellationToken);
-
-        await s3.UploadChunkAsync(bucketName, key, encrypted, cancellationToken: cancellationToken);
     }
 }

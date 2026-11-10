@@ -32,20 +32,4 @@ public static class FileEncryptorExtensions
             throw;
         }
     }
-
-    public static async Task<Stream> EncryptAsync(this IFileEncryptor encryptor, Stream stream,
-       CancellationToken cancellationToken)
-    {
-        stream.Position = 0;
-
-        var encryptedStream = new MemoryStream();
-
-        await encryptor.EncryptAsync(
-            stream,
-            encryptedStream,
-            totalBytes: stream.Length,
-            cancellationToken: cancellationToken);
-
-        return encryptedStream;
-    }
 }

@@ -1,9 +1,12 @@
+using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Core.Correlation;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +19,7 @@ public class CsvDataFileSplitBackgroundService(
     Channel<CsvDataFileSplitJob> channel,
     ILogger<CsvDataFileSplitBackgroundService> logger,
     IServiceScopeFactory scopeFactory,
+    IS3ClientFactory s3ClientFactory,
     DataLoadConfiguration config) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -88,6 +92,8 @@ public class CsvDataFileSplitBackgroundService(
             else
             {
                 await fileImportStore.UpdateAsync(request.FileImportId!.Value, FileImportStatus.Completed, request.TotalRowsToProcess, foundRows, stoppingToken);
+
+                await DeleteSourceFileAsync(request.SourceKey, stoppingToken);
             }
         }
         catch (Exception ex)
@@ -126,6 +132,30 @@ public class CsvDataFileSplitBackgroundService(
                 logger.LogError(markEx,
                     "Failed to mark split {FileImportId} as failed", fileImportId);
             }
+        }
+    }
+
+    private async Task DeleteSourceFileAsync(
+        string sourceKey,
+        CancellationToken cancellationToken)
+    {
+        var internalS3Info =
+            s3ClientFactory.GetClientInfo<InternalStorageClient>();
+
+        await internalS3Info.Client.DeleteObjectAsync(
+            new DeleteObjectRequest
+            {
+                BucketName = internalS3Info.BucketName,
+                Key = sourceKey
+            },
+            cancellationToken);
+
+        if(logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Deleted completed source file {SourceKey} from bucket {BucketName}",
+                sourceKey,
+                internalS3Info.BucketName);
         }
     }
 }

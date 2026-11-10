@@ -4,6 +4,7 @@ using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
+using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,8 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     private readonly Mock<ILogger<CsvDataFileSplitBackgroundService>> _logger = new();
     private readonly Mock<IFileImportStore> _fileImportStatusStore = new();
     private readonly Mock<ICsvDataFileSplitterService> _splitter = new();
+
+    private readonly Mock<IS3ClientFactory> _s3ClientFactory = new();
     private readonly CsvDataFileSplitBackgroundService _sut;
 
     public CsvDataFileSplitBackgroundServiceTests()
@@ -41,6 +44,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
             _channel,
             _logger.Object,
             serviceScopeFactory,
+            _s3ClientFactory.Object,
             config);
     }
 

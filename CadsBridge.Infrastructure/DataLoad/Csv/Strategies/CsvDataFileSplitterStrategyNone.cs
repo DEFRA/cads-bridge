@@ -2,7 +2,6 @@ using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
 using CadsBridge.Application.Encryption;
-using CadsBridge.Application.Extensions;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
 using CadsBridge.Infrastructure.Encryption.Configuration;
@@ -18,11 +17,9 @@ public class CsvDataFileSplitterStrategyNone(
     IFileEncryptor fileEncryptor,
     IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyNone> logger) :
-    ICsvDataFileSplitterStrategy
+    CsvDataFileSplitterStrategy(fileEncryptor, encryptionOptions), ICsvDataFileSplitterStrategy
 {
     public SplitType SplitType => SplitType.None;
-
-    private readonly EncryptionConfig _encryptionConfig = encryptionOptions.Value;
 
     public async Task<long> ProcessAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
@@ -43,14 +40,9 @@ public class CsvDataFileSplitterStrategyNone(
 
         try
         {
-            if (_encryptionConfig.StorageEncryptionEnabled)
-            {
-                uploadStream = await fileEncryptor.EncryptAsync(memoryStream, cancellationToken);
-            }
-
             var uploadedLength = uploadStream.Length;
 
-            await s3.UploadChunkAsync(
+            await UploadAsync(s3,
                 internalS3Info.BucketName,
                 job.SourceKey.FormatSplitFileTargetKey(),
                 uploadStream,
