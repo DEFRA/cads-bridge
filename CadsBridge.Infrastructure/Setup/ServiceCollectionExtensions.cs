@@ -3,6 +3,7 @@ using CadsBridge.Infrastructure.ApiClients.Setup;
 using CadsBridge.Infrastructure.Authentication.Setup;
 using CadsBridge.Infrastructure.Crypto;
 using CadsBridge.Infrastructure.DataLoad.Setup;
+using CadsBridge.Infrastructure.Encryption.Setup;
 using CadsBridge.Infrastructure.FileSystem;
 using CadsBridge.Infrastructure.Messaging.Setup;
 using CadsBridge.Infrastructure.Storage.Setup;
@@ -32,6 +33,8 @@ public static class ServiceCollectionExtensions
         services.AddSqsAdmin(config);
 
         services.AddAwsSts(config);
+
+        services.AddEncryption(config);
 
         return services;
     }
