@@ -91,26 +91,26 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
 
         var decryptedPayload1 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv");
 
-        decryptedPayload1.Should().Contain("C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO");
+        decryptedPayload1.Should().Contain("record_type|column_one|column_two");
         decryptedPayload1.Should().Contain("D|1|One");
-        decryptedPayload1.Should().Contain("D|1|Two");
-        decryptedPayload1.Should().Contain("D|1|Three");
-        decryptedPayload1.Should().Contain("D|1|Four");
-        decryptedPayload1.Should().Contain("D|1|Five");
+        decryptedPayload1.Should().Contain("D|2|Two");
+        decryptedPayload1.Should().Contain("D|3|Three");
+        decryptedPayload1.Should().Contain("D|4|Four");
+        decryptedPayload1.Should().Contain("D|5|Five");
 
         var decryptedPayload2 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv");
 
-        decryptedPayload2.Should().Contain("C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO");
-        decryptedPayload2.Should().Contain("D|1|Six");
-        decryptedPayload2.Should().Contain("D|1|Seven");
-        decryptedPayload2.Should().Contain("D|1|Eight");
-        decryptedPayload2.Should().Contain("D|1|Nine");
-        decryptedPayload2.Should().Contain("D|1|Ten");
+        decryptedPayload2.Should().Contain("record_type|column_one|column_two");
+        decryptedPayload2.Should().Contain("D|6|Six");
+        decryptedPayload2.Should().Contain("D|7|Seven");
+        decryptedPayload2.Should().Contain("D|8|Eight");
+        decryptedPayload2.Should().Contain("D|9|Nine");
+        decryptedPayload2.Should().Contain("D|10|Ten");
 
         var decryptedPayload3 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv");
 
-        decryptedPayload3.Should().Contain("C|RECORD_TYPE|COLUMN_ONE|COLUMN_TWO");
-        decryptedPayload3.Should().Contain("D|1|Eleven");
+        decryptedPayload3.Should().Contain("record_type|column_one|column_two");
+        decryptedPayload3.Should().Contain("D|11|Eleven");
     }
 
     private sealed record ImportJobResponse(string JobId);

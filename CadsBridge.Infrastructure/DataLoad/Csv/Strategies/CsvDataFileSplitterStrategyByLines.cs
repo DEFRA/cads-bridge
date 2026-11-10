@@ -109,17 +109,12 @@ public class CsvDataFileSplitterStrategyByLines(
 
             if (lineCount >= config.SplitValue || (lineCount > 0 && isTerminatorLine)) // only upload if there are lines to upload
             {
-                // encrypt the last chunk if encryption is enabled
-                if (_encryptionConfig.StorageEncryptionEnabled)
-                {
-                    chunkBuilder = await fileEncryptor.EncryptAsync(chunkBuilder, cancellationToken);
-                }
-
-                await s3.UploadChunkAsync(
+                await UploadChunkAsync(
+                    s3,
                     bucketName,
                     sourceKey.FormatSplitFileTargetKey(chunkNumber),
-                    chunkBuilder.ToString(),
-                    cancellationToken: cancellationToken);
+                    chunkBuilder,
+                    cancellationToken);
 
                 chunkNumber++;
                 totalLinesProcessed += lineCount;
@@ -134,18 +129,37 @@ public class CsvDataFileSplitterStrategyByLines(
         {
             totalLinesProcessed += lineCount;
 
-            // encrypt the last chunk if encryption is enabled
-            if (_encryptionConfig.StorageEncryptionEnabled)
-            {
-                chunkBuilder = await fileEncryptor.EncryptAsync(chunkBuilder, cancellationToken);
-            }
-
-            await s3.UploadChunkAsync(
+            await UploadChunkAsync(
+                s3,
                 bucketName,
                 sourceKey.FormatSplitFileTargetKey(chunkNumber),
-                chunkBuilder.ToString(),
-                cancellationToken: cancellationToken);
+                chunkBuilder,
+                cancellationToken);
         }
         return totalLinesProcessed;
+    }
+
+    /// <summary>
+    /// Uploads a chunk, encrypting it first when storage encryption is enabled.
+    /// Encrypted data is binary, so it must be uploaded as a stream. Never convert it to a string: invalid UTF-8
+    /// sequences are replaced irreversibly and the file can no longer be decrypted.
+    /// </summary>
+    private async Task UploadChunkAsync(
+        IAmazonS3 s3,
+        string bucketName,
+        string key,
+        StringBuilder chunk,
+        CancellationToken cancellationToken)
+    {
+        if (!_encryptionConfig.StorageEncryptionEnabled)
+        {
+            await s3.UploadChunkAsync(bucketName, key, chunk.ToString(), cancellationToken: cancellationToken);
+            return;
+        }
+
+        await using var plaintext = new MemoryStream(Encoding.UTF8.GetBytes(chunk.ToString()));
+        await using var encrypted = await fileEncryptor.EncryptAsync(plaintext, cancellationToken);
+
+        await s3.UploadChunkAsync(bucketName, key, encrypted, cancellationToken: cancellationToken);
     }
 }
