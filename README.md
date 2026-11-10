@@ -100,6 +100,8 @@ These values are used by the backend’s Docker Compose:
 ```bash
 ENV=local
 ApiClients__CdsApi__BasicApiKey=****
+ApiClients__CdsApi__Sts__Mock__Enabled=true
+ApiClients__CdsApi__Sts__Mock__ClientId=local-sts-cads-bridge
 DataLoad__Salt=****
 ApiClients__CdsApi__UseFakeClient=false|true
 ENCRYPTION_CURRENTKEYID=V1
