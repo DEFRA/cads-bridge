@@ -92,9 +92,9 @@ public class CsvDataFileSplitBackgroundService(
             else
             {
                 await fileImportStore.UpdateAsync(request.FileImportId!.Value, FileImportStatus.Completed, request.TotalRowsToProcess, foundRows, stoppingToken);
-
-                await DeleteSourceFileAsync(request.SourceKey, stoppingToken);
             }
+
+            await DeleteSourceFileAsync(request.SourceKey, stoppingToken);
         }
         catch (Exception ex)
         {
