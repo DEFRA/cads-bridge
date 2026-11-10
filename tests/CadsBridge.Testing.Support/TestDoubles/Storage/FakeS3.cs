@@ -2,6 +2,7 @@ using Amazon.Runtime;
 using Amazon.Runtime.Endpoints;
 using Amazon.S3;
 using Amazon.S3.Model;
+using System.Net;
 using System.Text;
 
 namespace CadsBridge.Testing.Support.TestDoubles.Storage;
@@ -265,10 +266,10 @@ public class FakeS3 : IAmazonS3
         throw new NotImplementedException();
     }
 
-    public Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default)
+    public Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default) => Task.FromResult(new DeleteObjectResponse
     {
-        throw new NotImplementedException();
-    }
+        HttpStatusCode = HttpStatusCode.NoContent
+    });
 
     public Task<DeleteObjectsResponse> DeleteObjectsAsync(DeleteObjectsRequest request, CancellationToken cancellationToken = default)
     {

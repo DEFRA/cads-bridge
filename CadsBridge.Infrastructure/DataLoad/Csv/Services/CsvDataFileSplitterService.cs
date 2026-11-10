@@ -12,7 +12,7 @@ public class CsvDataFileSplitterService(
     ILogger<CsvDataFileSplitterService> logger)
     : ICsvDataFileSplitterService
 {
-    public async Task<long> ExecuteAsync(CsvDataFileSplitJob job,  CancellationToken cancellationToken)
+    public async Task<long> ExecuteAsync(CsvDataFileSplitJob job, CancellationToken cancellationToken)
     {
         var attempt = 0;
         var csvDataFileSplitterStrategy = csvDataFileSplitterStrategyFactory.GetStrategy(config.SplitType);

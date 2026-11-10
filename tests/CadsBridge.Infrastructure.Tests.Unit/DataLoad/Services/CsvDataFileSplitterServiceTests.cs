@@ -265,8 +265,8 @@ public class CsvDataFileSplitterServiceTests
         factory.Setup(x => x.GetClientInfo<InternalStorageClient>())
             .Returns(new Infrastructure.Storage.Factories.S3ClientFactory.ClientInfo(s3, BucketName));
 
-       var config = new DataLoadConfiguration { SplitType = splitType, SplitValue = splitValue };
-       var encryptionConfigOptions = Options.Create(new EncryptionConfig
+        var config = new DataLoadConfiguration { SplitType = splitType, SplitValue = splitValue };
+        var encryptionConfigOptions = Options.Create(new EncryptionConfig
         {
             CurrentKeyId = TestEncryptionKeyProvider.CurrentKeyId,
             StorageEncryptionEnabled = encryptionEnabled,

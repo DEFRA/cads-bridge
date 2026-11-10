@@ -81,7 +81,7 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
             listObjectsV2Response.S3Objects.Should().HaveCount(3);
 
             // The original imported file should always remain alongside the split parts.
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().BeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().BeEmpty();
 
             // The parts from the imported file (SplitValue set as 5 so expect 3 parts)
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();

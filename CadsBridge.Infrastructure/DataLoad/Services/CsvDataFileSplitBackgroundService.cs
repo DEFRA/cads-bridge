@@ -150,7 +150,7 @@ public class CsvDataFileSplitBackgroundService(
             },
             cancellationToken);
 
-        if(logger.IsEnabled(LogLevel.Information))
+        if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
                 "Deleted completed source file {SourceKey} from bucket {BucketName}",

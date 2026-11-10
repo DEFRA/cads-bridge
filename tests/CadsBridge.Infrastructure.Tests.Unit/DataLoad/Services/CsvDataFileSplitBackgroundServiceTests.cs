@@ -5,6 +5,9 @@ using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
 using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Factories;
+using CadsBridge.Testing.Support.TestDoubles.Storage;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,6 +32,16 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 
         _splitter.Setup(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(1);
+
+        var s3 = new FakeS3
+        {
+            FileSize = 1024,
+            EncryptedContent = "encrypted"
+        };
+
+        _s3ClientFactory = new Mock<IS3ClientFactory>();
+        _s3ClientFactory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+            .Returns(new S3ClientFactory.ClientInfo(s3, "internal-bucket"));
 
         _fileImportStatusStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);

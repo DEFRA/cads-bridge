@@ -59,7 +59,7 @@ public class CsvDataFileSplitterStrategyBySize(
 
         while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
         {
-            
+
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
