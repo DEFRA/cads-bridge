@@ -4,10 +4,6 @@ using CadsBridge.Utils.Logging;
 using FluentValidation;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
-using Amazon.SecurityToken;
-using CadsBridge.Infrastructure.ApiClients.Configuration;
-using CadsBridge.Infrastructure.Authentication.Fakes;
-using CadsBridge.Infrastructure.Authentication.Providers;
 
 var app = CreateWebApplication(args);
 await app.RunAsync();

@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using CadsBridge.Infrastructure.Authentication.DTOs;
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CadsBridge.Infrastructure.Authentication.Providers;
 

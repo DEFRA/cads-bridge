@@ -1,8 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using CadsBridge.Infrastructure.Authentication.Configuration;
 using CadsBridge.Infrastructure.Authentication.Handlers;
 using FluentAssertions;
@@ -14,6 +9,11 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.WebEncoders.Testing;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace CadsBridge.Infrastructure.Tests.Unit.Authentication.Handlers;
 

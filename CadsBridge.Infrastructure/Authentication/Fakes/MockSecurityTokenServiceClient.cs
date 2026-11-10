@@ -1,11 +1,10 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
-using CadsBridge.Infrastructure.ApiClients.Configuration;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace CadsBridge.Infrastructure.Authentication.Fakes;
 

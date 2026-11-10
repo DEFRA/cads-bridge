@@ -49,7 +49,7 @@ services:
       - Acl__Clients__TestClient__Secret=test-secret
       - Acl__Clients__TestClient__Scopes__0=access
       - Encryption__CurrentKeyId=${ENCRYPTION_CURRENTKEYID:-V1}
-      - Encryption__Keys__V1=${ENCRYPTION_KEY:-dGVzdC1lbmNyeXB0aW9uLWtleQ==}
+      - Encryption__Keys__V1=${ENCRYPTION_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
     ports:
       - "5550"
     env_file:

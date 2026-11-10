@@ -1,9 +1,9 @@
-using System.Net;
-using System.Net.Http.Headers;
 using Amazon.Runtime;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.Authentication.DTOs;
 using CadsBridge.Infrastructure.Authentication.Providers;
+using System.Net;
+using System.Net.Http.Headers;
 
 namespace CadsBridge.Infrastructure.Authentication.Handlers;
 
