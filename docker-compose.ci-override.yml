@@ -41,8 +41,8 @@ services:
       - AuthenticationConfiguration__AzureAD__MetadataAddress=http://cads-oidc-mock/.well-known/openid-configuration
       - AuthenticationConfiguration__AzureAD__RequireHttpsMetadata=false
       - AuthenticationConfiguration__AzureAD__ValidateIssuer=false
-      - Encryption__CurrentKeyId=${ENCRYPTION_CURRENTKEYID:-V1},
-      - Encryption__Keys__${ENCRYPTION_CURRENTKEYID:-V1}=${ENCRYPTION_KEY:-dGVzdC1lbmNyeXB0aW9uLWtleQ==}
+      - Encryption__CurrentKeyId=${ENCRYPTION_CURRENTKEYID:-V1}
+      - Encryption__Keys__V1=${ENCRYPTION_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
     depends_on: []
     ports:
       - "5550"

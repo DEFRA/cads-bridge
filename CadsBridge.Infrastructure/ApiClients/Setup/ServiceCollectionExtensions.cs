@@ -2,6 +2,8 @@ using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.ApiClients.Contracts;
 using CadsBridge.Infrastructure.ApiClients.Handlers;
 using CadsBridge.Infrastructure.ApiClients.Services;
+using CadsBridge.Infrastructure.Authentication.Handlers;
+using CadsBridge.Infrastructure.Authentication.Providers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -9,8 +11,6 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using System.Net;
-using CadsBridge.Infrastructure.Authentication.Handlers;
-using CadsBridge.Infrastructure.Authentication.Providers;
 
 namespace CadsBridge.Infrastructure.ApiClients.Setup;
 

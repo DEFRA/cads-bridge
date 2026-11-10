@@ -1,6 +1,5 @@
 using Amazon.Runtime;
 using Amazon.SecurityToken.Model;
-using CadsBridge.Infrastructure.ApiClients.Configuration;
 using CadsBridge.Infrastructure.Authentication.Fakes;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
