@@ -2,13 +2,16 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Encryption;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Core.Exceptions;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+using CadsBridge.Infrastructure.Encryption.Configuration;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
@@ -16,8 +19,10 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 public class CsvDataFileSplitterStrategyByLines(
     IS3ClientFactory s3ClientFactory,
     DataLoadConfiguration config,
+    IFileEncryptor fileEncryptor,
+    IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyByLines> logger) :
-    ICsvDataFileSplitterStrategy
+    CsvDataFileSplitterStrategy(fileEncryptor, encryptionOptions), ICsvDataFileSplitterStrategy
 {
     private const char ColumnDelimiter = '|';
     private const char TerminatorRowIndicator = 'T';
@@ -101,11 +106,12 @@ public class CsvDataFileSplitterStrategyByLines(
 
             if (lineCount >= config.SplitValue || (lineCount > 0 && isTerminatorLine)) // only upload if there are lines to upload
             {
-                await s3.UploadChunkAsync(
+                await UploadChunkAsync(
+                    s3,
                     bucketName,
                     sourceKey.FormatSplitFileTargetKey(chunkNumber),
-                    chunkBuilder.ToString(),
-                    cancellationToken: cancellationToken);
+                    chunkBuilder,
+                    cancellationToken);
 
                 chunkNumber++;
                 totalLinesProcessed += lineCount;
@@ -120,11 +126,12 @@ public class CsvDataFileSplitterStrategyByLines(
         {
             totalLinesProcessed += lineCount;
 
-            await s3.UploadChunkAsync(
+            await UploadChunkAsync(
+                s3,
                 bucketName,
                 sourceKey.FormatSplitFileTargetKey(chunkNumber),
-                chunkBuilder.ToString(),
-                cancellationToken: cancellationToken);
+                chunkBuilder,
+                cancellationToken);
         }
         return totalLinesProcessed;
     }

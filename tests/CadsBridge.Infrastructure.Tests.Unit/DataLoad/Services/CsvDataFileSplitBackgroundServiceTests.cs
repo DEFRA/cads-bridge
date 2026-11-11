@@ -4,6 +4,10 @@ using CadsBridge.Application.DataLoad.Persistence;
 using CadsBridge.Core.ApiClients;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Services;
+using CadsBridge.Infrastructure.Storage.Abstractions;
+using CadsBridge.Infrastructure.Storage.Clients;
+using CadsBridge.Infrastructure.Storage.Factories;
+using CadsBridge.Testing.Support.TestDoubles.Storage;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,6 +22,8 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
     private readonly Mock<ILogger<CsvDataFileSplitBackgroundService>> _logger = new();
     private readonly Mock<IFileImportStore> _fileImportStatusStore = new();
     private readonly Mock<ICsvDataFileSplitterService> _splitter = new();
+
+    private readonly Mock<IS3ClientFactory> _s3ClientFactory = new();
     private readonly CsvDataFileSplitBackgroundService _sut;
 
     public CsvDataFileSplitBackgroundServiceTests()
@@ -26,6 +32,16 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
 
         _splitter.Setup(x => x.ExecuteAsync(It.IsAny<CsvDataFileSplitJob>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(1);
+
+        var s3 = new FakeS3
+        {
+            FileSize = 1024,
+            EncryptedContent = "encrypted"
+        };
+
+        _s3ClientFactory = new Mock<IS3ClientFactory>();
+        _s3ClientFactory.Setup(x => x.GetClientInfo<InternalStorageClient>())
+            .Returns(new S3ClientFactory.ClientInfo(s3, "internal-bucket"));
 
         _fileImportStatusStore.Setup(x => x.MarkFailedAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                               .Returns(Task.CompletedTask);
@@ -41,6 +57,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
             _channel,
             _logger.Object,
             serviceScopeFactory,
+            _s3ClientFactory.Object,
             config);
     }
 
@@ -103,7 +120,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to split file {job.SourceKey}")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to split file {job.SourceKey}")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -130,7 +147,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Failed to mark split {job.FileImportId!.Value} as failed")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, $"Failed to mark split {job.FileImportId!.Value} as failed")),
                 markEx,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -167,4 +184,7 @@ public class CsvDataFileSplitBackgroundServiceTests : IAsyncDisposable
         _sut.Dispose();
         GC.SuppressFinalize(this);
     }
+
+    private static bool LogStateContains(object? value, string expected) =>
+        value?.ToString()?.Contains(expected) == true;
 }

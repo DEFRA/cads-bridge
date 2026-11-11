@@ -1,12 +1,15 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Encryption;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Configuration;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+using CadsBridge.Infrastructure.Encryption.Configuration;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
@@ -14,8 +17,10 @@ namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 public class CsvDataFileSplitterStrategyBySize(
     IS3ClientFactory s3ClientFactory,
     DataLoadConfiguration config,
+    IFileEncryptor fileEncryptor,
+    IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyBySize> logger) :
-    ICsvDataFileSplitterStrategy
+    CsvDataFileSplitterStrategy(fileEncryptor, encryptionOptions), ICsvDataFileSplitterStrategy
 {
     public SplitType SplitType => SplitType.BySize;
 
@@ -54,6 +59,7 @@ public class CsvDataFileSplitterStrategyBySize(
 
         while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
         {
+
             if (cancellationToken.IsCancellationRequested)
             {
                 if (logger.IsEnabled(LogLevel.Information))
@@ -66,7 +72,7 @@ public class CsvDataFileSplitterStrategyBySize(
             // If adding this line exceeds chunk size, upload current chunk and start a new one
             if (bytesInChunk + lineBytes.Length > chunkSizeBytes)
             {
-                await s3.UploadChunkAsync(
+                await UploadChunkAsync(s3,
                     internalS3Info.BucketName,
                     job.SourceKey.FormatSplitFileTargetKey(chunkNumber),
                     chunkStream,

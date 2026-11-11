@@ -1,18 +1,23 @@
 using Amazon.S3.Model;
 using CadsBridge.Application.DataLoad.Csv.Abstractions;
 using CadsBridge.Application.DataLoad.Jobs;
+using CadsBridge.Application.Encryption;
 using CadsBridge.Core.DataLoad;
 using CadsBridge.Infrastructure.DataLoad.Csv.Extensions;
+using CadsBridge.Infrastructure.Encryption.Configuration;
 using CadsBridge.Infrastructure.Storage.Abstractions;
 using CadsBridge.Infrastructure.Storage.Clients;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CadsBridge.Infrastructure.DataLoad.Csv.Strategies;
 
 public class CsvDataFileSplitterStrategyNone(
     IS3ClientFactory s3ClientFactory,
+    IFileEncryptor fileEncryptor,
+    IOptions<EncryptionConfig> encryptionOptions,
     ILogger<CsvDataFileSplitterStrategyNone> logger) :
-    ICsvDataFileSplitterStrategy
+    CsvDataFileSplitterStrategy(fileEncryptor, encryptionOptions), ICsvDataFileSplitterStrategy
 {
     public SplitType SplitType => SplitType.None;
 
@@ -28,13 +33,26 @@ public class CsvDataFileSplitterStrategyNone(
             cancellationToken);
 
         await using var memoryStream = new MemoryStream();
+
         await response.ResponseStream.CopyToAsync(memoryStream, cancellationToken);
 
-        await s3.UploadChunkAsync(
-            internalS3Info.BucketName,
-            job.SourceKey.FormatSplitFileTargetKey(),
-            memoryStream,
-            cancellationToken: cancellationToken);
-        return memoryStream.Length;
+        Stream uploadStream = memoryStream;
+
+        try
+        {
+            var uploadedLength = uploadStream.Length;
+
+            await UploadAsync(s3,
+                internalS3Info.BucketName,
+                job.SourceKey.FormatSplitFileTargetKey(),
+                uploadStream,
+                cancellationToken: cancellationToken);
+
+            return uploadedLength;
+        }
+        finally
+        {
+            await uploadStream.DisposeAsync();
+        }
     }
 }

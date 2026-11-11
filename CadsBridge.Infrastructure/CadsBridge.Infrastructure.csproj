@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="DataLoad\Csv\Files\**" />
+    <EmbeddedResource Remove="DataLoad\Csv\Files\**" />
+    <None Remove="DataLoad\Csv\Files\**" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -25,10 +31,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CadsBridge.Infrastructure.Tests.Unit" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="DataLoad\Csv\Files\" />
   </ItemGroup>
 
 </Project>

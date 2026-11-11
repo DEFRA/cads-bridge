@@ -100,6 +100,7 @@ public abstract class ApiContainerFixtureBase : IAsyncLifetime
             .WithEnvironment("AWS_SECRET_ACCESS_KEY", LocalStackFixture.AwsSecretAccessKey)
             .WithEnvironment("DOTNET_SYSTEM_NET_SOCKETS_HTTP_USEIPV6", "false")
             .WithEnvironment("Encryption__CurrentKeyId", TestEncryptionConfiguration.CurrentKeyId)
+            //.WithEnvironment("Encryption__CurrentKeyId", TestEncryptionConfiguration.CurrentKeyId)
             .WithEnvironment("Encryption__Keys__V1", TestEncryptionConfiguration.CurrentKeyBase64)
             .WithNetwork(_networkName)
             .WithNetworkAliases("cads_bridge")

@@ -274,3 +274,4 @@ library.db
 !.gitkeep
 coverage/*
 coverage-report/*
+/compose/copy-data.bat

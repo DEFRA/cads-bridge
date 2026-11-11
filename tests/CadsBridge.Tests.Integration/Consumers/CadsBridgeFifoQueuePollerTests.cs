@@ -45,7 +45,7 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
             "D|9|Nine",
             "D|10|Ten",
             "D|11|Eleven",
-            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|3") + Environment.NewLine;
+            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|11") + Environment.NewLine;
 
         using var encryptedStream = await fileContents.Encrypt(TestDerivedValue, Salt, TestContext.Current.CancellationToken);
         await apiContainerFixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
@@ -93,10 +93,10 @@ public class CadsBridgeFifoQueuePollerTests(ApiContainerFixture apiContainerFixt
                     Prefix = $"import/cts/bulk/{FileNameWithoutFileType}"
                 },
                 TestContext.Current.CancellationToken);
-            listObjectsV2Response.S3Objects.Should().HaveCount(4);
+            listObjectsV2Response.S3Objects.Should().HaveCount(3);
 
             // The original imported file should always remain alongside the split parts.
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().BeEmpty();
 
             // The parts from the imported file (SplitValue set as 5 so expect 3 parts)
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();

@@ -52,7 +52,7 @@ public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Failed")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, "Failed")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -76,7 +76,7 @@ public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Failed")),
+                It.Is<It.IsAnyType>((v, _) => LogStateContains(v, "Failed")),
                 ex,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -111,4 +111,7 @@ public class DataSeedImportBackgroundServiceTests : IAsyncDisposable
         _sut.Dispose();
         GC.SuppressFinalize(this);
     }
+
+    private static bool LogStateContains(object? value, string expected) =>
+        value?.ToString()?.Contains(expected) == true;
 }

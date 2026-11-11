@@ -1,12 +1,16 @@
 using Amazon.S3.Model;
 using CadsBridge.Endpoints.Requests;
+using CadsBridge.Infrastructure.Encryption;
+using CadsBridge.Infrastructure.Encryption.Providers;
 using CadsBridge.Testing.Support.Constants;
 using CadsBridge.Testing.Support.TestFixtures.Containers;
 using CadsBridge.Testing.Support.Utilities.Assertions;
 using CadsBridge.Testing.Support.Utilities.Aws;
+using CadsBridge.Testing.Support.Utilities.Encryption;
 using CadsBridge.Testing.Support.Utilities.Http;
 using FluentAssertions;
 using System.Net;
+using System.Text;
 
 namespace CadsBridge.Tests.Integration.Endpoints;
 
@@ -47,7 +51,7 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
             "D|9|Nine",
             "D|10|Ten",
             "D|11|Eleven",
-            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|3") + Environment.NewLine;
+            $"T|{FileNameWithoutFileType}.csv|01012000 00:00:00|11") + Environment.NewLine;
 
         using var encryptedStream = await fileContents.Encrypt(TestDerivedValue, Salt, TestContext.Current.CancellationToken);
         await apiContainerFixture.LocalStackFixture.S3Client.PutObjectAsync(new PutObjectRequest
@@ -74,16 +78,39 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
                     Prefix = $"import/cts/bulk/{FileNameWithoutFileType}"
                 },
                 TestContext.Current.CancellationToken);
-            listObjectsV2Response.S3Objects.Should().HaveCount(4);
+            listObjectsV2Response.S3Objects.Should().HaveCount(3);
 
             // The original imported file should always remain alongside the split parts.
-            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().NotBeNull();
+            listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}.csv").Should().BeEmpty();
 
             // The parts from the imported file (SplitValue set as 5 so expect 3 parts)
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv").Should().NotBeNull();
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv").Should().NotBeNull();
             listObjectsV2Response.S3Objects.Where(x => x.Key == $"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv").Should().NotBeNull();
         });
+
+        var decryptedPayload1 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0001.csv");
+
+        decryptedPayload1.Should().Contain("record_type|column_one|column_two");
+        decryptedPayload1.Should().Contain("D|1|One");
+        decryptedPayload1.Should().Contain("D|2|Two");
+        decryptedPayload1.Should().Contain("D|3|Three");
+        decryptedPayload1.Should().Contain("D|4|Four");
+        decryptedPayload1.Should().Contain("D|5|Five");
+
+        var decryptedPayload2 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0002.csv");
+
+        decryptedPayload2.Should().Contain("record_type|column_one|column_two");
+        decryptedPayload2.Should().Contain("D|6|Six");
+        decryptedPayload2.Should().Contain("D|7|Seven");
+        decryptedPayload2.Should().Contain("D|8|Eight");
+        decryptedPayload2.Should().Contain("D|9|Nine");
+        decryptedPayload2.Should().Contain("D|10|Ten");
+
+        var decryptedPayload3 = await DownloadAndDecryptAsync($"import/cts/bulk/{FileNameWithoutFileType}/{FileNameWithoutFileType}-part-0003.csv");
+
+        decryptedPayload3.Should().Contain("record_type|column_one|column_two");
+        decryptedPayload3.Should().Contain("D|11|Eleven");
     }
 
     private sealed record ImportJobResponse(string JobId);
@@ -99,4 +126,39 @@ public class CsvDataFileImportEndpointTests(ApiContainerFixture apiContainerFixt
 
     private static StringContent? EmptyImportRequest =>
         HttpContentUtility.CreateApplicationJsonAsStringContent(new CsvDataFileImportRequest([]));
+
+    private async Task<string> DownloadAndDecryptAsync(string key)
+    {
+        using var s3Object = await apiContainerFixture.LocalStackFixture.S3Client
+            .GetObjectAsync(
+                TestS3Constants.TestCadsBridgeInternalBucketName,
+                key,
+                TestContext.Current.CancellationToken);
+
+        await using var encryptedStream = new MemoryStream();
+        await s3Object.ResponseStream.CopyToAsync(
+            encryptedStream,
+            TestContext.Current.CancellationToken);
+
+        var encryptedBytes = encryptedStream.ToArray();
+
+        encryptedBytes.Should().NotBeEmpty();
+
+        encryptedStream.Position = 0;
+
+        await using var decryptedStream = new MemoryStream();
+
+        var encryptor = new FileEncryptor(
+            new InMemoryMasterKeyProvider(
+                TestEncryptionKeyProvider.CurrentKeyId,
+                TestEncryptionKeyProvider.Keys));
+
+        await encryptor.DecryptAsync(
+            encryptedStream,
+            decryptedStream,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        return Encoding.UTF8.GetString(decryptedStream.ToArray());
+    }
+
 }
