@@ -142,6 +142,12 @@ public class AwsStsInboundAuthenticationHandlerTests
     }
 
     [Fact]
+    public async Task TokenShapedGarbage_FailsInsteadOfThrowing()
+    {
+        (await AuthenticateToken("not.a.token")).Failure.Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task TokenWithoutIssuer_Fails()
     {
         var token = new JwtSecurityTokenHandler().CreateEncodedJwt(new SecurityTokenDescriptor

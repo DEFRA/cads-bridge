@@ -44,7 +44,16 @@ public class AwsStsInboundAuthenticationHandler(
         if (!_tokenHandler.CanReadToken(token))
             return AuthenticateResult.Fail("Malformed token");
 
-        var issuer = _tokenHandler.ReadJwtToken(token).Issuer;
+        string issuer;
+        try
+        {
+            issuer = _tokenHandler.ReadJwtToken(token).Issuer;
+        }
+        catch (Exception ex) when (ex is ArgumentException or SecurityTokenException)
+        {
+            // CanReadToken only checks the shape, so garbage like "a.b.c" still throws here (HTTP 500).
+            return AuthenticateResult.Fail("Malformed token");
+        }
         if (string.IsNullOrWhiteSpace(issuer))
             return AuthenticateResult.Fail("Token has no issuer");
 
