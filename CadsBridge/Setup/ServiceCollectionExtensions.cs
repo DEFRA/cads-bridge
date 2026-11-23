@@ -33,6 +33,10 @@ public static class ServiceCollectionExtensions
                 }
             });
 
+        // Minimal API endpoints use these options, not the MVC ones above.
+        // Strict casing so only the camelCase contract (e.g. fileName) binds.
+        services.ConfigureHttpJsonOptions(opts => opts.SerializerOptions.PropertyNameCaseInsensitive = false);
+
         services.AddDefaultAWSOptions(configuration.GetAWSOptions());
         services.Configure<AwsConfig>(configuration.GetSection(AwsConfig.SectionName));
 

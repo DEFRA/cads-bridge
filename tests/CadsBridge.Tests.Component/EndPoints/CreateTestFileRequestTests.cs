@@ -81,6 +81,30 @@ public class CreateTestFileRequestTests
         response.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
     }
 
+    // Contract: only camelCase fileName binds; other casings must not be guessed.
+    [Theory]
+    [InlineData("fileName", HttpStatusCode.Created)]
+    [InlineData("filename", HttpStatusCode.BadRequest)]
+    [InlineData("FileName", HttpStatusCode.BadRequest)]
+    public async Task ICreateTestFileRequest_FileNameCasing_OnlyCamelCaseIsAccepted(string propertyName,
+        HttpStatusCode expected)
+    {
+        var configOverrides = new Dictionary<string, string?>
+        {
+            ["EnableTestSupportEndpoints"] = "true"
+        };
+        await using var factory = new CadsBridgeWebAppFactory(configOverrides);
+        var json = $$"""
+            {"{{propertyName}}":"CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv","content":"some content","dataSource":{{(int)DataSourceType.CtsBulk}}}
+            """;
+        var client = factory.CreateClient().AddBasicTestApiKey();
+
+        var response = await client.PostAsync("/api/v1/test-support/files",
+            HttpContentUtility.CreateApplicationJsonAsStringContent(json), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(expected);
+    }
+
     private static async Task<HttpResponseMessage> TriggerImportJob(CadsBridgeWebAppFactory factory,
         CreateTestFileRequest? request = null)
     {

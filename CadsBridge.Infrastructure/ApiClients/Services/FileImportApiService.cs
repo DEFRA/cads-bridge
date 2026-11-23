@@ -36,7 +36,6 @@ public class FileImportApiService(
 
     private static readonly JsonSerializerOptions s_condensedJsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true,
         WriteIndented = false,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
@@ -204,7 +203,7 @@ public class FileImportApiService(
         {
             var options = new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 Converters = { new JsonStringEnumConverter() }
             };
 
