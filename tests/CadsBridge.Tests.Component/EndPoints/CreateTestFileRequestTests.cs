@@ -105,6 +105,28 @@ public class CreateTestFileRequestTests
         response.StatusCode.Should().Be(expected);
     }
 
+    // Contract (snapshot) of the upload response property names consumed by the e2e journey tests.
+    [Fact]
+    public async Task ICreateTestFileRequest_WithValidRequest_ResponseUsesExactCamelCasePropertyNames()
+    {
+        var configOverrides = new Dictionary<string, string?>
+        {
+            ["EnableTestSupportEndpoints"] = "true"
+        };
+        await using var factory = new CadsBridgeWebAppFactory(configOverrides);
+
+        var response = await TriggerImportJob(factory, new CreateTestFileRequest(
+            "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv",
+            "some content",
+            DataSourceType.CtsBulk));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using var document = System.Text.Json.JsonDocument.Parse(body);
+        document.RootElement.EnumerateObject().Select(p => p.Name).Should()
+            .Equal("fileName", "externalS3Bucket", "externalS3Key", "sizeBytes", "uploadedAt");
+    }
+
     private static async Task<HttpResponseMessage> TriggerImportJob(CadsBridgeWebAppFactory factory,
         CreateTestFileRequest? request = null)
     {
