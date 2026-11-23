@@ -34,13 +34,6 @@ public class FileImportApiService(
             { FileImportStatus.Failed, "failed" }
        };
 
-    private static readonly JsonSerializerOptions s_condensedJsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = false,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
-
     public async Task<FileImportDto?> GetByFileNameIfExists(string objectKey, CancellationToken cancellationToken)
     {
         var endpoint = $"{BaseApiUrl}/{GetByFileNameEndpoint}?fileName={Uri.EscapeDataString(objectKey)}";
@@ -202,13 +195,13 @@ public class FileImportApiService(
     {
         try
         {
-            var options = new JsonSerializerOptions
+            var readOptions = new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true,
+                PropertyNameCaseInsensitive = false,
                 Converters = { new JsonStringEnumConverter() }
             };
 
-            var result = await response.Content.ReadFromJsonAsync<T>(options, cancellationToken);
+            var result = await response.Content.ReadFromJsonAsync<T>(readOptions, cancellationToken);
             if (result is null)
             {
                 if (logger.IsEnabled(LogLevel.Error))
@@ -259,8 +252,14 @@ public class FileImportApiService(
         try
         {
             using var document = JsonDocument.Parse(content);
+            var writeCondensedJsonOptions = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+                WriteIndented = false,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
 
-            return JsonSerializer.Serialize(document, s_condensedJsonOptions);
+            return JsonSerializer.Serialize(document, writeCondensedJsonOptions);
         }
         catch (JsonException)
         {
