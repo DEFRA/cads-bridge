@@ -106,6 +106,8 @@ DataLoad__Salt=****
 ApiClients__CdsApi__UseFakeClient=false|true
 ENCRYPTION_CURRENTKEYID=V1
 ENCRYPTION_KEY==*****
+QUARTZ_BULK_ENABLED=true|false
+QUARTZ_DELTA_ENABLED=true|false
 ```
 
 ### Running the Application
