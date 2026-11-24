@@ -45,6 +45,25 @@ public class FileImportStatusApiServiceTests
             result.FileName.Should().Be("file.csv");
         }
 
+        // Contract: only camelCase binds, so a casing drift in the API surfaces instead of being guessed.
+        [Theory]
+        [InlineData("filename")]
+        [InlineData("FileName")]
+        public async Task GetByFileName_DoesNotBindNonCamelCaseFileName(string propertyName)
+        {
+            var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent($$"""{"id":1,"{{propertyName}}":"file.csv"}""",
+                    System.Text.Encoding.UTF8, "application/json")
+            });
+
+            var result = await CreateSut(handler).GetByFileName("file.csv", TestContext.Current.CancellationToken);
+
+            result.Should().NotBeNull();
+            result.Id.Should().Be(1);
+            result.FileName.Should().NotBe("file.csv");
+        }
+
         [Fact]
         public async Task GetByFileName_SendsRequest_ToExpectedUrl()
         {

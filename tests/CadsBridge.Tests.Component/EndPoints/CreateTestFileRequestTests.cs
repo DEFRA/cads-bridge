@@ -81,6 +81,52 @@ public class CreateTestFileRequestTests
         response.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
     }
 
+    // Contract: only camelCase fileName binds; other casings must not be guessed.
+    [Theory]
+    [InlineData("fileName", HttpStatusCode.Created)]
+    [InlineData("filename", HttpStatusCode.BadRequest)]
+    [InlineData("FileName", HttpStatusCode.BadRequest)]
+    public async Task ICreateTestFileRequest_FileNameCasing_OnlyCamelCaseIsAccepted(string propertyName,
+        HttpStatusCode expected)
+    {
+        var configOverrides = new Dictionary<string, string?>
+        {
+            ["EnableTestSupportEndpoints"] = "true"
+        };
+        await using var factory = new CadsBridgeWebAppFactory(configOverrides);
+        var json = $$"""
+            {"{{propertyName}}":"CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv","content":"some content","dataSource":{{(int)DataSourceType.CtsBulk}}}
+            """;
+        var client = factory.CreateClient().AddBasicTestApiKey();
+
+        var response = await client.PostAsync("/api/v1/test-support/files",
+            HttpContentUtility.CreateApplicationJsonAsStringContent(json), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(expected);
+    }
+
+    // Contract (snapshot) of the upload response property names consumed by the e2e journey tests.
+    [Fact]
+    public async Task ICreateTestFileRequest_WithValidRequest_ResponseUsesExactCamelCasePropertyNames()
+    {
+        var configOverrides = new Dictionary<string, string?>
+        {
+            ["EnableTestSupportEndpoints"] = "true"
+        };
+        await using var factory = new CadsBridgeWebAppFactory(configOverrides);
+
+        var response = await TriggerImportJob(factory, new CreateTestFileRequest(
+            "CTSM_CADS_TEST_FULL_BATCH1_MYTABLE_2026-07-10-120000.csv",
+            "some content",
+            DataSourceType.CtsBulk));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using var document = System.Text.Json.JsonDocument.Parse(body);
+        document.RootElement.EnumerateObject().Select(p => p.Name).Should()
+            .Equal("fileName", "externalS3Bucket", "externalS3Key", "sizeBytes", "uploadedAt");
+    }
+
     private static async Task<HttpResponseMessage> TriggerImportJob(CadsBridgeWebAppFactory factory,
         CreateTestFileRequest? request = null)
     {
