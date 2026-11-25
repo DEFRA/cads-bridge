@@ -16,6 +16,23 @@ public static class EndpointExtensions
     {
         app.MapPost("/api/v1/test-support/files", UploadTestFiles)
             .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
+
+        app.MapGet("/api/v1/test-support/internal-files", GetInternalFiles)
+            .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
+    }
+
+    private static async Task<IResult> GetInternalFiles(
+        [FromQuery] string? fileName,
+        IInternalFileService service,
+        CancellationToken cancellationToken)
+    {
+        var chunks = await service.ListChunksAsync(fileName ?? string.Empty, cancellationToken);
+
+        var response = new GetInternalFilesResponse(
+            fileName!,
+            [.. chunks.Select(c => new InternalFileChunkResponse(c.Key, c.ChunkNo, c.SizeBytes, c.RecordCount))]);
+
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> UploadTestFiles(
