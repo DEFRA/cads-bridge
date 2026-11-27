@@ -7,7 +7,7 @@ namespace CadsBridge.Endpoints.Testing.Validators;
 
 public class GetInternalFilesRequestValidator : AbstractValidator<GetInternalFilesRequest>
 {
-    private static readonly Regex s_eTePattern = new("CTSM_(?<app>[a-zA-Z]+)_ETE_", RegexOptions.CultureInvariant);
+    private static readonly Regex s_eTePattern = new("^CTSM_(?<app>[a-zA-Z]+)_ETE_", RegexOptions.CultureInvariant);
     private const string FilenameFormatErrorMessage = "Must be a valid ETE CTSM filename";
 
     public GetInternalFilesRequestValidator()
