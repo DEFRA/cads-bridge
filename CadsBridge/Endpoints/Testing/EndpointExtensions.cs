@@ -5,6 +5,7 @@ using CadsBridge.Infrastructure.Authentication.Configuration;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using CadsBridge.Endpoints.Testing.Validators;
 
 namespace CadsBridge.Endpoints.Testing;
 
@@ -24,8 +25,17 @@ public static class EndpointExtensions
     private static async Task<IResult> GetInternalFiles(
         [FromQuery] string? fileName,
         IInternalFileService service,
+        GetInternalFilesRequestValidator validator,
         CancellationToken cancellationToken)
     {
+        var validationResult = await validator.ValidateAsync(fileName, cancellationToken);
+
+        if (!validationResult.IsValid)
+        {
+            var validationErrors = validationResult.ToDictionary();
+            return Results.ValidationProblem(validationErrors);
+        }
+
         var chunks = await service.ListChunksAsync(fileName ?? string.Empty, cancellationToken);
 
         var response = new GetInternalFilesResponse(
