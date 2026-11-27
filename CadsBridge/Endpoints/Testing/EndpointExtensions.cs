@@ -28,7 +28,8 @@ public static class EndpointExtensions
         GetInternalFilesRequestValidator validator,
         CancellationToken cancellationToken)
     {
-        var validationResult = await validator.ValidateAsync(fileName, cancellationToken);
+        var request = new  GetInternalFilesRequest(fileName);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
 
         if (!validationResult.IsValid)
         {
