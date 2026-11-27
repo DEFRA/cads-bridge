@@ -50,6 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFileImportStore, FileImportStore>();
         services.AddTransient<IFileDiscoveryService, S3FileDiscoveryService<ExternalStorageClient>>();
         services.AddTransient<IS3UploadService, S3ExternalUploadService<ExternalStorageClient>>();
+        services.AddTransient<IInternalFileService, InternalFileService>();
     }
 
     public static void RegisterSqlDataSeeding(this IServiceCollection services)

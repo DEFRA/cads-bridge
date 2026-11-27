@@ -5,6 +5,7 @@ using CadsBridge.Infrastructure.Authentication.Configuration;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using CadsBridge.Endpoints.Testing.Validators;
 
 namespace CadsBridge.Endpoints.Testing;
 
@@ -16,6 +17,33 @@ public static class EndpointExtensions
     {
         app.MapPost("/api/v1/test-support/files", UploadTestFiles)
             .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
+
+        app.MapGet("/api/v1/test-support/internal-files", GetInternalFiles)
+            .RequireAuthorization(AuthenticationConstants.DefaultPolicy);
+    }
+
+    private static async Task<IResult> GetInternalFiles(
+        [FromQuery] string? fileName,
+        IInternalFileService service,
+        GetInternalFilesRequestValidator validator,
+        CancellationToken cancellationToken)
+    {
+        var request = new  GetInternalFilesRequest(fileName);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+
+        if (!validationResult.IsValid)
+        {
+            var validationErrors = validationResult.ToDictionary();
+            return Results.ValidationProblem(validationErrors);
+        }
+
+        var chunks = await service.ListChunksAsync(fileName ?? string.Empty, cancellationToken);
+
+        var response = new GetInternalFilesResponse(
+            fileName!,
+            [.. chunks.Select(c => new InternalFileChunkResponse(c.Key, c.ChunkNo, c.SizeBytes, c.RecordCount))]);
+
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> UploadTestFiles(
