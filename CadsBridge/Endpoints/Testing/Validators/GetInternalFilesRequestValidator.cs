@@ -1,5 +1,5 @@
-﻿using System.Text.RegularExpressions;
-using CadsBridge.Endpoints.Testing.Models;
+﻿using CadsBridge.Endpoints.Testing.Models;
+using CadsBridge.Infrastructure.DataLoad.Services.Testing;
 using CadsBridge.Infrastructure.DataLoad.Sources.Parsers;
 using FluentValidation;
 
@@ -7,14 +7,16 @@ namespace CadsBridge.Endpoints.Testing.Validators;
 
 public class GetInternalFilesRequestValidator : AbstractValidator<GetInternalFilesRequest>
 {
-    private static readonly Regex s_eTePattern = new("^CTSM_(?<app>[a-zA-Z]+)_ETE_", RegexOptions.CultureInvariant);
     private const string FilenameFormatErrorMessage = "Must be a valid ETE CTSM filename";
 
     public GetInternalFilesRequestValidator()
     {
+        RuleLevelCascadeMode = CascadeMode.Stop;
+
         RuleFor(x => x.FileName)
+            .Cascade(CascadeMode.Stop)
             .NotNull()
-            .Matches(s_eTePattern)
+            .Matches(TestingConstants.ValidE2EFilenamePattern)
             .WithMessage(FilenameFormatErrorMessage)
             .Must(x => CtsmFilenameParser.TryParse(x, out CtsmFilename _))
             .WithMessage(FilenameFormatErrorMessage);

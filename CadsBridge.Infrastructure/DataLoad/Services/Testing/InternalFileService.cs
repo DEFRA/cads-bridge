@@ -28,7 +28,6 @@ public class InternalFileService(
 {
     private const string DataRecordPrefix = "D|";
     private static readonly Regex s_chunkNumberPattern = new(@"-part-(?<chunkNumber>\d{1,9})\.csv$",  RegexOptions.CultureInvariant);
-    private static readonly Regex s_eTePattern = new("^CTSM_(?<app>[a-zA-Z]+)_ETE_", RegexOptions.CultureInvariant);
 
     public async Task<IReadOnlyList<InternalFileChunk>> ListChunksAsync(string fileName, CancellationToken cancellationToken = default)
     {
@@ -56,7 +55,7 @@ public class InternalFileService(
 
     internal static string GetPartsFolder(string fileName)
     {
-        if (!CtsmFilenameParser.TryParse(fileName, out var parsed) || parsed is null || !s_eTePattern.IsMatch(fileName))
+        if (!CtsmFilenameParser.TryParse(fileName, out var parsed) || parsed is null || !TestingConstants.ValidE2EFilenamePattern.IsMatch(fileName))
         {
             throw new FormatException($"fileName '{fileName}' is not valid.");
         }
